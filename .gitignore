@@ -1,0 +1,18 @@
+# Visual Studio
+.vs/
+*.VC.db
+*.opendb
+*.db
+
+# Unreal Engine
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+*.sln
+*.suo
+*.opensdf
+*.sdf
+*.xcworkspace
+*.DS_Store
