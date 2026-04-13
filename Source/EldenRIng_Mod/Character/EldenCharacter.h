@@ -20,6 +20,9 @@ class ELDENRING_MOD_API AEldenCharacter : public ACharacter
 
 public:
 	AEldenCharacter();
+	
+	// 캐릭터가 장착 중인 무기를 반환하는 함수
+	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon ;}
 
 protected:
 	virtual void BeginPlay() override;

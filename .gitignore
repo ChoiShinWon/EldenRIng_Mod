@@ -10,6 +10,7 @@ DerivedDataCache/
 Intermediate/
 Saved/
 Build/
+/Content/ParagonKhaimera/
 *.sln
 *.suo
 *.opensdf

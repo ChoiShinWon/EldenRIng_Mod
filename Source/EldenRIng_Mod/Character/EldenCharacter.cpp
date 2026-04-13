@@ -61,6 +61,8 @@ void AEldenCharacter::BeginPlay()
 		SpawnParams.Owner = this;
 		SpawnParams.Instigator = GetInstigator();
 		
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		
 		EquippedWeapon = GetWorld()->SpawnActor<AEldenWeapon>(WeaponClass,
 			GetActorLocation(),GetActorRotation(), SpawnParams);
 		
