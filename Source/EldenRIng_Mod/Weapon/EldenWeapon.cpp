@@ -5,6 +5,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "DrawDebugHelpers.h"
+#include "Sound/SoundBase.h"
 
 // Sets default values
 AEldenWeapon::AEldenWeapon()
@@ -45,10 +47,38 @@ void AEldenWeapon::OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor
 	// 내가 아닌 다른 액터를 때리면
 	if (OtherActor && OtherActor != GetOwner())
 	{
+		// 다중 히트 방지
 		if (AlreadyHitActors.Contains(OtherActor)) return;
-		
 		// 명단에 없으면 새로 추가
 		AlreadyHitActors.Add(OtherActor);
+		
+		// 타격 지점 찾기
+		FVector HitLocation;
+		
+		if (bFromSweep)
+		{
+			HitLocation = SweepResult.ImpactPoint;
+		}
+		else
+		{
+			{
+				// 적의 몸통 표면 중에서, 내 무기 박스 중심점과 가장 가까운 지점을 찾음
+				OtherComp->GetClosestPointOnCollision(WeaponBox->GetComponentLocation(), HitLocation);
+			}
+		}
+		// --- [시각적 확인: 빨간 구슬 그리기] ---
+		// (월드, 위치, 반지름 10짜리 구슬, 각형 12, 빨간색, 영구지속 안 함, 2초 동안 띄움)
+		DrawDebugSphere(GetWorld(), HitLocation, 10.0f, 12, FColor::Red, false, 2.0f);
+		
+		if (HitParticles)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), HitParticles, HitLocation);
+		}
+		
+		if (HitSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, HitSound, HitLocation);
+		}
 		
 		// 데미지 전달
 		UGameplayStatics::ApplyDamage(OtherActor, 25.0f, GetInstigatorController(), this, UDamageType::StaticClass());

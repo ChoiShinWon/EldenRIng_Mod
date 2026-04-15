@@ -41,4 +41,12 @@ protected:
 	UPROPERTY()
 	TArray<AActor*> AlreadyHitActors;
 	
+	// 타격 시 터뜨릴 파티클 이펙트
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effects")
+	class UParticleSystem* HitParticles;
+	
+	// 타격 시 재생할 사운드
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effects")
+	class USoundBase* HitSound;
+	
 };

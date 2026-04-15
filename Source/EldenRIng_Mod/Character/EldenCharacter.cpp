@@ -7,6 +7,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
+#include "EldenRing_Mod/Widget/EldenHUDWidget.h"
 
 
 AEldenCharacter::AEldenCharacter()
@@ -76,12 +77,37 @@ void AEldenCharacter::BeginPlay()
 		}
 	}
 	
+	if (HUDWidgetClass)
+	{
+		CurrentHUD = CreateWidget<UEldenHUDWidget>(GetWorld(), HUDWidgetClass);
+		if (CurrentHUD)
+		{
+			CurrentHUD->AddToViewport();
+		}
+	}
 }
 
 // Called every frame
 void AEldenCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	if (bIsSprinting && GetVelocity().Size() > 0.0f)
+	{
+		ConsumeStamina(SprintStaminaCost * DeltaTime);
+		
+		// 달리다가 스태미너 떨어지면 멈춤
+		if (CurrentStamina <= 0.0f)
+		{
+			StopSprint();
+		}
+	}
+	
+	// 회복 가능 상태이고 최대치가 아니면 매 프레임 회복시킴
+	if (bCanRegen && CurrentStamina < MaxStamina)
+	{
+		CurrentStamina = FMath::Clamp(CurrentStamina + (StaminaRegenRate * DeltaTime), 0.0f, MaxStamina);
+	}
 
 }
 
@@ -114,6 +140,10 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		{
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AEldenCharacter::Jump);
 		}
+		if (DodgeAction)
+		{
+			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &AEldenCharacter::Dodge);
+		}
 	}
 
 }
@@ -121,7 +151,7 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 // 이동 및 회전 로직
 void AEldenCharacter::Move(const FInputActionValue& Value)
 {
-	if (bIsAttacking) return; // 공격중에는 WASD 입력 차단
+	if (bIsAttacking || bIsRolling) return; // 공격중에는 WASD 입력 차단
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	
 	if (Controller != nullptr)
@@ -151,13 +181,54 @@ void AEldenCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+void AEldenCharacter::Dodge()
+{
+	if (bIsRolling || CurrentStamina < DodgeStaminaCost) return;
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && RollMontage)
+	{
+		//스태미너 소모 함수 호출
+		ConsumeStamina(DodgeStaminaCost);
+		
+		if (bIsAttacking)
+		{
+			AnimInstance->Montage_Stop(0.1f);
+			bIsAttacking = false;
+			bComboQueued = false;
+			ComboCount = 0;
+		}
+
+		bIsRolling = true;
+		// 몽타주 재생
+		AnimInstance->Montage_Play(RollMontage);
+
+		// --- [추가] 구르기 종료 감지 예약 ---
+		FOnMontageEnded RollEndDelegate;
+		RollEndDelegate.BindUObject(this, &AEldenCharacter::OnRollMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(RollEndDelegate, RollMontage);
+	}
+}
+
+// 구르기가 끝나면 호출되는 함수
+void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	bIsRolling = false; // 이제 다시 구를 수 있는 상태로 변경
+	UE_LOG(LogTemp, Warning, TEXT("구르기 끝!"));
+}
+
 void AEldenCharacter::StartSprint()
 {
-	GetCharacterMovement()->MaxWalkSpeed = 800.0f;
-}
+	if (CurrentStamina > 0.0f)
+	{
+		bIsSprinting = true;
+		GetCharacterMovement()->MaxWalkSpeed = 800.0f;
+	}
+} 
 
 void AEldenCharacter::StopSprint()
 {
+	bIsSprinting = false;
 	GetCharacterMovement()->MaxWalkSpeed = 500.0f;
 }
 
@@ -180,11 +251,16 @@ void AEldenCharacter::Attack()
 
 void AEldenCharacter::ProcessCombo()
 {
+	if (CurrentStamina < AttackStaminaCost) return;
+	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (ComboMontage && AnimInstance)
 	{
 		// 1. 방어 코드: 3타까지만 가능하도록 제한
 		if (ComboCount >= 3) return;
+		
+		// 공격 스태미너 소모
+		ConsumeStamina(AttackStaminaCost);
 
 		bIsAttacking = true;
 		ComboCount++; // 1 -> 2 -> 3
@@ -226,4 +302,25 @@ void AEldenCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrup
 	bIsAttacking = false;
 	bComboQueued = false;
 	ComboCount = 0;
+}
+
+void AEldenCharacter::ConsumeStamina(float Amount)
+{
+	// 실제 스태미너 깎기
+	CurrentStamina = FMath::Clamp(CurrentStamina - Amount, 0.0f, MaxStamina);
+	
+	// 회복 중단
+	bCanRegen = false;
+	
+	// 타이머 재설정
+	// 만약 1.5초 뒤에 회복하기로 예약했는데, 그 사이에 다시 구르면 기존 예약은 취소해야 하므로 Clear 하고 들어감.
+	GetWorldTimerManager().ClearTimer(RegenDelayTimerHandle);
+	// Clear후 다시 Timer 세팅, 시간이 StaminaRegen Delay후엔 Regen 다시 진행
+	GetWorldTimerManager().SetTimer(RegenDelayTimerHandle, this, &AEldenCharacter::ResetRegen, StaminaRegenDelay, false);
+	
+}
+
+void AEldenCharacter::ResetRegen()
+{
+	bCanRegen = true;
 }
