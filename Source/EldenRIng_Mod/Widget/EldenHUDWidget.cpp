@@ -2,6 +2,7 @@
 #include "Components/ProgressBar.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h" 
 #include "Kismet/KismetMathLibrary.h"
+#include "EldenRing_Mod/StatUtils.h"
 
 void UEldenHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
@@ -12,15 +13,19 @@ void UEldenHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		PlayerRef = Cast<AEldenCharacter>(GetOwningPlayerPawn());
 	}
 
-	if (PlayerRef && StaminaBar && GhostBar)
+	if (PlayerRef && StaminaBar && GhostBar && HPBar && GhostHPBar)
 	{
 		// Getter 함수 사용 
-		float TargetPercent = PlayerRef->GetCurrentStamina() / PlayerRef->GetMaxStamina();
-
-		StaminaBar->SetPercent(TargetPercent);
-
+		float TargetStamina = PlayerRef->GetCurrentStamina() / PlayerRef->GetMaxStamina();
+		StaminaBar->SetPercent(TargetStamina);
 		// 노란색 바 보간
-		GhostPercent = UKismetMathLibrary::FInterpTo(GhostPercent, TargetPercent, InDeltaTime, 2.0f);
+		GhostPercent = FStatUtils::InterpGhostValue(GhostPercent, TargetStamina, InDeltaTime, 5.0f);
 		GhostBar->SetPercent(GhostPercent);
+
+		float TargetHP = PlayerRef->GetCurrentHealth() / PlayerRef->GetMaxHealth();
+		HPBar->SetPercent(TargetHP);
+
+		GhostHPPercent = FStatUtils::InterpGhostValue(GhostHPPercent, TargetHP, InDeltaTime, 5.0f);
+		GhostHPBar->SetPercent(GhostHPPercent);
 	}
 }

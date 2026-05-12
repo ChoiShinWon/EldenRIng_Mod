@@ -1,6 +1,8 @@
 
 
 #include "EldenRing_Mod/Character/EldenEnemy.h"
+#include "EldenRing_Mod/StatUtils.h"
+#include "Components/WidgetComponent.h"
 
 
 AEldenEnemy::AEldenEnemy()
@@ -8,6 +10,12 @@ AEldenEnemy::AEldenEnemy()
  	
 	PrimaryActorTick.bCanEverTick = true;
 
+	TargetMarkWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("TargetMarkWidget"));
+	TargetMarkWidget->SetupAttachment(GetMesh());
+
+	TargetMarkWidget->SetWidgetSpace(EWidgetSpace::Screen);
+	TargetMarkWidget->SetDrawAtDesiredSize(true);
+	TargetMarkWidget->SetVisibility(false);
 }
 
 
@@ -23,31 +31,41 @@ void AEldenEnemy::BeginPlay()
 float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator,
 	class AActor* DamageCauser)
 {
+	if (bIsDead) return 0.0f;
+
 	// 부모 클래스의 기본 데미지 로직 실행
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	
-	// 체력 깎기
-	CurrentHealth -= ActualDamage;
-	
+	// 스탯 처리 템플릿 적용 (FStatUtils)
+	FStatUtils::UpdateStat(CurrentHealth, MaxHealth, -ActualDamage);
+
 	// 로그 띄우기 (맞았는지 확인)
 	UE_LOG(LogTemp, Warning, TEXT("몬스터가 %f의 데미지를 입음. 남은 체력: %f"), ActualDamage, CurrentHealth);
 	
-	// 체력이 남아있고, 피격 몽타주가 설정되어 있다면 재생
-	if (CurrentHealth > 0.0f && HitReactMontage)
+	if (CurrentHealth <= 0.0f)
 	{
-		// 몬스터의 애니메이션 인스턴스를 가져와서 몽타주를 재생
+		bIsDead = true;
+		UE_LOG(LogTemp, Warning, TEXT("몬스터가 죽었다!"));
+		// 추후에 사망 애니메이션 추가
+
+		Destroy(); // 몬스터 제거 (임시)
+	}
+	else if (HitReactMontage)
+	{
+		// 맞는 모션 재생
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 		if (AnimInstance)
 		{
 			AnimInstance->Montage_Play(HitReactMontage);
 		}
 	}
-	// 만약 체력이 0이 되면? 죽음 처리
-	else if (CurrentHealth <= 0.0f)
-	{
-		UE_LOG(LogTemp, Error, TEXT("몬스터 사망."));
-		// 임시로 액터 파괴
-		Destroy();
-	}
 	return ActualDamage;
+}
+
+void AEldenEnemy::ShowTargetMark(bool bShow)
+{
+	if (TargetMarkWidget)
+	{
+		TargetMarkWidget->SetVisibility(bShow);
+	}
 }

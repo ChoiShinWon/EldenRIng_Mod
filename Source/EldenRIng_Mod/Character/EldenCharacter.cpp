@@ -8,6 +8,10 @@
 #include "InputActionValue.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Widget/EldenHUDWidget.h"
+#include "EldenRing_Mod/StatUtils.h"
+#include "EldenRing_Mod/Character/EldenEnemy.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 
 
 AEldenCharacter::AEldenCharacter()
@@ -87,6 +91,7 @@ void AEldenCharacter::BeginPlay()
 	}
 }
 
+
 // Called every frame
 void AEldenCharacter::Tick(float DeltaTime)
 {
@@ -107,6 +112,35 @@ void AEldenCharacter::Tick(float DeltaTime)
 	if (bCanRegen && CurrentStamina < MaxStamina)
 	{
 		CurrentStamina = FMath::Clamp(CurrentStamina + (StaminaRegenRate * DeltaTime), 0.0f, MaxStamina);
+	}
+
+	// 락온 기능
+	if (LockedTarget)
+	{
+		// 타겟이 죽었거나 파괴되었다면 자동으로 락온 해제
+		if (!IsValid(LockedTarget) || LockedTarget->GetIsDead())
+		{
+			LockedTarget->ShowTargetMark(false);
+			ToggleLockOn();
+		}
+		else
+		{
+			// 내가 쳐다봐야 할 회전 값 계산 (내 위치-> 적 위치)
+			FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), LockedTarget->GetActorLocation());
+
+			// 카메라가 적의 발밑이 아니라 가슴팍을 보도록	
+			LookAtRotation.Pitch -= 15.0f;
+
+			// 현재 카메라 회전값
+			FRotator CurrentRotation = Controller->GetControlRotation();
+
+			// 보간
+			FRotator SmoothRotation = FMath::RInterpTo(CurrentRotation, LookAtRotation, DeltaTime, 5.0f);
+
+			// 컨트롤러에 강제로 보간한 회전값 주입
+			Controller->SetControlRotation(SmoothRotation);
+		}
+		
 	}
 
 }
@@ -144,6 +178,11 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		{
 			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &AEldenCharacter::Dodge);
 		}
+
+		if (LockOnAction)
+		{
+			EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Started, this, &AEldenCharacter::ToggleLockOn);
+		}
 	}
 
 }
@@ -151,7 +190,7 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 // 이동 및 회전 로직
 void AEldenCharacter::Move(const FInputActionValue& Value)
 {
-	if (bIsAttacking || bIsRolling) return; // 공격중에는 WASD 입력 차단
+	if (bIsAttacking || bIsRolling || bIsDead) return; // 공격 중, 구르기 중, 사망 중에는 WASD 입력 차단
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	
 	if (Controller != nullptr)
@@ -200,10 +239,35 @@ void AEldenCharacter::Dodge()
 		}
 
 		bIsRolling = true;
+
+		
+		// 구르기 시작할 때, 캐릭터가 이동 방향을 바라보도록 강제로 설정
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+		GetCharacterMovement()->bUseControllerDesiredRotation = false;
+		bUseControllerRotationYaw = false;
+		
+		
+		// 현재 캐릭터가 이동 중이던 방향(속도)을 가져옵니다. (WASD를 누르고 있으면 그 방향이 됨)
+		FVector DodgeDir = GetVelocity().GetSafeNormal();
+
+		//만약 제자리에 서서 구르기만 눌렀다면?
+		if (DodgeDir.IsNearlyZero())
+		{
+			DodgeDir = GetActorForwardVector(); 
+		}
+
+		// 구를 방향으로 회전값 계산
+		FRotator DodgeRotation = DodgeDir.Rotation();
+		DodgeRotation.Pitch = 0.0f; // 바닥으로 처박히는 것 방지
+		DodgeRotation.Roll = 0.0f;
+
+		// 캐릭터 몸통을 즉시 강제로 돌려버림! (TeleportPhysics를 넣어서 물리 충돌 무시하고 즉시 휙 돌림)
+		SetActorRotation(DodgeRotation, ETeleportType::TeleportPhysics);
+
 		// 몽타주 재생
 		AnimInstance->Montage_Play(RollMontage);
 
-		// --- [추가] 구르기 종료 감지 예약 ---
+		// --- 구르기 종료 감지 예약 ---
 		FOnMontageEnded RollEndDelegate;
 		RollEndDelegate.BindUObject(this, &AEldenCharacter::OnRollMontageEnded);
 		AnimInstance->Montage_SetEndDelegate(RollEndDelegate, RollMontage);
@@ -214,7 +278,41 @@ void AEldenCharacter::Dodge()
 void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	bIsRolling = false; // 이제 다시 구를 수 있는 상태로 변경
-	UE_LOG(LogTemp, Warning, TEXT("구르기 끝!"));
+	
+	if (LockedTarget)
+	{
+		// 락온 중이었다면 다시 적을 노려보게 복구
+		GetCharacterMovement()->bUseControllerDesiredRotation = true;
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+	}
+	else
+	{
+		// 평소 모드 복구
+		GetCharacterMovement()->bUseControllerDesiredRotation = false;
+		GetCharacterMovement()->bOrientRotationToMovement = true;
+	}
+}
+
+float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	if (bIsDead) return 0.0f;
+
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	// 템플릿 사용해서 체력깎기
+	FStatUtils::UpdateStat(CurrentHealth, MaxHealth, -ActualDamage);
+
+	UE_LOG(LogTemp, Warning, TEXT("데미지 입음! 남은 체력 : %f"), CurrentHealth);
+
+	if (CurrentHealth <= 0.0f)
+	{
+		bIsDead = true;
+		UE_LOG(LogTemp, Warning, TEXT("죽었다!"));
+		// 추후에 사망 애니메이션 추가
+
+		if (LockedTarget) LockedTarget = nullptr; // 죽으면 락온 해제
+	}
+	return ActualDamage;
 }
 
 void AEldenCharacter::StartSprint()
@@ -304,6 +402,8 @@ void AEldenCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrup
 	ComboCount = 0;
 }
 
+
+
 void AEldenCharacter::ConsumeStamina(float Amount)
 {
 	// 실제 스태미너 깎기
@@ -323,4 +423,56 @@ void AEldenCharacter::ConsumeStamina(float Amount)
 void AEldenCharacter::ResetRegen()
 {
 	bCanRegen = true;
+}
+
+// 락온 시스템
+void AEldenCharacter::ToggleLockOn()
+{
+	// 이미 락온중이라면 해제
+	if (LockedTarget)
+	{
+		LockedTarget->ShowTargetMark(false);
+		LockedTarget = nullptr;
+
+		// 다시 원래대로 자연스럽게 달리도록 원상 복구
+		GetCharacterMovement()->bOrientRotationToMovement = true;
+		GetCharacterMovement()->bUseControllerDesiredRotation = false;
+		bUseControllerRotationYaw = false;
+		return;
+	}
+
+	// 락온중이 아니라면
+	TArray<AActor*> FoundEnemies;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEldenEnemy::StaticClass(), FoundEnemies);
+
+	AEldenEnemy* ClosestEnemy = nullptr;
+	float MinDistance = 1500.0f; // 탐색 반경 (너무 멀면 락온 안되도록)
+
+	for (AActor* EnemyActor : FoundEnemies)
+	{
+		if (!IsValid(EnemyActor)) continue;
+
+		AEldenEnemy* Enemy = Cast<AEldenEnemy>(EnemyActor);
+		if (!Enemy) continue;
+
+		// 살아있는 적 중에서 가장 가까운 놈 찾기
+		if (!Enemy->GetIsDead())
+		{
+			float Distance = FVector::Dist(GetActorLocation(), Enemy->GetActorLocation());
+			if (Distance < MinDistance)
+			{
+				MinDistance = Distance;
+				ClosestEnemy = Enemy;
+			}
+		}
+	}
+
+	if (ClosestEnemy)
+	{
+		LockedTarget = ClosestEnemy;
+		LockedTarget->ShowTargetMark(true);
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+		GetCharacterMovement()->bUseControllerDesiredRotation = true;
+		bUseControllerRotationYaw = true; // 카메라가 적을 보면 몸도 적을 향함
+	}
 }

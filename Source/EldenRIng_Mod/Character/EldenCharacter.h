@@ -70,6 +70,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* DodgeAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LockOn")
+	class UInputAction* LockOnAction;
 	
 	// 키보드/마우스에서 신호가 들어왔을 때 실행될 함수들
 	void Move(const FInputActionValue& Value);
@@ -136,6 +139,31 @@ protected:
 	UFUNCTION()
 	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+protected:
+	/*=============================================================================
+	 * 체력 시스템 (Health)
+	 *=============================================================================*/
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
+	float MaxHealth = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
+	float CurrentHealth = 100.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health")
+	bool bIsDead = false;
+
+public:
+	// HUD 에서 값을 읽어갈 수 있도록 Getter 추가
+	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+	FORCEINLINE bool GetIsDead() const { return bIsDead; }
+	FORCEINLINE bool GetIsLockedOn() const { return LockedTarget != nullptr; }
+
+	// 기본 데미지 처리 함수 오버라이드
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
+protected:
 	/*=============================================================================
 	 * 스태미너 시스템 (Stamina)
 	 *=============================================================================*/
@@ -169,6 +197,19 @@ protected:
 	
 	// 달리고 있는지 확인
 	bool bIsSprinting = false;
+
+protected:
+	/*=============================================================================
+	 * 락온 시스템 (Lock - On)
+	 *=============================================================================*/
+	// 현재 락온된 몬스터를 가리키는 포인터
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LockOn")
+	class AEldenEnemy* LockedTarget;
+
+	// 락온 버튼을 눌렀을 때 실행될 함수
+	void ToggleLockOn();
+
+
 public:	
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
