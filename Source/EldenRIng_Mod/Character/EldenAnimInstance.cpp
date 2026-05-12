@@ -3,6 +3,7 @@
 
 #include "EldenRing_Mod/Character/EldenAnimInstance.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "KismetAnimationLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 void UEldenAnimInstance::NativeInitializeAnimation()
@@ -33,5 +34,12 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 		// 공중 상태 구하기
 		// 캐릭터 무브먼트 컴포넌트에 너 지금 바닥 안 밟고 있어? 하고 물어보기
 		bIsFalling = EldenCharacter->GetCharacterMovement()->IsFalling();
+
+		// 락온 상태 가져오기
+		bIsLockedOn = EldenCharacter->GetIsLockedOn();
+
+		// 이동 방향 구하기
+		FRotator BaseRoation = EldenCharacter->GetActorRotation();
+		Direction = UKismetAnimationLibrary::CalculateDirection(EldenCharacter->GetVelocity(), BaseRoation);
 	}
 }

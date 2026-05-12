@@ -31,9 +31,17 @@ protected:
 	// 캐릭터가 현재 공중에 떠 있는지
 	UPROPERTY(BlueprintReadOnly, Category = "Character Status")
 	bool bIsFalling;
+
+	// 캐릭터 이동 방향
+	UPROPERTY(BlueprintReadOnly, Category = "Character Status")	
+	float Direction;
+
+	// 현재 락온 여부
+	UPROPERTY(BlueprintReadOnly, Category = "Character Status")
+	bool bIsLockedOn;
 	
 private:
 	// 이 애님 인스턴스를 소유하고 있는 캐릭터 포인터 (캐스팅 비용 절약용)
 	UPROPERTY()
 	class AEldenCharacter* EldenCharacter;
-};
+};   

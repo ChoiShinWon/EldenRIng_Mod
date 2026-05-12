@@ -17,8 +17,15 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UProgressBar* GhostBar;
 
+	UPROPERTY(meta = (BindWidget))
+	class UProgressBar* HPBar;
+
+	UPROPERTY(meta = (BindWidget))
+	class UProgressBar* GhostHPBar;
+
 	// 보간용 변수
 	float GhostPercent = 1.0f;
+	float GhostHPPercent = 1.0f;
     
 	// 매 프레임 업데이트 (블루프린트의 Tick 역할)
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
