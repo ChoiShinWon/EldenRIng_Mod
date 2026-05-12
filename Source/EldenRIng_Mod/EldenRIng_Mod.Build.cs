@@ -9,6 +9,7 @@ public class EldenRIng_Mod : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
-			"UMG","Slate", "SlateCore", "AnimGraphRuntime" });
+			"UMG","Slate", "SlateCore", "AnimGraphRuntime",
+        "AIModule", "GameplayTasks"});
 	}
 }
