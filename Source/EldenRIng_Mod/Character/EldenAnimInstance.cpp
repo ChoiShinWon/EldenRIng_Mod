@@ -1,8 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "EldenRing_Mod/Character/EldenAnimInstance.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Component/EldenCombatComponent.h"
+#include "KismetAnimationLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 void UEldenAnimInstance::NativeInitializeAnimation()
@@ -25,6 +26,8 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	// 주인이 정상적으로 존재한다면, 매 프레임 상태를 훔쳐옴
 	if (EldenCharacter)
 	{
+		 
+
 		// 속도 구하기
 		FVector Velocity = EldenCharacter->GetVelocity();
 		Velocity.Z = 0.0f; // 하늘에서 떨어지는 속도는 걷기와 뛰기 모션에 영향을 주면 안되므로 Z축은 0으로 날려버린다
@@ -33,5 +36,18 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 		// 공중 상태 구하기
 		// 캐릭터 무브먼트 컴포넌트에 너 지금 바닥 안 밟고 있어? 하고 물어보기
 		bIsFalling = EldenCharacter->GetCharacterMovement()->IsFalling();
+
+		// 락온 상태 가져오기
+		bIsLockedOn = EldenCharacter->GetIsLockedOn();
+
+		// 이동 방향 구하기
+		FRotator BaseRoation = EldenCharacter->GetActorRotation();
+		Direction = UKismetAnimationLibrary::CalculateDirection(EldenCharacter->GetVelocity(), BaseRoation);
+	
+
+		if (EldenCharacter->CombatComponent)
+		{
+			bIsAttacking = EldenCharacter->CombatComponent->bIsAttacking;
+		}
 	}
 }

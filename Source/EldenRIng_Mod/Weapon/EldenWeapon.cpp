@@ -34,6 +34,8 @@ AEldenWeapon::AEldenWeapon()
 
 }
 
+
+
 void AEldenWeapon::BeginPlay()
 {
 	Super::BeginPlay();
@@ -85,4 +87,20 @@ void AEldenWeapon::OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor
 		// 일단 데미지 로그 띄워놓기 나중엔 여기에 데미지를 줌
 		UE_LOG(LogTemp, Warning, TEXT("때렸다! 맞은 액터 : %s"), *OtherActor->GetName());
 	}
+}
+
+void AEldenWeapon::EnableWeaponCollision()
+{
+	ClearHitActors();
+
+	// 콜리전 설정
+	WeaponBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+}
+
+
+void AEldenWeapon::DisableWeaponCollision()
+{
+	// 노콜리전으로 설정
+	WeaponBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }

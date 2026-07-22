@@ -14,9 +14,7 @@ void UANS_WeaponCollision::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSe
 	{
 		if (AEldenWeapon* Weapon = Character->GetEquippedWeapon())
 		{
-			Weapon->ClearHitActors();
-		
-			Weapon->GetWeaponBox()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			Weapon->EnableWeaponCollision();
 		}
 		
 	}
@@ -30,9 +28,9 @@ void UANS_WeaponCollision::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequ
 	// 주인 찾기
 	if (AEldenCharacter* Character = Cast<AEldenCharacter>(MeshComp->GetOwner()))
 	{
-		if (Character->GetEquippedWeapon())
+		if (AEldenWeapon* Weapon = Character->GetEquippedWeapon())
 		{
-			Character->GetEquippedWeapon()->GetWeaponBox()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Weapon->DisableWeaponCollision();
 		}
 	}
 }
