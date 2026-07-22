@@ -14,20 +14,24 @@ void ULockOnComponent::ToggleLockOn()
 	AEldenCharacter* OwnerChar = Cast<AEldenCharacter>(GetOwner());
 	if (!OwnerChar) return;
 
-	if (CurrentTarget)
+	// 락온중일때
+	if (CurrentTarget.IsValid())
 	{
-		IITargetable* TargetInterface = Cast<IITargetable>(CurrentTarget);
+		IITargetable* TargetInterface = Cast<IITargetable>(CurrentTarget.Get());
+		// 락온 마크가 있다면 마크 보여주기
 		if (TargetInterface) TargetInterface->ShowTargetMark(false);
+		// 락온 대상 비우기
 		CurrentTarget = nullptr;
 		OwnerChar->GetCharacterMovement()->bOrientRotationToMovement = true;
 		OwnerChar->GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	}
+	// 락온중이지 않을때
 	else
 	{
 		FindBestTarget();
-		if (CurrentTarget)
+		if (CurrentTarget.IsValid())
 		{
-			IITargetable* TargetInterface = Cast<IITargetable>(CurrentTarget);
+			IITargetable* TargetInterface = Cast<IITargetable>(CurrentTarget.Get());
 			if (TargetInterface) TargetInterface->ShowTargetMark(true);
 			OwnerChar->GetCharacterMovement()->bOrientRotationToMovement = false;
 			OwnerChar->GetCharacterMovement()->bUseControllerDesiredRotation = true;
@@ -38,10 +42,9 @@ void ULockOnComponent::ToggleLockOn()
 void ULockOnComponent::UpdateLockOn(float DeltaTime)
 {
 	AEldenCharacter* OwnerChar = Cast<AEldenCharacter>(GetOwner());
-	if (!OwnerChar || !CurrentTarget) return;
+	if (!OwnerChar || !CurrentTarget.IsValid()) return;
 
-	AEldenEnemy* Enemy = Cast<AEldenEnemy>(CurrentTarget);
-	if (!IsValid(CurrentTarget) || (Enemy && Enemy->GetIsDead()))
+	if (CurrentTarget->GetIsDead())
 	{
 		ToggleLockOn(); // 해제
 		return;
@@ -70,7 +73,7 @@ void ULockOnComponent::FindBestTarget()
 	TArray<AActor*> FoundEnemies;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEldenEnemy::StaticClass(), FoundEnemies);
 
-	AActor* Closest = nullptr;
+	AEldenEnemy* Closest = nullptr;
 	float MinDist = 1500.0f;
 
 	for (AActor* Actor : FoundEnemies)
@@ -79,7 +82,7 @@ void ULockOnComponent::FindBestTarget()
 		if (Enemy && !Enemy->GetIsDead())
 		{
 			float Dist = FVector::Dist(OwnerChar->GetActorLocation(), Actor->GetActorLocation());
-			if (Dist < MinDist) { MinDist = Dist; Closest = Actor; }
+			if (Dist < MinDist) { MinDist = Dist; Closest = Enemy; }
 		}
 	}
 	CurrentTarget = Closest;

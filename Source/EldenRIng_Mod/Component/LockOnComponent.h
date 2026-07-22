@@ -13,10 +13,11 @@ public:
 	// 인자 제거
 	void ToggleLockOn();
 	void UpdateLockOn(float DeltaTime);
-	bool HasTarget() const { return CurrentTarget != nullptr; }
+	bool HasTarget() const { return CurrentTarget.IsValid(); }
 
 protected:
-	UPROPERTY() AActor* CurrentTarget;
+	TWeakObjectPtr<class AEldenEnemy> CurrentTarget;
+
 	void FindBestTarget();
 
 	UPROPERTY(EditAnywhere, Category = "LockOn")

@@ -6,6 +6,8 @@
 #include "Animation/AnimInstance.h"
 #include "EldenAnimInstance.generated.h"
 
+class AEldenCharacter;
+class UEldenCombatComponent;
 /**
  * 
  */
@@ -39,8 +41,12 @@ protected:
 	// 현재 락온 여부
 	UPROPERTY(BlueprintReadOnly, Category = "Character Status")
 	bool bIsLockedOn;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Character Status")
+	bool bIsAttacking;
 	
 private:
+
 	// 이 애님 인스턴스를 소유하고 있는 캐릭터 포인터 (캐스팅 비용 절약용)
 	UPROPERTY()
 	class AEldenCharacter* EldenCharacter;
