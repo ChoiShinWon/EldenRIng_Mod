@@ -1,12 +1,17 @@
 
 
 #include "EldenRing_Mod/Character/EldenEnemy.h"
+#include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Component/EldenHitboxComponent.h"
 #include "EldenRing_Mod/StatUtils.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Components/BoxComponent.h"
+
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include <Kismet/GameplayStatics.h>
 
 
 AEldenEnemy::AEldenEnemy()
@@ -24,6 +29,13 @@ AEldenEnemy::AEldenEnemy()
 	PawnSensingComp = CreateDefaultSubobject<UPawnSensingComponent>(TEXT("PawnSensingComp"));
 	PawnSensingComp->SightRadius = 1500.0f; // 시야 반경 설정
 	PawnSensingComp->SetPeripheralVisionAngle(60.0f); // 시야각 설정
+	
+	// 공격 박스 컴포넌트 생성 및 설정
+	RightHandHitbox = CreateDefaultSubobject<UEldenHitboxComponent>(TEXT("RightHandHitbox"));
+	RightHandHitbox->SetupAttachment(GetMesh(), FName("RightWeaponSocket"));
+
+	LeftHandHitbox = CreateDefaultSubobject<UEldenHitboxComponent>(TEXT("LeftHandHitbox"));
+	LeftHandHitbox->SetupAttachment(GetMesh(), FName("LeftWeaponSocket"));
 }
 
 
@@ -39,8 +51,10 @@ void AEldenEnemy::BeginPlay()
 	{
 		PawnSensingComp->OnSeePawn.AddDynamic(this, &AEldenEnemy::OnSeePlayer);
 	}
+
 	
 }
+
 
 void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 {
@@ -203,10 +217,35 @@ void AEldenEnemy::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	SetLifeSpan(5.0f);
 }
 
+bool AEldenEnemy::IsTargetable() const
+{
+	return !bIsDead;
+}
+
 void AEldenEnemy::ShowTargetMark(bool bShow)
 {
 	if (TargetMarkWidget)
 	{
 		TargetMarkWidget->SetVisibility(bShow);
 	}
+}
+
+void AEldenEnemy::EnableRightAttackCollision()
+{
+	if (RightHandHitbox) RightHandHitbox->EnableHitbox();
+}
+
+void AEldenEnemy::DisableRightAttackCollision()
+{
+	if (RightHandHitbox) RightHandHitbox->DisableHitbox();
+}
+
+void AEldenEnemy::EnableLeftAttackCollision()
+{
+	if (LeftHandHitbox) LeftHandHitbox->EnableHitbox();
+}
+
+void AEldenEnemy::DisableLeftAttackCollision()
+{
+	if (LeftHandHitbox) LeftHandHitbox->DisableHitbox();
 }

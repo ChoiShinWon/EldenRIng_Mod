@@ -1,6 +1,9 @@
 
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/Component/EldenCombatComponent.h"
+#include "EldenRing_Mod/Component/LockOnComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h"
@@ -37,7 +40,13 @@ AEldenCharacter::AEldenCharacter()
 	// 4. 캐릭터가 걷거나 뛰는 방향(이동 방향)을 자연스럽게 바라보도록 설정
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
+
+	// 캐릭터 스탯 컴포넌트 생성 
+	StatComponent = CreateDefaultSubobject<UEldenStatComponent>(TEXT("StatComponent"));
+
+	CombatComponent = CreateDefaultSubobject<UEldenCombatComponent>(TEXT("CombatComponent"));
 	
+	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -99,48 +108,25 @@ void AEldenCharacter::Tick(float DeltaTime)
 	
 	if (bIsSprinting && GetVelocity().Size() > 0.0f)
 	{
-		ConsumeStamina(SprintStaminaCost * DeltaTime);
+		StatComponent->ConsumeStamina(SprintStaminaCost * DeltaTime);
 		
 		// 달리다가 스태미너 떨어지면 멈춤
-		if (CurrentStamina <= 0.0f)
+		if (StatComponent->CurrentStamina <= 0.0f)
 		{
 			StopSprint();
 		}
 	}
 	
 	// 회복 가능 상태이고 최대치가 아니면 매 프레임 회복시킴
-	if (bCanRegen && CurrentStamina < MaxStamina)
+	if (StatComponent->bCanRegen && StatComponent->CurrentStamina < StatComponent->MaxStamina)
 	{
-		CurrentStamina = FMath::Clamp(CurrentStamina + (StaminaRegenRate * DeltaTime), 0.0f, MaxStamina);
+		StatComponent->CurrentStamina = FMath::Clamp(StatComponent->CurrentStamina + (StatComponent->StaminaRegenRate * DeltaTime), 0.0f, StatComponent->MaxStamina);
 	}
 
 	// 락온 기능
-	if (LockedTarget)
+	if (LockOnComponent)
 	{
-		// 타겟이 죽었거나 파괴되었다면 자동으로 락온 해제
-		if (!IsValid(LockedTarget) || LockedTarget->GetIsDead())
-		{
-			LockedTarget->ShowTargetMark(false);
-			ToggleLockOn();
-		}
-		else
-		{
-			// 내가 쳐다봐야 할 회전 값 계산 (내 위치-> 적 위치)
-			FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), LockedTarget->GetActorLocation());
-
-			// 카메라가 적의 발밑이 아니라 가슴팍을 보도록	
-			LookAtRotation.Pitch -= 15.0f;
-
-			// 현재 카메라 회전값
-			FRotator CurrentRotation = Controller->GetControlRotation();
-
-			// 보간
-			FRotator SmoothRotation = FMath::RInterpTo(CurrentRotation, LookAtRotation, DeltaTime, 5.0f);
-
-			// 컨트롤러에 강제로 보간한 회전값 주입
-			Controller->SetControlRotation(SmoothRotation);
-		}
-		
+		LockOnComponent->UpdateLockOn(DeltaTime);
 	}
 
 }
@@ -190,7 +176,7 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 // 이동 및 회전 로직
 void AEldenCharacter::Move(const FInputActionValue& Value)
 {
-	if (bIsAttacking || bIsRolling || bIsDead) return; // 공격 중, 구르기 중, 사망 중에는 WASD 입력 차단
+	if (CombatComponent->bIsAttacking || bIsRolling || bIsDead) return; // 공격 중, 구르기 중, 사망 중에는 WASD 입력 차단
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	
 	if (Controller != nullptr)
@@ -220,22 +206,31 @@ void AEldenCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+void AEldenCharacter::ToggleLockOn()
+{
+	// 캐릭터는 입력을 받아서 컴포넌트에게 '전달(위임)'만 합니다.
+	if (LockOnComponent)
+	{
+		LockOnComponent->ToggleLockOn();
+	}
+}
+
 void AEldenCharacter::Dodge()
 {
-	if (bIsRolling || CurrentStamina < DodgeStaminaCost) return;
+	if (bIsRolling || StatComponent->CurrentStamina < DodgeStaminaCost) return;
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && RollMontage)
 	{
 		//스태미너 소모 함수 호출
-		ConsumeStamina(DodgeStaminaCost);
+		StatComponent->ConsumeStamina(DodgeStaminaCost);
 		
-		if (bIsAttacking)
+		if (CombatComponent->bIsAttacking)
 		{
 			AnimInstance->Montage_Stop(0.1f);
-			bIsAttacking = false;
-			bComboQueued = false;
-			ComboCount = 0;
+			CombatComponent->bIsAttacking = false;
+			CombatComponent->bComboQueued = false;
+			CombatComponent->ComboCount = 0;
 		}
 
 		bIsRolling = true;
@@ -279,7 +274,7 @@ void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupte
 {
 	bIsRolling = false; // 이제 다시 구를 수 있는 상태로 변경
 	
-	if (LockedTarget)
+	if (LockOnComponent->HasTarget())
 	{
 		// 락온 중이었다면 다시 적을 노려보게 복구
 		GetCharacterMovement()->bUseControllerDesiredRotation = true;
@@ -297,27 +292,36 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 {
 	if (bIsDead) return 0.0f;
 
+	if (bIsInvincible)
+	{
+		return 0.0f;
+	}
+
+
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	// 템플릿 사용해서 체력깎기
-	FStatUtils::UpdateStat(CurrentHealth, MaxHealth, -ActualDamage);
+	StatComponent->ApplyDamage(ActualDamage);
 
-	UE_LOG(LogTemp, Warning, TEXT("데미지 입음! 남은 체력 : %f"), CurrentHealth);
+	float LeftHealth = StatComponent->GetCurrentHealth();
+	UE_LOG(LogTemp, Warning, TEXT("데미지 입음! 남은 체력 : %f"), LeftHealth);
 
-	if (CurrentHealth <= 0.0f)
+	
+	if (LeftHealth <= 0.0f)
 	{
 		bIsDead = true;
 		UE_LOG(LogTemp, Warning, TEXT("죽었다!"));
 		// 추후에 사망 애니메이션 추가
 
-		if (LockedTarget) LockedTarget = nullptr; // 죽으면 락온 해제
+		
 	}
 	return ActualDamage;
 }
 
+
 void AEldenCharacter::StartSprint()
 {
-	if (CurrentStamina > 0.0f)
+	if (StatComponent->CurrentStamina > 0.0f)
 	{
 		bIsSprinting = true;
 		GetCharacterMovement()->MaxWalkSpeed = 800.0f;
@@ -332,147 +336,27 @@ void AEldenCharacter::StopSprint()
 
 void AEldenCharacter::Attack()
 {
-	if (bIsAttacking)
+	UE_LOG(LogTemp, Warning, TEXT("Attack 함수 호출됨!")); // 이 로그가 찍히는지 확인하세요.
+
+	if (CombatComponent)
 	{
-		// 다음 타수를 예약만 해두고 함수 종료
-		if (!bComboQueued)
-		{
-			bComboQueued = true;
-		}
-		return;
+		CombatComponent->ExecuteAttack();
 	}
-	
-	// 공격중이 아니면 1타 시작
-	ProcessCombo();
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("CombatComponent가 NULL입니다!"));
+	}
+
 }
 
-
-void AEldenCharacter::ProcessCombo()
+bool AEldenCharacter::GetIsLockedOn() const
 {
-	if (CurrentStamina < AttackStaminaCost) return;
-	
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (ComboMontage && AnimInstance)
-	{
-		// 1. 방어 코드: 3타까지만 가능하도록 제한
-		if (ComboCount >= 3) return;
-		
-		// 공격 스태미너 소모
-		ConsumeStamina(AttackStaminaCost);
-
-		bIsAttacking = true;
-		ComboCount++; // 1 -> 2 -> 3
-
-		FName SectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCount));
-
-		if (AnimInstance->Montage_IsPlaying(ComboMontage))
-		{
-			// 2. [완벽 해결] 강제 점프를 삭제하고, 현재 실제로 재생 중인 섹션 이름을 안전하게 가져옴
-			FName CurrentSection = AnimInstance->Montage_GetCurrentSection(ComboMontage);
-            
-			// 3. 현재 섹션이 끝날 때 다음 섹션으로 자연스럽게 이어지도록 다리를 놓습니다.
-			AnimInstance->Montage_SetNextSection(CurrentSection, SectionName, ComboMontage);
-		}
-		else 
-		{
-			// 공격 중이 아니면 1타부터 재생
-			PlayAnimMontage(ComboMontage, 1.0f, SectionName);
-           
-			FOnMontageEnded EndDelegate;
-			EndDelegate.BindUObject(this, &AEldenCharacter::OnAttackMontageEnded);
-			AnimInstance->Montage_SetEndDelegate(EndDelegate, ComboMontage);
-		}
-	}
-}
-
-void AEldenCharacter::SetComboWindow(bool bOpen)
-{
-	// 콤보 창이 닫힐 때 예약된 콤보가 있다면 다음 타수로 넘어감
-	if (!bOpen && bComboQueued)
-	{
-		bComboQueued = false;
-		ProcessCombo();
-	}
-}
-
-void AEldenCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	bIsAttacking = false;
-	bComboQueued = false;
-	ComboCount = 0;
+	return LockOnComponent && LockOnComponent->HasTarget();
 }
 
 
 
-void AEldenCharacter::ConsumeStamina(float Amount)
+void AEldenCharacter::SetInvincible(bool bState)
 {
-	// 실제 스태미너 깎기
-	CurrentStamina = FMath::Clamp(CurrentStamina - Amount, 0.0f, MaxStamina);
-	
-	// 회복 중단
-	bCanRegen = false;
-	
-	// 타이머 재설정
-	// 만약 1.5초 뒤에 회복하기로 예약했는데, 그 사이에 다시 구르면 기존 예약은 취소해야 하므로 Clear 하고 들어감.
-	GetWorldTimerManager().ClearTimer(RegenDelayTimerHandle);
-	// Clear후 다시 Timer 세팅, 시간이 StaminaRegen Delay후엔 Regen 다시 진행
-	GetWorldTimerManager().SetTimer(RegenDelayTimerHandle, this, &AEldenCharacter::ResetRegen, StaminaRegenDelay, false);
-	
-}
-
-void AEldenCharacter::ResetRegen()
-{
-	bCanRegen = true;
-}
-
-// 락온 시스템
-void AEldenCharacter::ToggleLockOn()
-{
-	// 이미 락온중이라면 해제
-	if (LockedTarget)
-	{
-		LockedTarget->ShowTargetMark(false);
-		LockedTarget = nullptr;
-
-		// 다시 원래대로 자연스럽게 달리도록 원상 복구
-		GetCharacterMovement()->bOrientRotationToMovement = true;
-		GetCharacterMovement()->bUseControllerDesiredRotation = false;
-		bUseControllerRotationYaw = false;
-		return;
-	}
-
-	// 락온중이 아니라면
-	TArray<AActor*> FoundEnemies;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEldenEnemy::StaticClass(), FoundEnemies);
-
-	AEldenEnemy* ClosestEnemy = nullptr;
-	float MinDistance = 1500.0f; // 탐색 반경 (너무 멀면 락온 안되도록)
-
-	for (AActor* EnemyActor : FoundEnemies)
-	{
-		if (!IsValid(EnemyActor)) continue;
-
-		AEldenEnemy* Enemy = Cast<AEldenEnemy>(EnemyActor);
-		if (!Enemy) continue;
-
-		// 살아있는 적 중에서 가장 가까운 놈 찾기
-		if (!Enemy->GetIsDead())
-		{
-			float Distance = FVector::Dist(GetActorLocation(), Enemy->GetActorLocation());
-			if (Distance < MinDistance)
-			{
-				MinDistance = Distance;
-				ClosestEnemy = Enemy;
-			}
-		}
-	}
-
-	if (ClosestEnemy)
-	{
-		LockedTarget = ClosestEnemy;
-		LockedTarget->ShowTargetMark(true);
-		GetCharacterMovement()->bOrientRotationToMovement = false;
-		GetCharacterMovement()->bUseControllerDesiredRotation = true;
-		bUseControllerRotationYaw = true; // 카메라가 적을 보면 몸도 적을 향함
-	}
+	bIsInvincible = bState;
 }

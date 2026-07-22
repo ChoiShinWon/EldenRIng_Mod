@@ -4,12 +4,15 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Perception/PawnSensingComponent.h"
+#include "EldenRing_Mod/Interface/ITargetable.h"
 #include "EldenEnemy.generated.h"
 
 class UWidgetComponent;
+class UEldenHitboxComponent;
+class UParticleSystem;
 
 UCLASS()
-class ELDENRING_MOD_API AEldenEnemy : public ACharacter
+class ELDENRING_MOD_API AEldenEnemy : public ACharacter, public IITargetable
 {
 	GENERATED_BODY()
 
@@ -66,6 +69,20 @@ protected:
 	// 타겟 마크 위젯 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	UWidgetComponent* TargetMarkWidget;
+
+	/*=============================================================================
+	 * 공격 타격 판정 (Hitbox)
+	 *=============================================================================*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	UEldenHitboxComponent* RightHandHitbox;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	UEldenHitboxComponent* LeftHandHitbox;
+
+
+
+	
+	
 public:	
 
 	// 시야에 플레이어가 들어왔을 때 호출되는 함수
@@ -81,8 +98,7 @@ public:
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE bool GetIsDead() const { return bIsDead; }
 
-	// 타겟 마크 위젯의 표시 여부를 설정하는 함수
-	void ShowTargetMark(bool bShow);
+	
 
 	// 어그로 애니메이션이 끝났을 때 호출되는 함수 
 	UFUNCTION()
@@ -98,4 +114,12 @@ public:
 	// 공격 중인지 여부 (콤보 시스템 구현 시 활용)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bIsAttacking = false;
+
+	virtual bool IsTargetable() const override;
+	virtual void ShowTargetMark(bool bShow) override;
+
+	void EnableRightAttackCollision();
+	void DisableRightAttackCollision();
+	void EnableLeftAttackCollision();
+	void DisableLeftAttackCollision();
 };

@@ -12,6 +12,9 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
+class UEldenStatComponent;
+class UEldenCombatComponent;
+class ULockOnComponent;
 
 
 UCLASS()
@@ -19,17 +22,12 @@ class ELDENRING_MOD_API AEldenCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
-public:
-	AEldenCharacter();
-	
-	// 캐릭터가 장착 중인 무기를 반환하는 함수
-	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon ;}
-	
-	void Dodge();
 	
 
 protected:
 	virtual void BeginPlay() override;
+
+
 	
 	/*=============================================================================
 	 * Camera
@@ -71,6 +69,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* DodgeAction;
 
+	// IA_Attack을 넣을 바구니
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* AttackAction;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LockOn")
 	class UInputAction* LockOnAction;
 	
@@ -103,85 +105,19 @@ protected:
 	/*=============================================================================
 	 * 공격 시스템 (Combat)
 	 *=============================================================================*/
-	// 현재 콤보 번호
-	int32 ComboCount = 0;
-	
-	// 다음 콤보가 예약되었는지 확인하는 플래그
-	bool bComboQueued = false;
-	
-	// 콤보 공격용 몽타주 섹션이 3개로 나뉘어 있어야함
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
-	UAnimMontage* ComboMontage;
-	
-	// 콤보 시작 진행 횟수
-	void ProcessCombo();
-	
-	// 콤보 창 제어용 함수 (애님 노티파이에서 호출)
-	UFUNCTION(BlueprintCallable)
-	void SetComboWindow(bool bOpen);
-	
-	// IA_Attack을 넣을 바구니
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputAction* AttackAction;
 	
 	
 	// 마우스 클릭시 실행할 함수
 	void Attack();
 	
-	// 공격 중인지 판별하는 변수
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	bool bIsAttacking;
-	
-	// 몽타주가 끝났을 때 엔진이 호출해 줄 함수
-	UFUNCTION()
-	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
-
 	UFUNCTION()
 	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
-
-protected:
-	/*=============================================================================
-	 * 체력 시스템 (Health)
-	 *=============================================================================*/
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
-	float MaxHealth = 100.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
-	float CurrentHealth = 100.0f;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health")
 	bool bIsDead = false;
 
-public:
-	// HUD 에서 값을 읽어갈 수 있도록 Getter 추가
-	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
-	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
-	FORCEINLINE bool GetIsDead() const { return bIsDead; }
-	FORCEINLINE bool GetIsLockedOn() const { return LockedTarget != nullptr; }
-
-	// 기본 데미지 처리 함수 오버라이드
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-
 protected:
-	/*=============================================================================
-	 * 스태미너 시스템 (Stamina)
-	 *=============================================================================*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
-	float MaxStamina = 100.0f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
-	float CurrentStamina = 100.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
-	float StaminaRegenRate = 20.f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
-	float StaminaRegenDelay = 1.5f;
-	
-	bool bCanRegen = true;
-	
-	FTimerHandle RegenDelayTimerHandle;
 	
 	/*=============================================================================
 	 * 스태미너 비용 설정 (Stamina Cost)
@@ -198,30 +134,52 @@ protected:
 	// 달리고 있는지 확인
 	bool bIsSprinting = false;
 
-protected:
 	/*=============================================================================
 	 * 락온 시스템 (Lock - On)
 	 *=============================================================================*/
-	// 현재 락온된 몬스터를 가리키는 포인터
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LockOn")
-	class AEldenEnemy* LockedTarget;
-
-	// 락온 버튼을 눌렀을 때 실행될 함수
-	void ToggleLockOn();
 
 
-public:	
+
+	/*=============================================================================
+	 * 방어 및 회피 (Defense & Dodge)
+	 *=============================================================================*/
+
+	// 캐릭터가 현재 무적 상태인지 확인하는 변수
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|State")
+	bool bIsInvincible = false;
+
+public:
+	AEldenCharacter();
+
+	/*=============================================================================
+	 * Components (컴포넌트)
+	 *=============================================================================*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenStatComponent* StatComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenCombatComponent* CombatComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class ULockOnComponent* LockOnComponent;
+	
+	// 캐릭터가 장착 중인 무기를 반환하는 함수
+	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon ;}
+	
+	void Dodge();
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// 스태미너 소모 함수
-	UFUNCTION(BlueprintCallable, Category = "Stamina")
-	void ConsumeStamina(float Amount);
 	
-	// 회복 재개 함수
-	void ResetRegen();
 	
-	// HUD에서 값을 읽어갈 수 있도록 Getter 추가
-	FORCEINLINE float GetCurrentStamina() const { return CurrentStamina; }
-	FORCEINLINE float GetMaxStamina() const { return MaxStamina; }
+	FORCEINLINE bool GetIsDead() const { return bIsDead; }
+
+
+	bool GetIsLockedOn() const;
+	// 기본 데미지 처리 함수 오버라이드
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+	void ToggleLockOn();
+
+	// 외부에서 무적 상태를 켜고 끌 수 있는 함수
+	void SetInvincible(bool bState);
 };
