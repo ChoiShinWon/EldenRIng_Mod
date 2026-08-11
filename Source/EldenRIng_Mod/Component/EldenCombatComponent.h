@@ -44,10 +44,10 @@ public:
 
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
-	
-private:
+
 	// 콤보 시작 진행 횟수
 	void ProcessCombo();
+private:
 
 	// 소유주인 캐릭터의 애니메이션 인스턴스를 캐싱하기 위한 변수
 	UPROPERTY()

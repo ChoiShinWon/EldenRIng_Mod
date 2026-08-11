@@ -49,6 +49,16 @@ AEldenCharacter::AEldenCharacter()
 	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 }
 
+void AEldenCharacter::SetState(ECharacterState NewState)
+{
+	CharacterState = NewState;
+}
+
+ECharacterState AEldenCharacter::GetState() const
+{
+	return CharacterState;
+}
+
 // Called when the game starts or when spawned
 void AEldenCharacter::BeginPlay()
 {
@@ -176,7 +186,8 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 // 이동 및 회전 로직
 void AEldenCharacter::Move(const FInputActionValue& Value)
 {
-	if (CombatComponent->bIsAttacking || bIsRolling || bIsDead) return; // 공격 중, 구르기 중, 사망 중에는 WASD 입력 차단
+	if (GetState() != ECharacterState::Idle) return;
+
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	
 	if (Controller != nullptr)
@@ -217,7 +228,7 @@ void AEldenCharacter::ToggleLockOn()
 
 void AEldenCharacter::Dodge()
 {
-	if (bIsRolling || StatComponent->CurrentStamina < DodgeStaminaCost) return;
+	if (GetState() != ECharacterState::Idle || StatComponent->CurrentStamina < DodgeStaminaCost) return;
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && RollMontage)
@@ -233,7 +244,7 @@ void AEldenCharacter::Dodge()
 			CombatComponent->ComboCount = 0;
 		}
 
-		bIsRolling = true;
+		SetState(ECharacterState::Rolling);
 
 		
 		// 구르기 시작할 때, 캐릭터가 이동 방향을 바라보도록 강제로 설정
@@ -272,7 +283,7 @@ void AEldenCharacter::Dodge()
 // 구르기가 끝나면 호출되는 함수
 void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	bIsRolling = false; // 이제 다시 구를 수 있는 상태로 변경
+	SetState(ECharacterState::Idle);
 	
 	if (LockOnComponent->HasTarget())
 	{
@@ -290,7 +301,7 @@ void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupte
 
 float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	if (bIsDead) return 0.0f;
+	if (GetState() == ECharacterState::Dead) return 0.0f;
 
 	if (bIsInvincible)
 	{
@@ -309,7 +320,7 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 	
 	if (LeftHealth <= 0.0f)
 	{
-		bIsDead = true;
+		SetState(ECharacterState::Dead);
 		UE_LOG(LogTemp, Warning, TEXT("죽었다!"));
 		// 추후에 사망 애니메이션 추가
 
@@ -336,15 +347,18 @@ void AEldenCharacter::StopSprint()
 
 void AEldenCharacter::Attack()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Attack 함수 호출됨!")); // 이 로그가 찍히는지 확인하세요.
-
+	
+	if (GetState()== ECharacterState::Rolling || GetState() == ECharacterState::Dead) return;
+	
+	
 	if (CombatComponent)
 	{
+		if (GetState() == ECharacterState::Idle)
+		{
+			SetState(ECharacterState::Attacking);
+		}
 		CombatComponent->ExecuteAttack();
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("CombatComponent가 NULL입니다!"));
+
 	}
 
 }

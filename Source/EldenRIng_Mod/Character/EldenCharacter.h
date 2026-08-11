@@ -16,6 +16,14 @@ class UEldenStatComponent;
 class UEldenCombatComponent;
 class ULockOnComponent;
 
+UENUM(BlueprintType)
+enum class ECharacterState : uint8
+{
+	Idle UMETA(DisplayName = "Idle"),
+    Attacking UMETA(DisplayName = "Attacking"),
+	Rolling UMETA(DisplayName = "Rolling"),
+	Dead UMETA(DisplayName = "Dead")
+};
 
 UCLASS()
 class ELDENRING_MOD_API AEldenCharacter : public ACharacter
@@ -27,7 +35,8 @@ class ELDENRING_MOD_API AEldenCharacter : public ACharacter
 protected:
 	virtual void BeginPlay() override;
 
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "State")
+	ECharacterState CharacterState = ECharacterState::Idle;
 	
 	/*=============================================================================
 	 * Camera
@@ -88,8 +97,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* RollMontage;
 	
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
-	bool bIsRolling = false;
+	
 	
 	/*=============================================================================
 	 * Weapon (무기 시스템)
@@ -113,8 +121,7 @@ protected:
 	UFUNCTION()
 	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health")
-	bool bIsDead = false;
+
 
 protected:
 	
@@ -151,6 +158,9 @@ protected:
 public:
 	AEldenCharacter();
 
+	void SetState(ECharacterState NewState);
+	ECharacterState GetState() const;
+
 	/*=============================================================================
 	 * Components (컴포넌트)
 	 *=============================================================================*/
@@ -172,7 +182,7 @@ public:
 
 	
 	
-	FORCEINLINE bool GetIsDead() const { return bIsDead; }
+	FORCEINLINE bool GetIsDead() const { return GetState() == ECharacterState::Dead; }
 
 
 	bool GetIsLockedOn() const;

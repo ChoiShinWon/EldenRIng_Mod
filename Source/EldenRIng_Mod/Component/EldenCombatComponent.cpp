@@ -3,6 +3,7 @@
 
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "GameFramework/Character.h" 
+#include "EldenRing_Mod/Character/EldenCharacter.h"
 
 
 UEldenCombatComponent::UEldenCombatComponent()
@@ -65,6 +66,11 @@ void UEldenCombatComponent::OnAttackMontageEnded(UAnimMontage* Montage, bool bIn
     bIsAttacking = false;
     bComboQueued = false;
     ComboCount = 0;
+    AEldenCharacter* EldenCharacter = Cast<AEldenCharacter>(GetOwner());
+    if (EldenCharacter)
+    {
+        EldenCharacter->SetState(ECharacterState::Idle);
+    }
 }
 
 void UEldenCombatComponent::SetComboWindow(bool bOpen)
