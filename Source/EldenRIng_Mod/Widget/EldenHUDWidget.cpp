@@ -1,5 +1,6 @@
 #include "EldenHUDWidget.h"
 #include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h" 
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -13,9 +14,21 @@ void UEldenHUDWidget::NativeConstruct()
     {
         PlayerRef->StatComponent->OnHealthChanged.AddDynamic(this, &UEldenHUDWidget::OnHealthUpdated);
         PlayerRef->StatComponent->OnStaminaChanged.AddDynamic(this, &UEldenHUDWidget::OnStaminaUpdated);
-    
+        PlayerRef->StatComponent->OnRunesChanged.AddDynamic(this, &UEldenHUDWidget::OnRunesUpdated);
+
         OnHealthUpdated(PlayerRef->StatComponent->GetCurrentHealth(), PlayerRef->StatComponent->GetMaxHealth());
         OnStaminaUpdated(PlayerRef->StatComponent->GetCurrentStamina(), PlayerRef->StatComponent->GetMaxStamina());
+        OnRunesUpdated(PlayerRef->StatComponent->CurrentRunes);
+    }
+
+}
+
+void UEldenHUDWidget::OnRunesUpdated(int32 NewRunes)
+{
+    if (RuneText)
+    {
+        FString RuneStr = FString::FromInt(NewRunes);
+        RuneText->SetText(FText::FromString(RuneStr));
     }
 
 }

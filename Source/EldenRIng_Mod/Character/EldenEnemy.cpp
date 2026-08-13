@@ -3,11 +3,12 @@
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Component/EldenHitboxComponent.h"
+#include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/AI/EnemyAIController.h"
 #include "EldenRing_Mod/StatUtils.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Components/BoxComponent.h"
-
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -52,9 +53,22 @@ void AEldenEnemy::BeginPlay()
 		PawnSensingComp->OnSeePawn.AddDynamic(this, &AEldenEnemy::OnSeePlayer);
 	}
 
+	/*AAIController* AIController = Cast<AAIController>(GetController());
+	if (AIController)
+	{
+		BlackboardComp = AIController-> GetBlackboardComponent();
+	}*/
+
 	
 }
 
+
+void AEldenEnemy::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	EnemyController = Cast<AEnemyAIController>(NewController);
+	
+}
 
 void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 {
@@ -68,31 +82,39 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 
 		CombatTarget = Pawn;
 
-		// 어그로 애니메이션 재생
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-		if (AnimInstance && AggroMontage)
+		if (!bHasRoared)
 		{
-			AnimInstance->Montage_Play(AggroMontage);
+			bHasRoared = true;
+			if (AnimInstance && AggroMontage)
+			{
+				AnimInstance->Montage_Play(AggroMontage);
 
-			// 몽타주가 끝났을 때 호출될 델리게이트 설정
-			FOnMontageEnded EndDelegate;
-			EndDelegate.BindUObject(this, &AEldenEnemy::OnAggroMontageEnded);
-			AnimInstance->Montage_SetEndDelegate(EndDelegate, AggroMontage);
+				// 몽타주가 끝났을 때 호출될 델리게이트 설정
+				FOnMontageEnded EndDelegate;
+				EndDelegate.BindUObject(this, &AEldenEnemy::OnAggroMontageEnded);
+				AnimInstance->Montage_SetEndDelegate(EndDelegate, AggroMontage);
+			}
+
 		}
+		else
+		{
+			if (EnemyController)
+			{
+				EnemyController->SetAggroTarget(CombatTarget);
+			}
+		}
+
+		
 
 	}
 }
 
 void AEldenEnemy::OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	AAIController* AIController = Cast<AAIController>(GetController());
-	if (AIController && CombatTarget)
+	if (EnemyController && CombatTarget)
 	{
-		UBlackboardComponent* BlackboardComp = AIController->GetBlackboardComponent();
-		if (BlackboardComp)
-		{
-			BlackboardComp->SetValueAsObject(FName("TargetActor"), CombatTarget);
-		}
+		EnemyController->SetAggroTarget(CombatTarget);
 	}
 }
 
@@ -135,6 +157,12 @@ float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 {
 	if (bIsDead) return 0.0f;
 
+	// 공격을 받아 피가 깎인 순간, 나를 때린 녀석이 누구인지 CombatTarget에 저장
+	if (EventInstigator && EventInstigator->GetPawn())
+	{
+		CombatTarget = EventInstigator->GetPawn();
+	}
+
 	// 부모 클래스의 기본 데미지 로직 실행
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	
@@ -159,17 +187,50 @@ float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 	return ActualDamage;
 }
 
+void AEldenEnemy::ResetAggro()
+{
+	bHasAggro = false;
+
+	CombatTarget = nullptr;
+
+
+	if (EnemyController) 
+	{
+		EnemyController->ClearAggroTarget();
+
+		// 멈추기
+		EnemyController->StopMovement();
+	}
+
+}
+
 void AEldenEnemy::Die()
 {
 	if (bIsDead) return; 
 	bIsDead = true;
 
-	AAIController* AIC = Cast<AAIController>(GetController());
-	if (AIC)
+	if (EnemyController)
 	{
-		AIC->StopMovement();
-		AIC->UnPossess();
+		EnemyController->StopMovement();
+		EnemyController->UnPossess();
 	}
+
+	AEldenCharacter* Player = Cast<AEldenCharacter>(CombatTarget);
+	if (Player)
+	{
+		UEldenStatComponent* PlayerStat = Player->StatComponent;
+		if (PlayerStat)
+		{
+			PlayerStat->AddRunes(RuneReward);
+
+			if (GEngine)
+			{
+				FString Msg = FString::Printf(TEXT("룬 %d 개 획득!"), RuneReward);
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, Msg);
+			}
+		} 
+	}
+
 	// 죽음 몽타주 재생
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && DeathMontage)

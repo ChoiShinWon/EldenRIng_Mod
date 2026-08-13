@@ -22,7 +22,8 @@ enum class ECharacterState : uint8
 	Idle UMETA(DisplayName = "Idle"),
     Attacking UMETA(DisplayName = "Attacking"),
 	Rolling UMETA(DisplayName = "Rolling"),
-	Dead UMETA(DisplayName = "Dead")
+	Dead UMETA(DisplayName = "Dead"),
+	Interacting UMETA(DisplayName = "Interact")
 };
 
 UCLASS()
@@ -34,6 +35,8 @@ class ELDENRING_MOD_API AEldenCharacter : public ACharacter
 
 protected:
 	virtual void BeginPlay() override;
+
+
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "State")
 	ECharacterState CharacterState = ECharacterState::Idle;
@@ -84,12 +87,17 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LockOn")
 	class UInputAction* LockOnAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* InteractAction;
+
 	
 	// 키보드/마우스에서 신호가 들어왔을 때 실행될 함수들
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	
-	
+	void InteractButtonPressed();
+
 	// Shift 키를 누를때와 뗄 때 실행될 함수
 	void StartSprint();
 	void StopSprint();
@@ -161,6 +169,9 @@ public:
 	void SetState(ECharacterState NewState);
 	ECharacterState GetState() const;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TScriptInterface<class IInteractable> CurrentInteractableTarget;
+
 	/*=============================================================================
 	 * Components (컴포넌트)
 	 *=============================================================================*/
@@ -192,4 +203,8 @@ public:
 
 	// 외부에서 무적 상태를 켜고 끌 수 있는 함수
 	void SetInvincible(bool bState);
+
+	void DebugLevelUpVigor();
+	void DebugLevelUpEndurance();
+	void DebugLevelUpStrength();
 };

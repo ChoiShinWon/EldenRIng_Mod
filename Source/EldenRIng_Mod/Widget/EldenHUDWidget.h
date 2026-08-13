@@ -4,6 +4,8 @@
 #include "Blueprint/UserWidget.h"
 #include "EldenHUDWidget.generated.h"
 
+class UProgressBar;
+class UTextBlock;
 UCLASS()
 class ELDENRING_MOD_API UEldenHUDWidget : public UUserWidget
 {
@@ -25,6 +27,12 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	class UProgressBar* GhostHPBar;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* RuneText;
+
+	UFUNCTION()
+	void OnRunesUpdated(int32 NewRunes);
 
 	UFUNCTION()
 	void OnHealthUpdated(float CurrentHealth, float MaxHealth);
