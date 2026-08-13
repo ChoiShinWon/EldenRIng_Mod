@@ -105,7 +105,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* RollMontage;
 	
-	
+	FVector2D LastMoveInput;
 	
 	/*=============================================================================
 	 * Weapon (무기 시스템)
@@ -128,6 +128,7 @@ protected:
 	
 	UFUNCTION()
 	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
 	
 
 
@@ -188,6 +189,7 @@ public:
 	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon ;}
 	
 	void Dodge();
+	bool bDodgeQueued = false;
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
