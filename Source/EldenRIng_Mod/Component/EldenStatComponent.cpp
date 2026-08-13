@@ -20,6 +20,8 @@ void UEldenStatComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	RecalculateDerivedStats();
+
 	// 게임 시작 시 체력과 스태미너를 꽉 채워줌.
 	CurrentHealth = MaxHealth;
 	CurrentStamina = MaxStamina;
@@ -41,6 +43,9 @@ void UEldenStatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	}
 }
 
+
+
+
 void UEldenStatComponent::ApplyDamage(float DamageAmount)
 {
 	// 2. 데미지 적용 로직 (FStatUtils 활용)
@@ -55,6 +60,48 @@ void UEldenStatComponent::ApplyDamage(float DamageAmount)
 	{
 		OnZeroHealth.Broadcast();
 	}
+}
+
+bool UEldenStatComponent::LevelUpStat(EEldenStatType StatToLevelUp)
+{
+	if (CurrentRunes < RequiredRunes)
+	{
+		return false;
+	}
+
+	CurrentRunes -= RequiredRunes;
+	OnRunesChanged.Broadcast(CurrentRunes);
+	Level += 1;
+	RequiredRunes += 500;
+
+	switch (StatToLevelUp)
+	{
+	case EEldenStatType::Vigor:
+		Vigor += 1;
+		break;
+
+	case EEldenStatType::Endurance:
+		Endurance += 1;
+		break;
+
+	case EEldenStatType::Strength:
+		Strength += 1;
+		break;
+	}
+
+	RecalculateDerivedStats();
+
+	return true;
+}
+
+void UEldenStatComponent::RecalculateDerivedStats()
+{
+	float OldMaxHealth = MaxHealth;
+	MaxHealth = 100.0f + (Vigor * 25.0f);
+	MaxStamina = 100.0f + (Endurance * 2.0f);
+	AttackPower = 3 + (Strength * 3.0f);
+	
+	CurrentHealth += (MaxHealth - OldMaxHealth);
 }
 
 void UEldenStatComponent::ConsumeStamina(float Amount)
@@ -79,6 +126,12 @@ void UEldenStatComponent::ConsumeStamina(float Amount)
 void UEldenStatComponent::ResetRegen()
 {
 	bCanRegen = true;
+}
+
+void UEldenStatComponent::AddRunes(int32 Amount)
+{
+	CurrentRunes += Amount;
+	OnRunesChanged.Broadcast(CurrentRunes);
 }
 
 

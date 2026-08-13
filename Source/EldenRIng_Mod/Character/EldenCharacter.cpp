@@ -4,6 +4,7 @@
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "EldenRing_Mod/Component/LockOnComponent.h"
+#include "EldenRing_Mod/Interface/Interactable.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h"
@@ -99,6 +100,13 @@ void AEldenCharacter::BeginPlay()
 			EquippedWeapon->AttachToComponent(GetMesh(), AttachmentRules, FName("RightHandSocket"));
 		}
 	}
+	// 초기 룬 테스트 세팅
+	if (StatComponent)
+	{
+		// 초기 룬 테스트 세팅
+		StatComponent->CurrentRunes = 10000;
+	}
+	
 	
 	if (HUDWidgetClass)
 	{
@@ -108,6 +116,8 @@ void AEldenCharacter::BeginPlay()
 			CurrentHUD->AddToViewport();
 		}
 	}
+
+	
 }
 
 
@@ -179,6 +189,15 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		{
 			EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Started, this, &AEldenCharacter::ToggleLockOn);
 		}
+
+		if (InteractAction)
+		{
+			EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AEldenCharacter::InteractButtonPressed);
+		}
+
+		PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &AEldenCharacter::DebugLevelUpVigor);
+		PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AEldenCharacter::DebugLevelUpEndurance);
+		PlayerInputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AEldenCharacter::DebugLevelUpStrength);
 	}
 
 }
@@ -214,6 +233,14 @@ void AEldenCharacter::Look(const FInputActionValue& Value)
 	{
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
+	}
+}
+
+void AEldenCharacter::InteractButtonPressed()
+{
+	if (CurrentInteractableTarget != nullptr)
+	{
+		CurrentInteractableTarget->Interact(this);
 	}
 }
 
@@ -373,4 +400,22 @@ bool AEldenCharacter::GetIsLockedOn() const
 void AEldenCharacter::SetInvincible(bool bState)
 {
 	bIsInvincible = bState;
+}
+
+void AEldenCharacter::DebugLevelUpVigor()
+{
+	StatComponent->LevelUpStat(EEldenStatType::Vigor);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("생명력 증가!"));
+}
+
+void AEldenCharacter::DebugLevelUpEndurance()
+{
+	StatComponent->LevelUpStat(EEldenStatType::Endurance);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("지구력 증가!"));
+}
+
+void AEldenCharacter::DebugLevelUpStrength()
+{
+	StatComponent->LevelUpStat(EEldenStatType::Strength);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("공격력 증가!"));
 }

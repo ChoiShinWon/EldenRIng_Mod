@@ -23,7 +23,12 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	class AEnemyAIController* EnemyController;
 	
+
+
 	// 몬스터의 시야(눈) 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category = "AI")
 	class UPawnSensingComponent* PawnSensingComp;
@@ -31,6 +36,9 @@ protected:
 	// 플레이어를 감지했는지 여부
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
 	bool bHasAggro = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	bool bHasRoared = false;
 
 	// 몬스터의 최대 체력과 현재 체력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
@@ -51,6 +59,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* AggroMontage;
+
+	
 
 	// 현재 타겟으로 삼고 있는 플레이어 폰
 	UPROPERTY()
@@ -79,11 +89,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	UEldenHitboxComponent* LeftHandHitbox;
 
-
-
-	
+	/*=============================================================================
+	 * 룬 보상 시스템
+	 *=============================================================================*/
+	// 몬스터 잡았을 때 플레이어에게 줄 룬의 양
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
+	int32 RuneReward = 100;
 	
 public:	
+	// AI가 몬스터에 빙의할 때 엔진이 자동으로 호출해 주는 함수
+	virtual void PossessedBy(AController* NewController) override;
 
 	// 시야에 플레이어가 들어왔을 때 호출되는 함수
 	UFUNCTION()
@@ -98,7 +113,8 @@ public:
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE bool GetIsDead() const { return bIsDead; }
 
-	
+	// 어그로 종료 함수
+	void ResetAggro();
 
 	// 어그로 애니메이션이 끝났을 때 호출되는 함수 
 	UFUNCTION()

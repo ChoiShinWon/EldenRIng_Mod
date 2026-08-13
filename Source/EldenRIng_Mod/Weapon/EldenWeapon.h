@@ -21,12 +21,9 @@ public:
 	void ClearHitActors() {AlreadyHitActors.Empty();}
 
 	/*=============================================================================
-	 * [미션 1] Anim Notify State에서 무기 판정을 켜고 끌 스위치 함수 선언하기
+	 *  Anim Notify State에서 무기 판정을 켜고 끌 스위치 함수 선언하기
 	 *=============================================================================*/
-	 // 힌트 1: 나중에 만들 'AnimNotifyState' 클래스에서 이 무기를 꺼내서 호출해야 합니다. 
-	 // 그렇다면 이 함수들은 public에 있어야 할까요, protected에 있어야 할까요?
-	 // 
-	 // [여기에 콜리전 켜기 함수 선언] (예: void EnableWeaponCollision(); )
+	 // [여기에 콜리전 켜기 함수 선언] 
 	 // [여기에 콜리전 끄기 함수 선언]
 	void EnableWeaponCollision();
 	void DisableWeaponCollision();
@@ -38,6 +35,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UStaticMeshComponent* WeaponMesh;
 	
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+	float BaseDamage = 20.0f;
+
 	// 칼날에 씌울 충돌체
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	class UBoxComponent* WeaponBox;

@@ -2,6 +2,8 @@
 
 
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
+#include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -81,11 +83,24 @@ void AEldenWeapon::OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor
 		{
 			UGameplayStatics::PlaySoundAtLocation(this, HitSound, HitLocation);
 		}
+
+		// 무기 고유 기본 데미지
+		float FinalDamage = BaseDamage;
+
+		// 여기에 캐릭터의 스탯에 접근해서 AttackPower를 가져와 최종 데미지를 계산
+		if (AEldenCharacter* MyOwner = Cast<AEldenCharacter>(GetOwner()))
+		{
+			if (UEldenStatComponent* OwnerStats = MyOwner->StatComponent)
+			{
+				FinalDamage += OwnerStats->AttackPower;
+			}
+		}
+
 		
 		// 데미지 전달
-		UGameplayStatics::ApplyDamage(OtherActor, 25.0f, GetInstigatorController(), this, UDamageType::StaticClass());
+		UGameplayStatics::ApplyDamage(OtherActor, FinalDamage, GetInstigatorController(), this, UDamageType::StaticClass());
 		// 일단 데미지 로그 띄워놓기 나중엔 여기에 데미지를 줌
-		UE_LOG(LogTemp, Warning, TEXT("때렸다! 맞은 액터 : %s"), *OtherActor->GetName());
+		UE_LOG(LogTemp, Warning, TEXT("때렸다! 맞은 액터: %s / 최종 데미지: %f"), *OtherActor->GetName(), FinalDamage);
 	}
 }
 
