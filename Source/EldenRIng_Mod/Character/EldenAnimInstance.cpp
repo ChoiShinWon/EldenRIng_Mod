@@ -47,7 +47,7 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 
 		if (EldenCharacter->CombatComponent)
 		{
-			bIsAttacking = EldenCharacter->CombatComponent->bIsAttacking;
+			bIsAttacking = EldenCharacter->GetState() == ECharacterState::Attacking;
 		}
 	}
 }

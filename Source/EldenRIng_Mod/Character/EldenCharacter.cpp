@@ -205,9 +205,12 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 // 이동 및 회전 로직
 void AEldenCharacter::Move(const FInputActionValue& Value)
 {
-	if (GetState() != ECharacterState::Idle) return;
-
 	FVector2D MovementVector = Value.Get<FVector2D>();
+
+	LastMoveInput = MovementVector;
+
+	if (GetState() != ECharacterState::Idle) return;
+	
 	
 	if (Controller != nullptr)
 	{
@@ -255,22 +258,26 @@ void AEldenCharacter::ToggleLockOn()
 
 void AEldenCharacter::Dodge()
 {
-	if (GetState() != ECharacterState::Idle || StatComponent->CurrentStamina < DodgeStaminaCost) return;
+	// 스태미너가 부족거나 이미 구르는 중이라면 무시
+	if (StatComponent->CurrentStamina < DodgeStaminaCost || GetState() == ECharacterState::Rolling) return;
 
+	if (GetState() == ECharacterState::Attacking)
+	{
+		bDodgeQueued = true;
+		if (CombatComponent)
+		{
+			CombatComponent->bComboQueued = false;
+			CombatComponent->ComboCount = 0;
+		}
+		return;
+	}
+
+	// Idle일 때 즉시 구르기 실행
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && RollMontage)
 	{
 		//스태미너 소모 함수 호출
 		StatComponent->ConsumeStamina(DodgeStaminaCost);
-		
-		if (CombatComponent->bIsAttacking)
-		{
-			AnimInstance->Montage_Stop(0.1f);
-			CombatComponent->bIsAttacking = false;
-			CombatComponent->bComboQueued = false;
-			CombatComponent->ComboCount = 0;
-		}
-
 		SetState(ECharacterState::Rolling);
 
 		
@@ -283,10 +290,23 @@ void AEldenCharacter::Dodge()
 		// 현재 캐릭터가 이동 중이던 방향(속도)을 가져옵니다. (WASD를 누르고 있으면 그 방향이 됨)
 		FVector DodgeDir = GetVelocity().GetSafeNormal();
 
+
 		//만약 제자리에 서서 구르기만 눌렀다면?
-		if (DodgeDir.IsNearlyZero())
+		if (DodgeDir.IsNearlyZero() && !LastMoveInput.IsNearlyZero())
 		{
-			DodgeDir = GetActorForwardVector(); 
+			if (Controller != nullptr)
+			{
+				const FRotator Rotation = Controller->GetControlRotation();
+				const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+				const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+				const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+				DodgeDir = (ForwardDirection * LastMoveInput.Y + RightDirection * LastMoveInput.X).GetSafeNormal();
+			}
+		}
+		else if (DodgeDir.IsNearlyZero() && LastMoveInput.IsNearlyZero())
+		{
+			DodgeDir = GetActorForwardVector();
 		}
 
 		// 구를 방향으로 회전값 계산
@@ -294,7 +314,7 @@ void AEldenCharacter::Dodge()
 		DodgeRotation.Pitch = 0.0f; // 바닥으로 처박히는 것 방지
 		DodgeRotation.Roll = 0.0f;
 
-		// 캐릭터 몸통을 즉시 강제로 돌려버림! (TeleportPhysics를 넣어서 물리 충돌 무시하고 즉시 휙 돌림)
+		// 캐릭터 몸통을 즉시 강제로 돌려버림!
 		SetActorRotation(DodgeRotation, ETeleportType::TeleportPhysics);
 
 		// 몽타주 재생
@@ -380,12 +400,8 @@ void AEldenCharacter::Attack()
 	
 	if (CombatComponent)
 	{
-		if (GetState() == ECharacterState::Idle)
-		{
-			SetState(ECharacterState::Attacking);
-		}
+		
 		CombatComponent->ExecuteAttack();
-
 	}
 
 }
