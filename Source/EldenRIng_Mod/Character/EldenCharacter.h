@@ -23,6 +23,7 @@ enum class ECharacterState : uint8
     Attacking UMETA(DisplayName = "Attacking"),
 	Rolling UMETA(DisplayName = "Rolling"),
 	Blocking UMETA(DisplayName = "Blocking"),
+	Parrying UMETA(DisplayName = "Parrying"),
 	Dead UMETA(DisplayName = "Dead"),
 	Interacting UMETA(DisplayName = "Interact")
 };
@@ -89,7 +90,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputAction* BlockAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* ParryAction;
+
 	void StartBlock();
+	void StopBlock(); // 가드를 뗄 때 처리용
+	void StartParry(); // 패리 시도용
 	
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LockOn")
@@ -178,6 +184,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|State")
 	bool bIsInvincible = false;
 
+	// 역경직을 관리할 타이머 핸들
+	FTimerHandle HitStopTimerHandle;
+
+	// 느려진 시간을 다시 원상 복구 시키는 함수
+	void ResetTimeDilation();
 public:
 	AEldenCharacter();
 
@@ -226,4 +237,16 @@ public:
 	void DebugLevelUpVigor();
 	void DebugLevelUpEndurance();
 	void DebugLevelUpStrength();
+
+	// 애니메이션 노티파이 (AN_ParryCheck)에서 호출할 패링 검사 함수
+	void ParryCheck();
+
+	/*=============================================================================
+	 * 퍼펙트 패리 전용 이펙트 & 사운드
+	 *=============================================================================*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
+	class UParticleSystem* ParryVFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
+	class USoundBase* ParrySound;
 };

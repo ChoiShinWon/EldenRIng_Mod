@@ -124,6 +124,41 @@ void UEldenCombatComponent::CheckComboQueue()
     }
 }
 
+void UEldenCombatComponent::ExecuteBlock()
+{
+    if (!PlayerCharacter || !CachedAnimInstance) return;
+
+    // 공격 중이거나 구르는 중이 아니면 가드 자세 진입 허용
+    if (PlayerCharacter->GetState() == ECharacterState::Idle)
+    {
+        PlayerCharacter->SetState(ECharacterState::Blocking);
+
+        // 필요하다면 방패 방어 히트박스 켜기
+        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
+        {
+            Shield->EnableShieldBlock();
+        }
+
+        // TODO: 방패를 들고 서 있는 루프 애니메이션 또는 블렌드 포즈 적용
+    }
+}
+
+void UEldenCombatComponent::EndBlock()
+{
+    if (!PlayerCharacter) return;
+
+    // 가드 상태일 때만 해제 가능
+    if (PlayerCharacter->GetState() == ECharacterState::Blocking)
+    {
+        PlayerCharacter->SetState(ECharacterState::Idle);
+
+        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
+        {
+            Shield->DisableShieldBlock();
+        }
+    }
+}
+
 void UEldenCombatComponent::ExecuteParry()
 {
     if (!PlayerCharacter || !CachedAnimInstance) return;
@@ -135,12 +170,9 @@ void UEldenCombatComponent::ExecuteParry()
         {
             return;
         }
-        PlayerCharacter->SetState(ECharacterState::Blocking);
+
+        PlayerCharacter->SetState(ECharacterState::Parrying);
        
-        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
-        {
-            Shield->EnableShieldBlock();
-        }
 
         if (BlockMontage)
         {
@@ -157,11 +189,6 @@ void UEldenCombatComponent::OnParryMontageEnded(UAnimMontage* Montage, bool bInt
 {
     if (PlayerCharacter)
     {
-        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
-        {
-            Shield->DisableShieldBlock();
-        }
-
         // 상태를 다시 평소(Idle)로 복구
         PlayerCharacter->SetState(ECharacterState::Idle);
     }

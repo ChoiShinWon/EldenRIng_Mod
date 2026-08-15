@@ -46,8 +46,9 @@ public:
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	void ExecuteBlock();
+	void EndBlock();
 
-	// Shift 키를 누를때와 뗄 때 실행될 함수
 	void ExecuteParry();
 
 	UFUNCTION(BlueprintCallable, Category = "Combat")

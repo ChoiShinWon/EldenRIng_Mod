@@ -10,7 +10,7 @@
 #include "Components/WidgetComponent.h"
 #include "Components/BoxComponent.h"
 #include "AIController.h"
-
+#include "AITypes.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include <Kismet/GameplayStatics.h>
@@ -305,6 +305,7 @@ void AEldenEnemy::ApplyStun()
 		if (StunMontage)
 		{
 			AnimInstance->Montage_Play(StunMontage);
+
 			FOnMontageEnded EndDelegate;
 			EndDelegate.BindUObject(this, &AEldenEnemy::OnStunMontageEnded);
 			AnimInstance->Montage_SetEndDelegate(EndDelegate, StunMontage);
@@ -316,6 +317,9 @@ void AEldenEnemy::ApplyStun()
 
 	if (EnemyController)
 	{
+		EnemyController->StopMovement();
+		EnemyController->ClearFocus(2);
+		EnemyController->ClearFocus(0);
 		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
 		{
 			BB->SetValueAsBool(FName("Stunned"), true);
