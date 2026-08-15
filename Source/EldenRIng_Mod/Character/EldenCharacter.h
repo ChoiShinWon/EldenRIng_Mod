@@ -22,6 +22,7 @@ enum class ECharacterState : uint8
 	Idle UMETA(DisplayName = "Idle"),
     Attacking UMETA(DisplayName = "Attacking"),
 	Rolling UMETA(DisplayName = "Rolling"),
+	Blocking UMETA(DisplayName = "Blocking"),
 	Dead UMETA(DisplayName = "Dead"),
 	Interacting UMETA(DisplayName = "Interact")
 };
@@ -85,6 +86,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputAction* AttackAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* BlockAction;
+
+	void StartBlock();
+	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LockOn")
 	class UInputAction* LockOnAction;
 
@@ -108,7 +115,7 @@ protected:
 	FVector2D LastMoveInput;
 	
 	/*=============================================================================
-	 * Weapon (무기 시스템)
+	 * Weapon & Shield
 	 *=============================================================================*/
     // 에디터에서 장착할 무기 클래스
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -117,6 +124,13 @@ protected:
 	// 실제로 월드에 스폰되어 내 손에 들려있는 무기를 가리키는 포인터
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	class AEldenWeapon* EquippedWeapon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shield")
+	TSubclassOf<class AEldenShield> ShieldClass;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Shield")
+	class AEldenShield* EquippedShield;
+
+	
 	
 	/*=============================================================================
 	 * 공격 시스템 (Combat)
@@ -184,6 +198,8 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class ULockOnComponent* LockOnComponent;
+
+	
 	
 	// 캐릭터가 장착 중인 무기를 반환하는 함수
 	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon ;}
@@ -193,10 +209,11 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	
+	FORCEINLINE class AEldenShield* GetEquippedShield() const { return EquippedShield ;}
 	
 	FORCEINLINE bool GetIsDead() const { return GetState() == ECharacterState::Dead; }
 
+	bool bShieldBlockedAttack = false;
 
 	bool GetIsLockedOn() const;
 	// 기본 데미지 처리 함수 오버라이드

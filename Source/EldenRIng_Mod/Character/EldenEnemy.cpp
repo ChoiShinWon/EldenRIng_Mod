@@ -10,6 +10,7 @@
 #include "Components/WidgetComponent.h"
 #include "Components/BoxComponent.h"
 #include "AIController.h"
+
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include <Kismet/GameplayStatics.h>
@@ -121,7 +122,7 @@ void AEldenEnemy::OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 void AEldenEnemy::PlayAttackMontage()
 {
 	// 공격 애니메이션 재생 함수. 공격 중이거나 죽은 상태라면 재생하지 않음.
-	if (bIsAttacking || bIsDead) return;
+	if (bIsAttacking || bIsDead || bIsStunned) return;
 	
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -261,7 +262,7 @@ void AEldenEnemy::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	GetCharacterMovement()->StopMovementImmediately();
 	GetMesh()->bPauseAnims = true;
 
-	// 2. 메시(시체)의 콜리전을 극한으로 통제하기
+	// 2. 메시(시체)의 콜리전 통제하기
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
 
@@ -276,6 +277,64 @@ void AEldenEnemy::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 
 	// 4. 삭제
 	SetLifeSpan(5.0f);
+}
+
+void AEldenEnemy::EnableParryWindow()
+{
+	bIsParryable = true;
+}
+
+void AEldenEnemy::DisableParryWindow()
+{
+	bIsParryable = false;
+}
+
+void AEldenEnemy::ApplyStun()
+{
+	if (bIsDead || bIsStunned) return;
+
+	bIsStunned = true;
+	bIsAttacking = false;
+	bIsParryable = false;
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance)
+	{
+		AnimInstance->StopAllMontages(0.1f);
+
+		if (StunMontage)
+		{
+			AnimInstance->Montage_Play(StunMontage);
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &AEldenEnemy::OnStunMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, StunMontage);
+		}
+		
+	}
+
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+
+	if (EnemyController)
+	{
+		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
+		{
+			BB->SetValueAsBool(FName("Stunned"), true);
+		}
+	}
+}
+
+void AEldenEnemy::OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	bIsStunned = false;
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+
+	if (EnemyController)
+	{
+		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
+		{
+			BB->SetValueAsBool(FName("Stunned"), false);
+		}
+	}
 }
 
 bool AEldenEnemy::IsTargetable() const

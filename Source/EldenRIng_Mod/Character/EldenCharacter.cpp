@@ -11,6 +11,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
+#include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Widget/EldenHUDWidget.h"
 #include "EldenRing_Mod/StatUtils.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
@@ -100,6 +101,27 @@ void AEldenCharacter::BeginPlay()
 			EquippedWeapon->AttachToComponent(GetMesh(), AttachmentRules, FName("RightHandSocket"));
 		}
 	}
+
+	if (ShieldClass != nullptr)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = GetInstigator();
+
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		EquippedShield = GetWorld()->SpawnActor<AEldenShield>(ShieldClass,
+			GetActorLocation(), GetActorRotation(), SpawnParams);
+
+		if (EquippedShield != nullptr)
+		{
+			FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+
+			EquippedShield->AttachToComponent(GetMesh(), AttachmentRules, FName("LeftHandSocket"));
+		}
+	}
+
+
 	// 초기 룬 테스트 세팅
 	if (StatComponent)
 	{
@@ -171,6 +193,11 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		{
 			EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AEldenCharacter::Attack);
 		}
+		if (BlockAction)
+		{
+			EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Started, this, &AEldenCharacter::StartBlock);
+			
+		}
 		if (SprintAction)
 		{
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this , &AEldenCharacter::StartSprint);
@@ -201,6 +228,16 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	}
 
 }
+
+void AEldenCharacter::StartBlock()
+{
+
+	if (CombatComponent)
+	{
+		CombatComponent->ExecuteParry();
+	}
+}
+
 
 // 이동 및 회전 로직
 void AEldenCharacter::Move(const FInputActionValue& Value)
