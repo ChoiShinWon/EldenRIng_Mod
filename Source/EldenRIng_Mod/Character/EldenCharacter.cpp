@@ -403,6 +403,14 @@ void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupte
 	}
 }
 
+void AEldenCharacter::OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (GetState() == ECharacterState::Damaged)
+	{
+		SetState(ECharacterState::Idle);
+	}
+}
+
 float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (GetState() == ECharacterState::Dead) return 0.0f;
@@ -435,7 +443,7 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 			}
 			else if (StatComponent)
 			{
-				// 🔴 가드 붕괴(Guard Break): 스태미나가 0이 되며 가드가 강제로 풀림
+				// 가드 붕괴(Guard Break): 스태미나가 0이 되며 가드가 강제로 풀림
 				StatComponent->CurrentStamina = 0.0f;
 				SetState(ECharacterState::Idle); // 가드 해제
 				if (EquippedShield) EquippedShield->DisableShieldBlock(); // 방패 박스도 끄기
@@ -456,6 +464,27 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 		{
 			SetState(ECharacterState::Dead);
 			UE_LOG(LogTemp, Warning, TEXT("죽었다!"));
+		}
+		else if (ActualDamage > 0.0f)
+		{
+			SetState(ECharacterState::Damaged);
+			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+			if (AnimInstance)
+			{
+				if (HitReactMontage)
+				{
+					AnimInstance->Montage_Play(HitReactMontage);
+
+					FOnMontageEnded HitEndDelegate;
+					HitEndDelegate.BindUObject(this, &AEldenCharacter::OnHitReactMontageEnded);
+					AnimInstance->Montage_SetEndDelegate(HitEndDelegate, HitReactMontage);
+				}
+				else
+				{
+					AnimInstance->StopAllMontages(0.1f);
+				}
+			
+			}
 		}
 	}
 

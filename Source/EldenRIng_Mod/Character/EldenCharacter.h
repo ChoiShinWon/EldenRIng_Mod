@@ -25,7 +25,8 @@ enum class ECharacterState : uint8
 	Blocking UMETA(DisplayName = "Blocking"),
 	Parrying UMETA(DisplayName = "Parrying"),
 	Dead UMETA(DisplayName = "Dead"),
-	Interacting UMETA(DisplayName = "Interact")
+	Interacting UMETA(DisplayName = "Interact"),
+	Damaged UMETA(DisplayName = "Damaged")
 };
 
 UCLASS()
@@ -133,6 +134,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shield")
 	TSubclassOf<class AEldenShield> ShieldClass;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Shield")
 	class AEldenShield* EquippedShield;
 
@@ -142,6 +144,8 @@ protected:
 	 * 공격 시스템 (Combat)
 	 *=============================================================================*/
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	class UAnimMontage* HitReactMontage;
 	
 	// 마우스 클릭시 실행할 함수
 	void Attack();
@@ -149,7 +153,8 @@ protected:
 	UFUNCTION()
 	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	
+	UFUNCTION()
+	void OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 
 protected:

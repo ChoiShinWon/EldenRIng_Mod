@@ -31,6 +31,9 @@ void UEldenHitboxComponent::OnHitboxOverlap(UPrimitiveComponent* OverlapComponen
 {
 	if (OtherActor == nullptr) return;
 
+	// 내 주인이 방패라면 데미지를 주지 않고 함수 종료
+	if (Cast<AEldenShield>(GetOwner())) return;
+
 	// 1. 방패의 물리 히트박스에 닿는 건 쿨하게 무시합니다. (플레이어 몸통을 때리게 냅둠)
 	if (Cast<AEldenShield>(OtherActor)) return;
 

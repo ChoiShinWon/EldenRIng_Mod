@@ -176,7 +176,7 @@ float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 		Die();
 
 	}
-	else if (HitReactMontage && !bIsAttacking)
+	else if (HitReactMontage && !bIsAttacking && !bIsStunned)
 	{
 		// 맞는 모션 재생
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -209,6 +209,9 @@ void AEldenEnemy::Die()
 {
 	if (bIsDead) return; 
 	bIsDead = true;
+
+	DisableRightAttackCollision();
+	DisableLeftAttackCollision();
 
 	if (EnemyController)
 	{
@@ -256,24 +259,24 @@ void AEldenEnemy::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	// 1. 캡슐 끄기 
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 
 	GetCharacterMovement()->DisableMovement();
 	GetCharacterMovement()->StopMovementImmediately();
-	GetMesh()->bPauseAnims = true;
+	/*GetMesh()->bPauseAnims = true;*/
 
-	// 2. 메시(시체)의 콜리전 통제하기
+	if (RightHandHitbox) RightHandHitbox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (LeftHandHitbox) LeftHandHitbox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	GetMesh()->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
 
-	// 시체는 무조건 바닥(WorldStatic)과 움직이는 배경(WorldDynamic)만 부딪히게 설정
-	GetMesh()->SetCollisionResponseToAllChannels(ECR_Ignore); // 일단 모든 충돌을 끔
-	GetMesh()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block); // 바닥/벽은 막음
-	GetMesh()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block); // 움직이는 물체 막음
-	// (Pawn 채널은 Ignore 상태이므로 플레이어와 겹쳐도 날아가지 않음)
 
 	// 3. 래그돌 켜기
 	GetMesh()->SetSimulatePhysics(true);
+
+	
 
 	// 4. 삭제
 	SetLifeSpan(5.0f);
