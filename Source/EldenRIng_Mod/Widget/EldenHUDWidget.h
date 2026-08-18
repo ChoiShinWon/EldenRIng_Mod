@@ -4,12 +4,18 @@
 #include "Blueprint/UserWidget.h"
 #include "EldenHUDWidget.generated.h"
 
+
 class UProgressBar;
 class UTextBlock;
+class UImage;
+class UTexture2D;
+
 UCLASS()
 class ELDENRING_MOD_API UEldenHUDWidget : public UUserWidget
 {
 	GENERATED_BODY()
+public:
+	void UpdateEquipmentUI(UTexture2D* RTexture, UTexture2D* LTexture, UTexture2D* ItemTexture, const FString& SkillName);
 
 protected:
 	// 위젯이 화면에 생성될 때 한번 호출되는 함수
@@ -30,6 +36,21 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* RuneText;
+
+	UPROPERTY(meta = (BindWidget))
+	class UImage* RightIcon;
+
+	UPROPERTY(meta = (BindWidget))
+	class UImage* LeftIcon;
+
+	UPROPERTY(meta = (BindWidget))
+	class UImage* ItemIcon;
+
+	UPROPERTY(meta = (BindWidget))
+	class UImage* MagicIcon;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* CombatSkillText;
 
 	UFUNCTION()
 	void OnRunesUpdated(int32 NewRunes);

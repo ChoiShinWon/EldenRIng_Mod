@@ -32,7 +32,14 @@ protected:
 	// 무기 외형 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UStaticMeshComponent* WeaponMesh;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	class UTexture2D* ItemIcon;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	FString SkillName;
 	
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
 	float BaseDamage = 20.0f;
@@ -41,5 +48,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	class UEldenHitboxComponent* WeaponHitbox;
 	
-	
+public:
+	FORCEINLINE class UTexture2D* GetIcon() const { return ItemIcon; }
+	FORCEINLINE const FString& GetSkillName() const { return SkillName; }
 };

@@ -136,6 +136,21 @@ void AEldenCharacter::BeginPlay()
 		if (CurrentHUD)
 		{
 			CurrentHUD->AddToViewport();
+			UTexture2D* WeaponTexture = nullptr;
+			UTexture2D* ShieldTexture = nullptr;
+			FString CurrentSkillName = TEXT("");
+
+			if (EquippedWeapon)
+			{
+				WeaponTexture = EquippedWeapon->GetIcon();
+				CurrentSkillName = EquippedWeapon->GetSkillName();
+			}
+			if (EquippedShield)
+			{
+				ShieldTexture = EquippedShield->GetIcon();
+				CurrentSkillName = EquippedShield->GetSkillName();
+			}
+			CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture, nullptr, CurrentSkillName);
 		}
 	}
 
