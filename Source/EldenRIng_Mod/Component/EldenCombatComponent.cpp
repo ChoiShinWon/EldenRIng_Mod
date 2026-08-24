@@ -174,13 +174,13 @@ void UEldenCombatComponent::ExecuteParry()
         PlayerCharacter->SetState(ECharacterState::Parrying);
        
 
-        if (BlockMontage)
+        if (ParryMontage)
         {
-            CachedAnimInstance->Montage_Play(BlockMontage, 1.0f);
+            CachedAnimInstance->Montage_Play(ParryMontage, 1.0f);
             
             FOnMontageEnded ParryEndDelegate;
             ParryEndDelegate.BindUObject(this, &UEldenCombatComponent::OnParryMontageEnded);
-            CachedAnimInstance->Montage_SetEndDelegate(ParryEndDelegate, BlockMontage);
+            CachedAnimInstance->Montage_SetEndDelegate(ParryEndDelegate, ParryMontage);
         }
     }
 }

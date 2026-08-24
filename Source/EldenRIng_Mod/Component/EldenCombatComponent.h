@@ -27,7 +27,7 @@ public:
 	TArray<UAnimMontage*> ComboMontages;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
-	class UAnimMontage* BlockMontage;
+	class UAnimMontage* ParryMontage;
 
 	// 현재 콤보 번호
 	int32 ComboCount = 0;
