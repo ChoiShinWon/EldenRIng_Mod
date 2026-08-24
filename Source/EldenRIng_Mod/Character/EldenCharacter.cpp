@@ -11,6 +11,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
+#include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Widget/EldenHUDWidget.h"
 #include "EldenRing_Mod/StatUtils.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
@@ -100,6 +101,27 @@ void AEldenCharacter::BeginPlay()
 			EquippedWeapon->AttachToComponent(GetMesh(), AttachmentRules, FName("RightHandSocket"));
 		}
 	}
+
+	if (ShieldClass != nullptr)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = GetInstigator();
+
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		EquippedShield = GetWorld()->SpawnActor<AEldenShield>(ShieldClass,
+			GetActorLocation(), GetActorRotation(), SpawnParams);
+
+		if (EquippedShield != nullptr)
+		{
+			FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+
+			EquippedShield->AttachToComponent(GetMesh(), AttachmentRules, FName("LeftHandSocket"));
+		}
+	}
+
+
 	// 초기 룬 테스트 세팅
 	if (StatComponent)
 	{
@@ -114,6 +136,21 @@ void AEldenCharacter::BeginPlay()
 		if (CurrentHUD)
 		{
 			CurrentHUD->AddToViewport();
+			UTexture2D* WeaponTexture = nullptr;
+			UTexture2D* ShieldTexture = nullptr;
+			FString CurrentSkillName = TEXT("");
+
+			if (EquippedWeapon)
+			{
+				WeaponTexture = EquippedWeapon->GetIcon();
+				CurrentSkillName = EquippedWeapon->GetSkillName();
+			}
+			if (EquippedShield)
+			{
+				ShieldTexture = EquippedShield->GetIcon();
+				CurrentSkillName = EquippedShield->GetSkillName();
+			}
+			CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture, nullptr, CurrentSkillName);
 		}
 	}
 
@@ -171,6 +208,16 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		{
 			EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AEldenCharacter::Attack);
 		}
+		if (BlockAction)
+		{
+			EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Started, this, &AEldenCharacter::StartBlock);
+			EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Completed, this, &AEldenCharacter::StopBlock);
+		}
+		if (ParryAction)
+		{
+			
+			EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Started, this, &AEldenCharacter::StartParry);
+		}
 		if (SprintAction)
 		{
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this , &AEldenCharacter::StartSprint);
@@ -202,6 +249,31 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 }
 
+void AEldenCharacter::StartBlock()
+{
+
+	if (CombatComponent)
+	{
+		CombatComponent->ExecuteBlock();
+	}
+}
+
+void AEldenCharacter::StopBlock()
+{
+	if (CombatComponent)
+	{
+		CombatComponent->EndBlock(); // 가드 해제 함수
+	}
+}
+
+void AEldenCharacter::StartParry()
+{
+	if (CombatComponent)
+	{
+		CombatComponent->ExecuteParry(); 
+	}
+}
+
 // 이동 및 회전 로직
 void AEldenCharacter::Move(const FInputActionValue& Value)
 {
@@ -209,7 +281,7 @@ void AEldenCharacter::Move(const FInputActionValue& Value)
 
 	LastMoveInput = MovementVector;
 
-	if (GetState() != ECharacterState::Idle) return;
+	if (GetState() != ECharacterState::Idle && GetState() != ECharacterState::Blocking) return;
 	
 	
 	if (Controller != nullptr)
@@ -346,33 +418,91 @@ void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupte
 	}
 }
 
+void AEldenCharacter::OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (GetState() == ECharacterState::Damaged)
+	{
+		SetState(ECharacterState::Idle);
+	}
+}
+
 float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (GetState() == ECharacterState::Dead) return 0.0f;
-
-	if (bIsInvincible)
-	{
-		return 0.0f;
-	}
-
-
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-
-	// 템플릿 사용해서 체력깎기
-	StatComponent->ApplyDamage(ActualDamage);
-
-	float LeftHealth = StatComponent->GetCurrentHealth();
-	UE_LOG(LogTemp, Warning, TEXT("데미지 입음! 남은 체력 : %f"), LeftHealth);
-
+	bShieldBlockedAttack = false;
 	
-	if (LeftHealth <= 0.0f)
-	{
-		SetState(ECharacterState::Dead);
-		UE_LOG(LogTemp, Warning, TEXT("죽었다!"));
-		// 추후에 사망 애니메이션 추가
 
-		
+	// 가드 상태이고 공격자가 있을 때만 각도 계산
+	if (GetState() == ECharacterState::Blocking && DamageCauser != nullptr)
+	{
+		// 적중 방향 계산 (적 -> 나)
+		FVector DamageDir = (DamageCauser->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+		// 캐릭터 정면 벡터와 내적 (180도 이내면 양수)
+		float DotToEnemy = FVector::DotProduct(GetActorForwardVector(), DamageDir);
+
+		// 정면에서 날아온 공격만 방어 성공 (뒤통수 맞으면 가드 무효)
+		if (DotToEnemy > 0.0f)
+		{
+			// 방어 시 소모할 스태미나 양 (기획에 따라 공격력의 50%로 설정)
+			float StaminaCost = DamageAmount * 0.5f;
+
+			if (StatComponent && StatComponent->CurrentStamina >= StaminaCost)
+			{
+				//  방어 성공: 스태미나만 깎이고 데미지는 0
+				StatComponent->ConsumeStamina(StaminaCost);
+				ActualDamage = 0.0f;
+				bShieldBlockedAttack = true; // 무기에게 "방어 성공함" 신호를 보냄!
+
+				UE_LOG(LogTemp, Warning, TEXT("🛡 가드 성공! 데미지 0, 스태미나 소모: %f"), StaminaCost);
+			}
+			else if (StatComponent)
+			{
+				// 가드 붕괴(Guard Break): 스태미나가 0이 되며 가드가 강제로 풀림
+				StatComponent->CurrentStamina = 0.0f;
+				SetState(ECharacterState::Idle); // 가드 해제
+				if (EquippedShield) EquippedShield->DisableShieldBlock(); // 방패 박스도 끄기
+
+				UE_LOG(LogTemp, Error, TEXT(" 가드 붕괴! 데미지 100%% 관통!"));
+			}
+		}
 	}
+
+	// 계산된 데미지 적용 (방어에 성공했다면 ActualDamage가 0이므로 체력 안 깎임)
+	if (StatComponent)
+	{
+		StatComponent->ApplyDamage(ActualDamage);
+		float LeftHealth = StatComponent->GetCurrentHealth();
+		UE_LOG(LogTemp, Warning, TEXT("데미지 적용됨! 남은 체력 : %f"), LeftHealth);
+
+		if (LeftHealth <= 0.0f)
+		{
+			SetState(ECharacterState::Dead);
+			UE_LOG(LogTemp, Warning, TEXT("죽었다!"));
+		}
+		else if (ActualDamage > 0.0f)
+		{
+			SetState(ECharacterState::Damaged);
+			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+			if (AnimInstance)
+			{
+				if (HitReactMontage)
+				{
+					AnimInstance->Montage_Play(HitReactMontage);
+
+					FOnMontageEnded HitEndDelegate;
+					HitEndDelegate.BindUObject(this, &AEldenCharacter::OnHitReactMontageEnded);
+					AnimInstance->Montage_SetEndDelegate(HitEndDelegate, HitReactMontage);
+				}
+				else
+				{
+					AnimInstance->StopAllMontages(0.1f);
+				}
+			
+			}
+		}
+	}
+
 	return ActualDamage;
 }
 
@@ -434,4 +564,81 @@ void AEldenCharacter::DebugLevelUpStrength()
 {
 	StatComponent->LevelUpStat(EEldenStatType::Strength);
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("공격력 증가!"));
+}
+
+void AEldenCharacter::ParryCheck()
+{
+	// 현재 상태가 패링 시도중일 때만 작동
+	if (GetState() != ECharacterState::Parrying) return;
+
+	TArray<FHitResult> HitResults;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(Parry), false, this);
+
+	// 전방 스윕 거리와 구체 두께 (무기 길이 맞춰서 조절 가능)
+	const float ParryRange = 200.f;
+	const float ParryRadius = 80.0f;
+
+	const FVector Start = GetActorLocation();
+	const FVector End = Start + GetActorForwardVector() * ParryRange;
+
+	// 내 캐릭터 앞쪽으로 구체를 쏴서 적이 있는지 검사
+	bool bHit = GetWorld()->SweepMultiByChannel(
+		HitResults, Start, End, FQuat::Identity,
+		ECollisionChannel::ECC_Pawn,
+		FCollisionShape::MakeSphere(ParryRadius),
+		Params);
+
+	if (!bHit) return;
+
+	for (const FHitResult& Result : HitResults)
+	{
+		if (AEldenEnemy* Enemy = Cast<AEldenEnemy>(Result.GetActor()))
+		{
+			// 적이 패링 가능 상태 (ANS_ParryWindow 구간) 인가?
+			if (!Enemy->bIsParryable) continue;
+
+			// 적이 내 정면에 있는가
+			FVector DirToEnemy = (Enemy->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+			float DotToEnemy = FVector::DotProduct(GetActorForwardVector(), DirToEnemy);
+
+			// 적이 나를 마주보고 있나 (뒤통수 / 옆구리 패링 방지)
+			float DotFacing = FVector::DotProduct(GetActorForwardVector(), Enemy->GetActorForwardVector());
+
+			// 적이 정면에 있고, 서로 마주보고 있다면 패링 성공
+			if (DotToEnemy > 0.0f && DotFacing < 0.0f)
+			{
+				Enemy->ApplyStun();
+
+				if (ParryVFX)
+				{
+					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParryVFX, Enemy->GetActorLocation());
+				}
+				if (ParrySound)
+				{
+					UGameplayStatics::PlaySoundAtLocation(GetWorld(), ParrySound, Enemy->GetActorLocation());
+				}
+
+				if (GEngine)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("패링 성공! 적 스턴!"));
+				}
+
+				
+
+				// 타격감을 위한 0.1초 멈춤 효과(역경직)
+				UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
+
+				GetWorld()->GetTimerManager().SetTimer(HitStopTimerHandle, this,
+					&AEldenCharacter::ResetTimeDilation, 0.01f, false);
+				break;
+			}
+		}
+	}
+}
+
+// 시간을 원래대로 돌리는 함수 구현
+void AEldenCharacter::ResetTimeDilation()
+{
+	// 게임 전체 속도를 다시 1.0 (정상 속도)으로 롤백
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 }

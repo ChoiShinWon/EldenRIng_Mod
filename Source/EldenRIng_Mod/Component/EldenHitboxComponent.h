@@ -5,6 +5,7 @@
 #include "EldenHitboxComponent.generated.h"
 
 class UParticleSystem;
+class USoundBase;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ELDENRING_MOD_API UEldenHitboxComponent : public UBoxComponent
@@ -29,6 +30,19 @@ protected:
 	// 파티클 이펙트
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
 	UParticleSystem* HitVFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
+	UParticleSystem* GuardVFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
+	USoundBase* HitSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
+	USoundBase* GuardSound;
+
+
+	void PlayImpactEffects(UParticleSystem* VFX, USoundBase* Sound, const FVector& Location) const;
+
 public:
 	//  데미지 량을 외부에서 설정할 수 있게 열어둠. (주먹은 10, 보스 무기는 50 등)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")

@@ -26,6 +26,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	TArray<UAnimMontage*> ComboMontages;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+	class UAnimMontage* ParryMontage;
+
 	// 현재 콤보 번호
 	int32 ComboCount = 0;
 	// 다음 콤보가 예약되었는지 확인하는 플래그
@@ -43,7 +46,14 @@ public:
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	void ExecuteBlock();
+	void EndBlock();
 
+	void ExecuteParry();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void OnParryMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	
 private:
 
 	// 소유주인 캐릭터의 애니메이션 인스턴스를 캐싱하기 위한 변수

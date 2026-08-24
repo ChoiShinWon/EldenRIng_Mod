@@ -1,6 +1,7 @@
 #include "EldenHUDWidget.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
+#include "Components/Image.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h" 
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -72,3 +73,64 @@ void UEldenHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
     }
 }
 
+
+void UEldenHUDWidget::UpdateEquipmentUI(UTexture2D* RTexture, UTexture2D* LTexture, UTexture2D* ItemTexture, const FString& SkillName)
+{
+    if (RightIcon)
+    {
+        if (RTexture)
+        {
+            RightIcon->SetBrushFromTexture(RTexture);
+            RightIcon->SetVisibility(ESlateVisibility::Visible);
+        }
+        else
+        {
+            RightIcon->SetVisibility(ESlateVisibility::Hidden);
+        }
+    }
+
+    if (LeftIcon)
+    {
+        if (LTexture)
+        {
+            LeftIcon->SetBrushFromTexture(LTexture);
+            LeftIcon->SetVisibility(ESlateVisibility::Visible);
+        }
+        else
+        {
+            LeftIcon->SetVisibility(ESlateVisibility::Hidden);
+        }
+    }
+
+    if (ItemIcon)
+    {
+        if (ItemTexture)
+        {
+            ItemIcon->SetBrushFromTexture(ItemTexture);
+            ItemIcon->SetVisibility(ESlateVisibility::Visible);
+        }
+        else
+        {
+            ItemIcon->SetVisibility(ESlateVisibility::Hidden);
+        }
+    }
+
+    if (MagicIcon)
+    {
+        MagicIcon->SetVisibility(ESlateVisibility::Hidden);
+    }
+
+    if (CombatSkillText)
+    {
+        if (SkillName.IsEmpty())
+        {
+            CombatSkillText->SetVisibility(ESlateVisibility::Hidden);
+        }
+
+        else
+        {
+            CombatSkillText->SetText(FText::FromString(SkillName));
+            CombatSkillText->SetVisibility(ESlateVisibility::Visible);
+        }
+    }
+}

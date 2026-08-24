@@ -12,10 +12,15 @@ void UANS_WeaponCollision::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSe
 	// 1. 주인을 찾습니다.
 	if (AEldenCharacter* Character = Cast<AEldenCharacter>(MeshComp->GetOwner()))
 	{
-		if (AEldenWeapon* Weapon = Character->GetEquippedWeapon())
+		if(AEldenWeapon * Weapon = Character->GetEquippedWeapon())
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[1] 노티파이 실행: 무기 콜리전 ON 요청"));
 			Weapon->EnableWeaponCollision();
 		}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[1-에러] 캐릭터가 들고 있는 무기(EquippedWeapon)가 nullptr입니다!"));
+	}
 		
 	}
 	

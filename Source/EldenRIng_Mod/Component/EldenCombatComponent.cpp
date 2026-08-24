@@ -4,6 +4,7 @@
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "GameFramework/Character.h" 
 #include "Containers/Array.h"
+#include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 
 
@@ -44,7 +45,10 @@ void UEldenCombatComponent::OnAttackMontageEnded(UAnimMontage* Montage, bool bIn
     
     if (PlayerCharacter)
     {
-        PlayerCharacter->SetState(ECharacterState::Idle);
+        if (PlayerCharacter->GetState() == ECharacterState::Attacking)
+        {
+            PlayerCharacter->SetState(ECharacterState::Idle);
+        }
         if (PlayerCharacter->bDodgeQueued)
         {
             PlayerCharacter->bDodgeQueued = false;
@@ -117,5 +121,75 @@ void UEldenCombatComponent::CheckComboQueue()
 
            
         }
+    }
+}
+
+void UEldenCombatComponent::ExecuteBlock()
+{
+    if (!PlayerCharacter || !CachedAnimInstance) return;
+
+    // 공격 중이거나 구르는 중이 아니면 가드 자세 진입 허용
+    if (PlayerCharacter->GetState() == ECharacterState::Idle)
+    {
+        PlayerCharacter->SetState(ECharacterState::Blocking);
+
+        // 필요하다면 방패 방어 히트박스 켜기
+        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
+        {
+            Shield->EnableShieldBlock();
+        }
+
+        // TODO: 방패를 들고 서 있는 루프 애니메이션 또는 블렌드 포즈 적용
+    }
+}
+
+void UEldenCombatComponent::EndBlock()
+{
+    if (!PlayerCharacter) return;
+
+    // 가드 상태일 때만 해제 가능
+    if (PlayerCharacter->GetState() == ECharacterState::Blocking)
+    {
+        PlayerCharacter->SetState(ECharacterState::Idle);
+
+        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
+        {
+            Shield->DisableShieldBlock();
+        }
+    }
+}
+
+void UEldenCombatComponent::ExecuteParry()
+{
+    if (!PlayerCharacter || !CachedAnimInstance) return;
+    if (PlayerCharacter)
+    {
+        if (PlayerCharacter->GetState() == ECharacterState::Dead ||
+            PlayerCharacter->GetState() == ECharacterState::Rolling ||
+            PlayerCharacter->GetState() == ECharacterState::Blocking)
+        {
+            return;
+        }
+
+        PlayerCharacter->SetState(ECharacterState::Parrying);
+       
+
+        if (ParryMontage)
+        {
+            CachedAnimInstance->Montage_Play(ParryMontage, 1.0f);
+            
+            FOnMontageEnded ParryEndDelegate;
+            ParryEndDelegate.BindUObject(this, &UEldenCombatComponent::OnParryMontageEnded);
+            CachedAnimInstance->Montage_SetEndDelegate(ParryEndDelegate, ParryMontage);
+        }
+    }
+}
+
+void UEldenCombatComponent::OnParryMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (PlayerCharacter)
+    {
+        // 상태를 다시 평소(Idle)로 복구
+        PlayerCharacter->SetState(ECharacterState::Idle);
     }
 }
