@@ -20,6 +20,8 @@ public:
 protected:
 	// 위젯이 화면에 생성될 때 한번 호출되는 함수
 	virtual void NativeConstruct() override;
+	
+	virtual void NativeDestruct() override;
 
 	// 블루프린트의 위젯 이름과 반드시 일치해야 함!
 	UPROPERTY(meta = (BindWidget))
@@ -52,6 +54,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* CombatSkillText;
 
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* PotionCountText;
+
 	UFUNCTION()
 	void OnRunesUpdated(int32 NewRunes);
 
@@ -60,6 +65,9 @@ protected:
 
 	UFUNCTION()
 	void OnStaminaUpdated(float CurrentStamina, float MaxStamina);
+
+	UFUNCTION()
+	void OnPotionCountUpdated(int32 Current, int32 Max);
 
 	// 보간용 변수
 	float GhostPercent = 1.0f;

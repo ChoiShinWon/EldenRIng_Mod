@@ -4,6 +4,7 @@
 #include "Blueprint/UserWidget.h"
 #include "GameFrameWork/PlayerController.h"
 #include "GameFrameWork/CharacterMovementComponent.h"
+#include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
@@ -54,6 +55,7 @@ void AEldenGrace::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Othe
 
 void AEldenGrace::Interact(AEldenCharacter* Player)
 {
+	if (!Player) return;
 	if (LevelUpWidgetClass)
 	{
 		UUserWidget* LevelUpWidget = CreateWidget<UUserWidget>(GetWorld(), LevelUpWidgetClass);
@@ -74,6 +76,10 @@ void AEldenGrace::Interact(AEldenCharacter* Player)
 		Player->GetCharacterMovement()->StopMovementImmediately();
 		Player->SetState(ECharacterState::Interacting);
 	}
+
+	if (!Player->InventoryComponent) return;
+	Player->InventoryComponent->RefillPotions();
+
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("Grace Found"));

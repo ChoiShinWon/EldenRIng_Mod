@@ -4,6 +4,7 @@
 #include "Components/Image.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h" 
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "EldenRing_Mod/StatUtils.h"
 
@@ -11,7 +12,8 @@ void UEldenHUDWidget::NativeConstruct()
 {
     Super::NativeConstruct();
     PlayerRef = Cast<AEldenCharacter>(GetOwningPlayerPawn());
-    if (PlayerRef && PlayerRef->StatComponent)
+    if (!PlayerRef) return;
+    if (PlayerRef->StatComponent)
     {
         PlayerRef->StatComponent->OnHealthChanged.AddDynamic(this, &UEldenHUDWidget::OnHealthUpdated);
         PlayerRef->StatComponent->OnStaminaChanged.AddDynamic(this, &UEldenHUDWidget::OnStaminaUpdated);
@@ -20,8 +22,32 @@ void UEldenHUDWidget::NativeConstruct()
         OnHealthUpdated(PlayerRef->StatComponent->GetCurrentHealth(), PlayerRef->StatComponent->GetMaxHealth());
         OnStaminaUpdated(PlayerRef->StatComponent->GetCurrentStamina(), PlayerRef->StatComponent->GetMaxStamina());
         OnRunesUpdated(PlayerRef->StatComponent->CurrentRunes);
+       
+
+    }
+    if (PlayerRef->InventoryComponent)
+    {
+        PlayerRef->InventoryComponent->OnPotionCountChanged.AddDynamic(this, &UEldenHUDWidget::OnPotionCountUpdated);
+        OnPotionCountUpdated(PlayerRef->InventoryComponent->GetCurrentPotionCount(), PlayerRef->InventoryComponent->GetMaxPotionCount());
     }
 
+}
+
+void UEldenHUDWidget::NativeDestruct()
+{
+    if (PlayerRef && PlayerRef->StatComponent)
+    {
+        PlayerRef->StatComponent->OnHealthChanged.RemoveDynamic(this, &UEldenHUDWidget::OnHealthUpdated);
+        PlayerRef->StatComponent->OnStaminaChanged.RemoveDynamic(this, &UEldenHUDWidget::OnStaminaUpdated);
+        PlayerRef->StatComponent->OnRunesChanged.RemoveDynamic(this, &UEldenHUDWidget::OnRunesUpdated);
+    }
+
+    if (PlayerRef && PlayerRef->InventoryComponent)
+    {
+        PlayerRef->InventoryComponent->OnPotionCountChanged.RemoveDynamic(this, &UEldenHUDWidget::OnPotionCountUpdated);
+    
+    }
+    Super::NativeDestruct();
 }
 
 void UEldenHUDWidget::OnRunesUpdated(int32 NewRunes)
@@ -49,6 +75,15 @@ void UEldenHUDWidget::OnStaminaUpdated(float CurrentStamina, float MaxStamina)
     {
         TargetStaminaPercent = CurrentStamina / MaxStamina;
         if (StaminaBar) StaminaBar->SetPercent(TargetStaminaPercent);
+    }
+}
+
+void UEldenHUDWidget::OnPotionCountUpdated(int32 Current, int32 Max)
+{
+    if (PotionCountText)
+    {
+        FString PotionStr = FString::FromInt(Current);
+        PotionCountText->SetText(FText::FromString(PotionStr));
     }
 }
 
