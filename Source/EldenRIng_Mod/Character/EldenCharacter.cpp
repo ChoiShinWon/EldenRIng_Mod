@@ -3,6 +3,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
+#include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/LockOnComponent.h"
 #include "EldenRing_Mod/Interface/Interactable.h"
 #include "Camera/CameraComponent.h"
@@ -49,6 +50,8 @@ AEldenCharacter::AEldenCharacter()
 	CombatComponent = CreateDefaultSubobject<UEldenCombatComponent>(TEXT("CombatComponent"));
 	
 	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
+
+	InventoryComponent = CreateDefaultSubobject<UEldenInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 void AEldenCharacter::SetState(ECharacterState NewState)
@@ -150,7 +153,8 @@ void AEldenCharacter::BeginPlay()
 				ShieldTexture = EquippedShield->GetIcon();
 				CurrentSkillName = EquippedShield->GetSkillName();
 			}
-			CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture, nullptr, CurrentSkillName);
+			CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture, 
+				InventoryComponent ? InventoryComponent->GetCurrentItemIcon() : nullptr, CurrentSkillName);
 		}
 	}
 
@@ -240,6 +244,11 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		if (InteractAction)
 		{
 			EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AEldenCharacter::InteractButtonPressed);
+		}
+
+		if (UseItemAction)
+		{
+			EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Started, this, &AEldenCharacter::UseItem);
 		}
 
 		PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &AEldenCharacter::DebugLevelUpVigor);
@@ -641,4 +650,80 @@ void AEldenCharacter::ResetTimeDilation()
 {
 	// 게임 전체 속도를 다시 1.0 (정상 속도)으로 롤백
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+}
+
+/*=============================================================================
+ * 포션 로직 구현부
+ *=============================================================================*/
+
+void AEldenCharacter::UseItem()
+{
+	// 1. 공통 예외 처리 (어떤 아이템이든 구르거나 죽어있을 땐 못 씀)
+	if (!StatComponent || !InventoryComponent) return;
+	if (GetState() != ECharacterState::Idle) return;
+
+	// 2. 인벤토리에게 현재 장착된 아이템이 뭔지 물어봄
+	EItemType CurrentItem = InventoryComponent->GetCurrentSelectedItem();
+
+	// 3. 아이템 종류에 따라 다른 행동(로직) 실행
+	switch (CurrentItem)
+	{
+	case EItemType::HP_Potion:
+	{
+		// 
+		if (StatComponent->IsHealthFull()) return;
+		if (!InventoryComponent->CanUseItem()) return;
+
+
+		UAnimMontage* UseMontage = InventoryComponent->GetCurrentUseMontage();
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+		if (!AnimInstance || !UseMontage) return;
+
+		
+		AnimInstance->Montage_Play(UseMontage);
+		FOnMontageEnded PotionEndDelegate;
+		PotionEndDelegate.BindUObject(this, &AEldenCharacter::OnPotionMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(PotionEndDelegate, UseMontage);
+		
+
+		InventoryComponent->ConsumeItem();
+		SetState(ECharacterState::Drinking);
+
+		break;
+	}
+
+	case EItemType::None:
+	default:
+		// 아이템이 없을 때는 아무것도 안 함 (혹은 빈 슬롯을 만지는 애니메이션 재생)
+		UE_LOG(LogTemp, Warning, TEXT("빈 슬롯입니다!"));
+		break;
+	}
+}
+
+void AEldenCharacter::ApplyItemEffect()
+{
+	if (!InventoryComponent || !StatComponent) return;
+
+	// 노티파이 실행 시점에도 현재 아이템이 뭔지 확인하고 해당 효과를 적용
+	EItemType CurrentItem = InventoryComponent->GetCurrentSelectedItem();
+
+	switch (CurrentItem)
+	{
+	case EItemType::HP_Potion:
+	{
+		float HealAmount = InventoryComponent->GetPotionHealAmount();
+		StatComponent->Heal(HealAmount);
+		break;
+	}
+	// 나중에 마나 포션이 추가되면 여기서 FP를 회복시킵니다.
+	}
+}
+
+void AEldenCharacter::OnPotionMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (GetState() == ECharacterState::Drinking)
+	{
+		SetState(ECharacterState::Idle);
+	}
 }

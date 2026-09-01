@@ -26,7 +26,8 @@ enum class ECharacterState : uint8
 	Parrying UMETA(DisplayName = "Parrying"),
 	Dead UMETA(DisplayName = "Dead"),
 	Interacting UMETA(DisplayName = "Interact"),
-	Damaged UMETA(DisplayName = "Damaged")
+	Damaged UMETA(DisplayName = "Damaged"),
+	Drinking UMETA(DisplayName = "Drink")
 };
 
 UCLASS()
@@ -84,15 +85,22 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* DodgeAction;
 
-	// IA_Attack을 넣을 바구니
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputAction* AttackAction;
+	UInputAction* UseItemAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputAction* BlockAction;
+	UInputAction* SwitchItemAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputAction* ParryAction;
+	UInputAction* AttackAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* BlockAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* ParryAction;
+
+	
 
 	void StartBlock();
 	void StopBlock(); // 가드를 뗄 때 처리용
@@ -195,11 +203,19 @@ protected:
 	// 느려진 시간을 다시 원상 복구 시키는 함수
 	void ResetTimeDilation();
 
-
 	/*=============================================================================
-	 * 아이템
+	 * 아이템 사용 (Item Usage)
 	 *=============================================================================*/
+	
 
+	// 키보드를 눌렀을 때 실행할 함수
+	void UseItem();
+
+	// 노티파이에서 호출할 진짜 회복 함수
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	void ApplyItemEffect();
+
+	void OnPotionMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 public:
 	AEldenCharacter();
 
@@ -220,6 +236,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class ULockOnComponent* LockOnComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenInventoryComponent* InventoryComponent;
 
 	
 	
@@ -260,4 +279,5 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
 	class USoundBase* ParrySound;
+
 };

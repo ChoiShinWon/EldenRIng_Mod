@@ -81,6 +81,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnStatChangeDelegate OnHealthChanged;
 
+	// 체력이 꽉 찼는지 확인하는 함수
+	bool IsHealthFull() const;
+
+	void Heal(float HealAmount);
+
 	/*=============================================================================
 	 * 스태미너 시스템 (Stamina)
 	 *=============================================================================*/

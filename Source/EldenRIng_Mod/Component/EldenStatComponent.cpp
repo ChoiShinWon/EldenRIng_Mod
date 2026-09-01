@@ -135,3 +135,13 @@ void UEldenStatComponent::AddRunes(int32 Amount)
 }
 
 
+bool UEldenStatComponent::IsHealthFull() const
+{
+	return CurrentHealth >= MaxHealth;
+}
+
+void UEldenStatComponent::Heal(float HealAmount)
+{
+	CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.0f, MaxHealth);
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+}
