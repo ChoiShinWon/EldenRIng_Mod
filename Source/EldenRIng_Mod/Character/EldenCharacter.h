@@ -15,6 +15,7 @@ struct FInputActionValue;
 class UEldenStatComponent;
 class UEldenCombatComponent;
 class ULockOnComponent;
+class UPointLightComponent;
 
 UENUM(BlueprintType)
 enum class ECharacterState : uint8
@@ -211,6 +212,8 @@ protected:
 	// 키보드를 눌렀을 때 실행할 함수
 	void UseItem();
 
+	void SetDrinkingVisuals(bool bDrinking);
+
 	// 노티파이에서 호출할 진짜 회복 함수
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void ApplyItemEffect();
@@ -239,6 +242,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UEldenInventoryComponent* InventoryComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+	class UPointLightComponent* DrinkLight;
 
 	
 	
