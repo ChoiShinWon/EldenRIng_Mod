@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -211,6 +211,8 @@ protected:
 
 	// 키보드를 눌렀을 때 실행할 함수
 	void UseItem();
+
+	void SwitchItem();
 
 	void SetDrinkingVisuals(bool bDrinking);
 

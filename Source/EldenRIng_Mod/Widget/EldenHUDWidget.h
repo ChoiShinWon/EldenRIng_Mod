@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
@@ -65,6 +65,9 @@ protected:
 
 	UFUNCTION()
 	void OnStaminaUpdated(float CurrentStamina, float MaxStamina);
+
+	UFUNCTION()
+	void OnSelectedItemChanged();
 
 	UFUNCTION()
 	void OnPotionCountUpdated(int32 Current, int32 Max);
