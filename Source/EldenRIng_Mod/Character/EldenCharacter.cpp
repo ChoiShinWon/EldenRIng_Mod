@@ -697,7 +697,6 @@ void AEldenCharacter::UseItem()
 		AnimInstance->Montage_SetEndDelegate(PotionEndDelegate, UseMontage);
 		
 
-		InventoryComponent->ConsumeItem();
 		SetState(ECharacterState::Drinking);
 
 		SetDrinkingVisuals(true);
@@ -731,6 +730,7 @@ void AEldenCharacter::ApplyItemEffect()
 	{
 	case EItemType::HP_Potion:
 	{
+		InventoryComponent->ConsumeItem();
 		float HealAmount = InventoryComponent->GetPotionHealAmount();
 		StatComponent->Heal(HealAmount);
 		break;
