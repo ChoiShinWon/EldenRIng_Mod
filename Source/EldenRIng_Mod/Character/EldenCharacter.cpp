@@ -18,29 +18,39 @@
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Components/PointLightComponent.h"
 
 
 AEldenCharacter::AEldenCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	
-	// 1. 스프링 암 생성 및 루트 컴포넌트에 부착
+	// 스프링 암 생성 및 루트 컴포넌트에 부착
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.0f; // 카메라와 캐릭터 사이의 거리
 	CameraBoom->bUsePawnControlRotation = true; // 마우스 움직임에 따라 셀카봉 회전
 	
-	// 2. 카메라 생성 및 스프링 암 끝에 부착
+	// 카메라 생성 및 스프링 암 끝에 부착
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); //셀카봉 끝 소켓에 연결
 	FollowCamera->bUsePawnControlRotation = false;
 
-	// 3. 캐릭터 본체가 마우스 회전(컨트롤러)을 무조건 따라가지 않도록 분리
+	DrinkLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("DrinkLight"));
+	DrinkLight->SetupAttachment(GetMesh(), FName("LeftHandSocket"));
+	DrinkLight->SetLightColor(FLinearColor::Red);
+	DrinkLight->SetAttenuationRadius(80.0f);
+	DrinkLight->SetIntensity(1.0f);
+	DrinkLight->SetCastShadows(false); // 짧게 켜지는 연출용
+	DrinkLight->SetVisibility(false); // 평소엔 꺼둠
+
+
+	// 캐릭터 본체가 마우스 회전(컨트롤러)을 무조건 따라가지 않도록 분리
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 	
-	// 4. 캐릭터가 걷거나 뛰는 방향(이동 방향)을 자연스럽게 바라보도록 설정
+	// 캐릭터가 걷거나 뛰는 방향(이동 방향)을 자연스럽게 바라보도록 설정
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 
@@ -690,6 +700,8 @@ void AEldenCharacter::UseItem()
 		InventoryComponent->ConsumeItem();
 		SetState(ECharacterState::Drinking);
 
+		SetDrinkingVisuals(true);
+
 		break;
 	}
 
@@ -699,6 +711,13 @@ void AEldenCharacter::UseItem()
 		UE_LOG(LogTemp, Warning, TEXT("빈 슬롯입니다!"));
 		break;
 	}
+}
+
+void AEldenCharacter::SetDrinkingVisuals(bool bDrinking)
+{
+	if (EquippedShield) EquippedShield->SetActorHiddenInGame(bDrinking);
+
+	if (DrinkLight) DrinkLight->SetVisibility(bDrinking);
 }
 
 void AEldenCharacter::ApplyItemEffect()
@@ -722,6 +741,7 @@ void AEldenCharacter::ApplyItemEffect()
 
 void AEldenCharacter::OnPotionMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	SetDrinkingVisuals(false);
 	if (GetState() == ECharacterState::Drinking)
 	{
 		SetState(ECharacterState::Idle);
