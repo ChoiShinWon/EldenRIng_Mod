@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+ï»¿
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,6 +7,21 @@
 #include "EldenInventoryComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPotionCountChangeDelegate, int32, CurrentValue, int32, MaxValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelectedItemChangedDelegate);
+
+USTRUCT(BlueprintType) // BPì—ì„œ ìŠ¬ë¡¯ ë‚´ìš© ì½ì„ ìˆ˜ ìˆê²Œ
+struct FEldenItemSlot
+{
+	GENERATED_BODY()
+
+	// ì–´ë–¤ ì•„ì´í…œì¸ê°€
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	TObjectPtr<UEldenItemDefinition> Definition = nullptr;
+
+	// ì§€ê¸ˆ ëª‡ê°œ ë‚¨ì•˜ë‚˜
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+	int32 Count = 0;
+};
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ELDENRING_MOD_API UEldenInventoryComponent : public UActorComponent
@@ -21,42 +35,71 @@ protected:
 	
 	virtual void BeginPlay() override;
  
-	// ÇöÀç ³²Àº Æ÷¼Ç °³¼ö
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Potion")
-	int32 CurrentPotionCount;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	TObjectPtr<UEldenItemDefinition> EquippedItem;
-	
+	TArray<FEldenItemSlot> ItemSlots;
+
+	UPROPERTY(VisibleAnywhere, Category = "Item")
+	int32 SelectedIndex = 0;
 
 public:	
-	// Ä³¸¯ÅÍ°¡ Áö±İ ¹«½¼ ¾ÆÀÌÅÛ µé°íÀÖ³Ä°í ¹°¾îº¼ ¶§ ´ë´äÇØÁÙ Getter ÇÔ¼ö
-	EItemType GetCurrentSelectedItem() const { return EquippedItem ? EquippedItem->ItemType : EItemType::None; }
+	// ìºë¦­í„°ê°€ ì§€ê¸ˆ ë¬´ìŠ¨ ì•„ì´í…œ ë“¤ê³ ìˆëƒê³  ë¬¼ì–´ë³¼ ë•Œ ëŒ€ë‹µí•´ì¤„ Getter í•¨ìˆ˜
+	EItemType GetCurrentSelectedItem() const 
+	{ 
+		const UEldenItemDefinition* Def = GetSelectedDefinition();
+		return Def ? Def->ItemType : EItemType::None;
+	}
 
 
-	UAnimMontage* GetCurrentUseMontage() const { return EquippedItem ? EquippedItem->UseMontage : nullptr; }
+	UAnimMontage* GetCurrentUseMontage() const 
+	{ 
+		const UEldenItemDefinition* Def = GetSelectedDefinition();
+		return Def ? Def->UseMontage : nullptr;
+	}
 
-	// ¾ÆÀÌÅÛ »ç¿ë °¡´ÉÇÑÁö È®ÀÎÇÏ´Â ÇÔ¼ö
+	// ì•„ì´í…œ ì‚¬ìš© ê°€ëŠ¥í•œì§€ í™•ì¸í•˜ëŠ” í•¨ìˆ˜
 	bool CanUseItem() const;
 
-	// ½ÇÁ¦·Î Æ÷¼ÇÀ» ÇÏ³ª ¼Ò¸ğÇÒ ÇÔ¼ö
+	// ì‹¤ì œë¡œ í¬ì…˜ì„ í•˜ë‚˜ ì†Œëª¨í•  í•¨ìˆ˜
 	void ConsumeItem();
 
-	// ¿ÜºÎ(Ä³¸¯ÅÍ)¿¡¼­ Æ÷¼ÇÀÇ È¸º¹·®À» °¡Á®°¥ ¼ö ÀÖ°Ô ÇØÁÖ´Â °ÔÅÍ ÇÔ¼ö
+	// ì™¸ë¶€(ìºë¦­í„°)ì—ì„œ í¬ì…˜ì˜ íšŒë³µëŸ‰ì„ ê°€ì ¸ê°ˆ ìˆ˜ ìˆê²Œ í•´ì£¼ëŠ” ê²Œí„° í•¨ìˆ˜
 	float GetPotionHealAmount() const;
 
-	// Æ÷¼Ç ¸®ÇÊ ÇÔ¼ö
+	// í¬ì…˜ ë¦¬í•„ í•¨ìˆ˜
 	void RefillPotions();
 
-	// ÇöÀç ¼±ÅÃµÈ ¾ÆÀÌÅÛÀÇ ¾ÆÀÌÄÜÀ» µ¹·ÁÁÖ´Â Getter ÇÔ¼ö
+	// í˜„ì¬ ì„ íƒëœ ì•„ì´í…œì˜ ì•„ì´ì½˜ì„ ëŒë ¤ì£¼ëŠ” Getter í•¨ìˆ˜
 	UTexture2D* GetCurrentItemIcon() const;
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnSelectedItemChangedDelegate OnSelectedItemChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnPotionCountChangeDelegate OnPotionCountChanged;
 
-	FORCEINLINE int32 GetCurrentPotionCount() const { return CurrentPotionCount; }
-	FORCEINLINE int32 GetMaxPotionCount() const { return EquippedItem ? EquippedItem->MaxCount : 0; }
+
+	int32 GetCurrentPotionCount() const 
+	{ 
+		const FEldenItemSlot* Slot = GetSelectedSlot();
+		return Slot ? Slot->Count : 0;
+	}
+
+	int32 GetMaxPotionCount() const 
+	{ 
+		const UEldenItemDefinition* Def = GetSelectedDefinition();
+		return Def ? Def->MaxCount : 0; 
+	}
+	
+	void SelectNextItem();
 	
 private:
 	void BroadcastPotionCount();
+	void SetSelectedIndex(int32 NewIndex);
+
+	// ì„ íƒëœ ìŠ¬ë¡¯ì„ ì•ˆì „í•˜ê²Œ êº¼ë‚´ëŠ” í•¨ìˆ˜. ë¹ˆ ë°°ì—´ì´ê±°ë‚˜ ì¸ë±ìŠ¤ ë²”ìœ„ ë°–ì´ë©´ nullptr
+	const FEldenItemSlot* GetSelectedSlot() const;
+
+	FEldenItemSlot* GetSelectedSlot();
+
+	const UEldenItemDefinition* GetSelectedDefinition() const;
 };

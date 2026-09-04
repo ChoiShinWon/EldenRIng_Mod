@@ -1,4 +1,4 @@
-
+﻿
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
@@ -254,6 +254,11 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		if (InteractAction)
 		{
 			EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AEldenCharacter::InteractButtonPressed);
+		}
+
+		if (SwitchItemAction)
+		{
+			EnhancedInputComponent->BindAction(SwitchItemAction, ETriggerEvent::Started, this, &AEldenCharacter::SwitchItem);
 		}
 
 		if (UseItemAction)
@@ -710,6 +715,13 @@ void AEldenCharacter::UseItem()
 		UE_LOG(LogTemp, Warning, TEXT("빈 슬롯입니다!"));
 		break;
 	}
+}
+
+void AEldenCharacter::SwitchItem()
+{
+	if (!InventoryComponent) return;
+	if (GetState() == ECharacterState::Drinking) return;
+	InventoryComponent->SelectNextItem();
 }
 
 void AEldenCharacter::SetDrinkingVisuals(bool bDrinking)

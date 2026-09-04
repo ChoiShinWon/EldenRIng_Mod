@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -212,11 +212,10 @@ protected:
 	// 키보드를 눌렀을 때 실행할 함수
 	void UseItem();
 
+	void SwitchItem();
+
 	void SetDrinkingVisuals(bool bDrinking);
 
-	// 노티파이에서 호출할 진짜 회복 함수
-	UFUNCTION(BlueprintCallable, Category = "Item")
-	void ApplyItemEffect();
 
 	void OnPotionMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 public:
@@ -273,6 +272,10 @@ public:
 	void DebugLevelUpVigor();
 	void DebugLevelUpEndurance();
 	void DebugLevelUpStrength();
+
+	// 노티파이에서 호출할 진짜 회복 함수
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	void ApplyItemEffect();
 
 	// 애니메이션 노티파이 (AN_ParryCheck)에서 호출할 패링 검사 함수
 	void ParryCheck();

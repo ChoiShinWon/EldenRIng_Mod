@@ -1,4 +1,4 @@
-#include "EldenHUDWidget.h"
+﻿#include "EldenHUDWidget.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
@@ -27,7 +27,10 @@ void UEldenHUDWidget::NativeConstruct()
     }
     if (PlayerRef->InventoryComponent)
     {
+		PlayerRef->InventoryComponent->OnSelectedItemChanged.AddDynamic(this,&UEldenHUDWidget::OnSelectedItemChanged);
         PlayerRef->InventoryComponent->OnPotionCountChanged.AddDynamic(this, &UEldenHUDWidget::OnPotionCountUpdated);
+
+		OnSelectedItemChanged();
         OnPotionCountUpdated(PlayerRef->InventoryComponent->GetCurrentPotionCount(), PlayerRef->InventoryComponent->GetMaxPotionCount());
     }
 
@@ -44,6 +47,7 @@ void UEldenHUDWidget::NativeDestruct()
 
     if (PlayerRef && PlayerRef->InventoryComponent)
     {
+		PlayerRef->InventoryComponent->OnSelectedItemChanged.RemoveDynamic(this, &UEldenHUDWidget::OnSelectedItemChanged);
         PlayerRef->InventoryComponent->OnPotionCountChanged.RemoveDynamic(this, &UEldenHUDWidget::OnPotionCountUpdated);
     
     }
@@ -76,6 +80,22 @@ void UEldenHUDWidget::OnStaminaUpdated(float CurrentStamina, float MaxStamina)
         TargetStaminaPercent = CurrentStamina / MaxStamina;
         if (StaminaBar) StaminaBar->SetPercent(TargetStaminaPercent);
     }
+}
+
+void UEldenHUDWidget::OnSelectedItemChanged()
+{
+	if (!PlayerRef || !PlayerRef->InventoryComponent || !ItemIcon) return;
+
+	UTexture2D* Icon = PlayerRef->InventoryComponent->GetCurrentItemIcon();
+	if (Icon)
+	{
+		ItemIcon->SetBrushFromTexture(Icon);
+		ItemIcon->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		ItemIcon->SetVisibility(ESlateVisibility::Hidden);
+	}
 }
 
 void UEldenHUDWidget::OnPotionCountUpdated(int32 Current, int32 Max)
