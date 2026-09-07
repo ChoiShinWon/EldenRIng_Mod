@@ -44,6 +44,7 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Character Status")
 	bool bIsAttacking;
+
 	
 private:
 

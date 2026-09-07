@@ -20,36 +20,47 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 
 	// 콤보 공격용 몽타주 섹션이 3개로 나뉘어 있어야함
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
-	UAnimMontage* ComboMontage;
+	TArray<UAnimMontage*> ComboMontages;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+	class UAnimMontage* ParryMontage;
 
 	// 현재 콤보 번호
 	int32 ComboCount = 0;
 	// 다음 콤보가 예약되었는지 확인하는 플래그
 	bool bComboQueued = false;
 
-	// 공격 중인지 판별하는 변수
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	bool bIsAttacking;
+	//// 공격 중인지 판별하는 변수
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	//bool bIsAttacking;
 
 	void ExecuteAttack();
 
-	// 콤보 창 제어용 함수 (애님 노티파이에서 호출)
-	UFUNCTION(BlueprintCallable)
-	void SetComboWindow(bool bOpen);
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void CheckComboQueue();
 
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	void ExecuteBlock();
+	void EndBlock();
+
+	void ExecuteParry();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void OnParryMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	
 private:
-	// 콤보 시작 진행 횟수
-	void ProcessCombo();
 
 	// 소유주인 캐릭터의 애니메이션 인스턴스를 캐싱하기 위한 변수
 	UPROPERTY()
 	class UAnimInstance* CachedAnimInstance;
+
+	// 플레이어 캐릭터 캐싱
+	UPROPERTY()
+	class AEldenCharacter* PlayerCharacter;
 };

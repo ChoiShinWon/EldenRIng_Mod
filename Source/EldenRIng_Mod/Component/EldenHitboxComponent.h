@@ -1,10 +1,11 @@
-#pragma once
+ï»¿#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/BoxComponent.h"
 #include "EldenHitboxComponent.generated.h"
 
 class UParticleSystem;
+class USoundBase;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ELDENRING_MOD_API UEldenHitboxComponent : public UBoxComponent
@@ -17,24 +18,40 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	// ±âÁ¸ Enemy¿¡ ÀÖ´ø '¹æ¸í·Ï'
+	// ê¸°ì¡´ Enemyì— ìˆë˜ 'ë°©ëª…ë¡'
 	UPROPERTY()
 	TArray<AActor*> HitActors;
 
-	// ±âÁ¸ Enemy¿¡ ÀÖ´ø ¿À¹ö·¦ ÇÔ¼ö
+	// ê¸°ì¡´ Enemyì— ìˆë˜ ì˜¤ë²„ë© í•¨ìˆ˜
 	UFUNCTION()
 	void OnHitboxOverlap(UPrimitiveComponent* OverlapComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	// ÆÄÆ¼Å¬ ÀÌÆåÆ®
+	// íŒŒí‹°í´ ì´í™íŠ¸
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
 	UParticleSystem* HitVFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
+	UParticleSystem* GuardVFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
+	USoundBase* HitSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
+	USoundBase* GuardSound;
+
+
+	void PlayImpactEffects(UParticleSystem* VFX, USoundBase* Sound, const FVector& Location) const;
+
 public:
-	//  µ¥¹ÌÁö ·®À» ¿ÜºÎ¿¡¼­ ¼³Á¤ÇÒ ¼ö ÀÖ°Ô ¿­¾îµÒ. (ÁÖ¸ÔÀº 10, º¸½º ¹«±â´Â 50 µî)
+	//  ë°ë¯¸ì§€ ëŸ‰ì„ ì™¸ë¶€ì—ì„œ ì„¤ì •í•  ìˆ˜ ìˆê²Œ ì—´ì–´ë‘ . (ì£¼ë¨¹ì€ 10, ë³´ìŠ¤ ë¬´ê¸°ëŠ” 50 ë“±)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float DamageAmount = 15.0f;
 
-	// ±âÁ¸ Enemy¿¡ ÀÖ´ø Äİ¸®Àü On/Off ½ºÀ§Ä¡
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	float PoiseDamage = 10.f;
+
+	// ê¸°ì¡´ Enemyì— ìˆë˜ ì½œë¦¬ì „ On/Off ìŠ¤ìœ„ì¹˜
 	void EnableHitbox();
 	void DisableHitbox();
 };

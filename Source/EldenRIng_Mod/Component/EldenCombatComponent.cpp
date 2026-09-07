@@ -3,12 +3,15 @@
 
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "GameFramework/Character.h" 
+#include "Containers/Array.h"
+#include "EldenRing_Mod/Weapon/EldenShield.h"
+#include "EldenRing_Mod/Character/EldenCharacter.h"
 
 
 UEldenCombatComponent::UEldenCombatComponent()
 {
 	
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 
 }
 
@@ -18,86 +21,175 @@ void UEldenCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	
-}
-
-
-
-void UEldenCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	
-}
-
-
-void UEldenCombatComponent::ProcessCombo()
-{
-    // 1. 소유주(캐릭터)의 메시로부터 애니메이션 인스턴스를 확실히 확보
-    ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
-    if (!OwnerChar || !OwnerChar->GetMesh()) return;
-
-    UAnimInstance* AnimInstance = OwnerChar->GetMesh()->GetAnimInstance();
-    if (!AnimInstance || !ComboMontage) return;
-
-    bComboQueued = false;
-    ComboCount++;
-
-    FName SectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCount));
-
-    if (!AnimInstance->Montage_IsPlaying(ComboMontage))
+    PlayerCharacter = Cast<AEldenCharacter>(GetOwner());
+    if (PlayerCharacter)
     {
-        AnimInstance->Montage_Play(ComboMontage, 1.0f);
+        CachedAnimInstance = PlayerCharacter->GetMesh()->GetAnimInstance();
     }
-    
-
-    AnimInstance->Montage_JumpToSection(SectionName, ComboMontage);
-    
-    bIsAttacking = true;
-    FOnMontageEnded EndDelegate;
-    EndDelegate.BindUObject(this, &UEldenCombatComponent::OnAttackMontageEnded);
-    AnimInstance->Montage_SetEndDelegate(EndDelegate, ComboMontage);
-   
+	
 }
+
+
 
 void UEldenCombatComponent::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-    bIsAttacking = false;
-    bComboQueued = false;
-    ComboCount = 0;
-}
-
-void UEldenCombatComponent::SetComboWindow(bool bOpen)
-{
-    if (!bOpen && bComboQueued)
+    if (bInterrupted)
     {
-        if (ComboCount >= 3)
+        if (PlayerCharacter && PlayerCharacter->GetState() == ECharacterState::Attacking)
         {
-            bComboQueued = false; // 예약 폐기
             return;
         }
-        
-        bComboQueued = false;
-        ProcessCombo();
     }
+    bComboQueued = false;
+    ComboCount = 0;
+    
+    if (PlayerCharacter)
+    {
+        if (PlayerCharacter->GetState() == ECharacterState::Attacking)
+        {
+            PlayerCharacter->SetState(ECharacterState::Idle);
+        }
+        if (PlayerCharacter->bDodgeQueued)
+        {
+            PlayerCharacter->bDodgeQueued = false;
+            PlayerCharacter->Dodge();
+        }
+    }
+
 }
+
+
 
 void UEldenCombatComponent::ExecuteAttack()
 {
-  
-    ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
-    if (!OwnerChar || !OwnerChar->GetMesh()) return;
+    if (!PlayerCharacter || !CachedAnimInstance) return;
 
-    if (!bIsAttacking)
+    if (PlayerCharacter->bDodgeQueued)
     {
-        ProcessCombo();
+        return;
     }
-    else
+
+    if (ComboMontages.Num() == 0)
     {
-        if (ComboCount < 3)
+        return;
+    }
+    
+
+    if (PlayerCharacter && CachedAnimInstance)
+    {
+        if (PlayerCharacter->GetState() == ECharacterState::Idle)
         {
-            bComboQueued = true;
+            PlayerCharacter->SetState(ECharacterState::Attacking);
+            ComboCount = 1;
+            bComboQueued = false;
+
+            CachedAnimInstance->Montage_Play(ComboMontages[0], 1.0f);
+            FOnMontageEnded EndDelegate;
+            EndDelegate.BindUObject(this, &UEldenCombatComponent::OnAttackMontageEnded);
+            CachedAnimInstance->Montage_SetEndDelegate(EndDelegate, ComboMontages[0]);
         }
+        else if (PlayerCharacter->GetState() == ECharacterState::Attacking)
+        {
+            if (ComboCount < ComboMontages.Num())
+            {
+                bComboQueued = true;
+            }
+        }
+    }
+    
+}
+
+void UEldenCombatComponent::CheckComboQueue()
+{
+    if (!PlayerCharacter || !PlayerCharacter->GetMesh()) return;
+
+    if (PlayerCharacter->bDodgeQueued) return;
+
+    if (PlayerCharacter && CachedAnimInstance)
+    {
+        if (bComboQueued)
+        {
+            ComboCount++;
+            bComboQueued = false;
+            if (ComboCount <= ComboMontages.Num())
+            {
+                CachedAnimInstance->Montage_Play(ComboMontages[ComboCount - 1]);
+                FOnMontageEnded EndDelegate;
+                EndDelegate.BindUObject(this, &UEldenCombatComponent::OnAttackMontageEnded);
+                CachedAnimInstance->Montage_SetEndDelegate(EndDelegate, ComboMontages[ComboCount - 1]);
+            }
+
+           
+        }
+    }
+}
+
+void UEldenCombatComponent::ExecuteBlock()
+{
+    if (!PlayerCharacter || !CachedAnimInstance) return;
+
+    // 공격 중이거나 구르는 중이 아니면 가드 자세 진입 허용
+    if (PlayerCharacter->GetState() == ECharacterState::Idle)
+    {
+        PlayerCharacter->SetState(ECharacterState::Blocking);
+
+        // 필요하다면 방패 방어 히트박스 켜기
+        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
+        {
+            Shield->EnableShieldBlock();
+        }
+
+        // TODO: 방패를 들고 서 있는 루프 애니메이션 또는 블렌드 포즈 적용
+    }
+}
+
+void UEldenCombatComponent::EndBlock()
+{
+    if (!PlayerCharacter) return;
+
+    // 가드 상태일 때만 해제 가능
+    if (PlayerCharacter->GetState() == ECharacterState::Blocking)
+    {
+        PlayerCharacter->SetState(ECharacterState::Idle);
+
+        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
+        {
+            Shield->DisableShieldBlock();
+        }
+    }
+}
+
+void UEldenCombatComponent::ExecuteParry()
+{
+    if (!PlayerCharacter || !CachedAnimInstance) return;
+    if (PlayerCharacter)
+    {
+        if (PlayerCharacter->GetState() == ECharacterState::Dead ||
+            PlayerCharacter->GetState() == ECharacterState::Rolling ||
+            PlayerCharacter->GetState() == ECharacterState::Blocking)
+        {
+            return;
+        }
+
+        PlayerCharacter->SetState(ECharacterState::Parrying);
        
+
+        if (ParryMontage)
+        {
+            CachedAnimInstance->Montage_Play(ParryMontage, 1.0f);
+            
+            FOnMontageEnded ParryEndDelegate;
+            ParryEndDelegate.BindUObject(this, &UEldenCombatComponent::OnParryMontageEnded);
+            CachedAnimInstance->Montage_SetEndDelegate(ParryEndDelegate, ParryMontage);
+        }
+    }
+}
+
+void UEldenCombatComponent::OnParryMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (PlayerCharacter)
+    {
+        // 상태를 다시 평소(Idle)로 복구
+        PlayerCharacter->SetState(ECharacterState::Idle);
     }
 }
