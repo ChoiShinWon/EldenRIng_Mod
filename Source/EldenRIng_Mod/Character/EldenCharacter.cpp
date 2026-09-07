@@ -19,6 +19,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/PointLightComponent.h"
+#include "Components/CapsuleComponent.h"
 
 
 AEldenCharacter::AEldenCharacter()
@@ -168,6 +169,10 @@ void AEldenCharacter::BeginPlay()
 		}
 	}
 
+    MeshDefaultRelLoc = GetMesh()->GetRelativeLocation();
+	MeshDefaultRelRot = GetMesh()->GetRelativeRotation();
+	MeshDefaultProfile = GetMesh()->GetCollisionProfileName();
+	MeshDefaultRelScale = GetMesh()->GetRelativeScale3D();
 	
 }
 
@@ -352,6 +357,29 @@ void AEldenCharacter::ToggleLockOn()
 	}
 }
 
+void AEldenCharacter::Revive(const FTransform& SpawnTransform)
+{
+	GetMesh()->SetSimulatePhysics(false);
+	GetMesh()->SetCollisionProfileName(MeshDefaultProfile);
+	GetMesh()->AttachToComponent(GetCapsuleComponent(),
+		FAttachmentTransformRules::KeepRelativeTransform);
+	GetMesh()->SetRelativeLocationAndRotation(MeshDefaultRelLoc, MeshDefaultRelRot);
+	GetMesh()->SetRelativeScale3D(MeshDefaultRelScale);
+	// 위치 이동
+	SetActorLocationAndRotation(
+		SpawnTransform.GetLocation(),
+		SpawnTransform.GetRotation().Rotator(),
+		false, nullptr, ETeleportType::TeleportPhysics);
+	// 무브먼트, 상태
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	SetState(ECharacterState::Idle);
+	SetInvincible(false); // 빠뜨리면 부활 후 영구 무적
+
+	// 리소스 풀 회복
+	if (StatComponent) StatComponent->FullRestore();
+	if (InventoryComponent) InventoryComponent->RefillPotions();
+}
+
 void AEldenCharacter::Dodge()
 {
 	// 스태미너가 부족거나 이미 구르는 중이라면 무시
@@ -450,6 +478,22 @@ void AEldenCharacter::OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterr
 	}
 }
 
+void AEldenCharacter::HandleDeath()
+{
+	if (GetState() == ECharacterState::Dead) return;
+
+	SetState(ECharacterState::Dead);
+
+	SetInvincible(true);
+	GetCharacterMovement()->DisableMovement();
+	GetMesh()->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetSimulatePhysics(true);
+
+	OnPlayerDied.Broadcast(this);
+}
+
 float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (GetState() == ECharacterState::Dead) return 0.0f;
@@ -501,8 +545,7 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 
 		if (LeftHealth <= 0.0f)
 		{
-			SetState(ECharacterState::Dead);
-			UE_LOG(LogTemp, Warning, TEXT("죽었다!"));
+			HandleDeath();
 		}
 		else if (ActualDamage > 0.0f)
 		{

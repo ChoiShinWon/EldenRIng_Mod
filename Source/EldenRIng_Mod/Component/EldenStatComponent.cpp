@@ -1,9 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/StatUtils.h"
-#include "Engine/World.h" // Å¸ÀÌ¸Ó ¸Å´ÏÀú(GetWorld())¸¦ »ç¿ëÇÏ±â À§ÇØ ÇÊ¼ö
+#include "Engine/World.h" // íƒ€ì´ë¨¸ ë§¤ë‹ˆì €(GetWorld())ë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•´ í•„ìˆ˜
 #include "TimerManager.h"
 
 // Sets default values for this component's properties
@@ -22,7 +22,7 @@ void UEldenStatComponent::BeginPlay()
 
 	RecalculateDerivedStats();
 
-	// °ÔÀÓ ½ÃÀÛ ½Ã Ã¼·Â°ú ½ºÅÂ¹Ì³Ê¸¦ ²Ë Ã¤¿öÁÜ.
+	// ê²Œì„ ì‹œì‘ ì‹œ ì²´ë ¥ê³¼ ìŠ¤íƒœë¯¸ë„ˆë¥¼ ê½‰ ì±„ì›Œì¤Œ.
 	CurrentHealth = MaxHealth;
 	CurrentStamina = MaxStamina;
 	
@@ -34,10 +34,10 @@ void UEldenStatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// 1. ½ºÅÂ¹Ì³Ê ÀÚµ¿ È¸º¹ ·ÎÁ÷ (Ä³¸¯ÅÍ¿¡¼­ ÀÌ»ç ¿È)
+	// 1. ìŠ¤íƒœë¯¸ë„ˆ ìë™ íšŒë³µ ë¡œì§ (ìºë¦­í„°ì—ì„œ ì´ì‚¬ ì˜´)
 	if (bCanRegen && CurrentStamina < MaxStamina)
 	{
-		// FStatUtils¸¦ »ç¿ëÇÏ¿© ¾ÈÀüÇÏ°Ô ´õÇÏ°í ÃÖ´ëÄ¡¸¦ ³ÑÁö ¾Êµµ·Ï Á¦ÇÑÇÕ´Ï´Ù.
+		// FStatUtilsë¥¼ ì‚¬ìš©í•˜ì—¬ ì•ˆì „í•˜ê²Œ ë”í•˜ê³  ìµœëŒ€ì¹˜ë¥¼ ë„˜ì§€ ì•Šë„ë¡ ì œí•œí•©ë‹ˆë‹¤.
 		FStatUtils::UpdateStat(CurrentStamina, MaxStamina, (StaminaRegenRate * DeltaTime));
 		OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
 	}
@@ -48,14 +48,14 @@ void UEldenStatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 void UEldenStatComponent::ApplyDamage(float DamageAmount)
 {
-	// 2. µ¥¹ÌÁö Àû¿ë ·ÎÁ÷ (FStatUtils È°¿ë)
-	// µ¥¹ÌÁöÀÌ¹Ç·Î À½¼ö(-)¸¦ ºÙ¿©¼­ ±ğ¾ÆÁİ´Ï´Ù.
+	// 2. ë°ë¯¸ì§€ ì ìš© ë¡œì§ (FStatUtils í™œìš©)
+	// ë°ë¯¸ì§€ì´ë¯€ë¡œ ìŒìˆ˜(-)ë¥¼ ë¶™ì—¬ì„œ ê¹ì•„ì¤ë‹ˆë‹¤.
 	FStatUtils::UpdateStat(CurrentHealth, MaxHealth, -DamageAmount);
 
-	// Ã¼·ÂÀÌ º¯ÇßÀ¸´Ï OnHealthChanged ¹æ¼Û
+	// ì²´ë ¥ì´ ë³€í–ˆìœ¼ë‹ˆ OnHealthChanged ë°©ì†¡
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 
-	// 3. Ã¼·ÂÀÌ 0 ÀÌÇÏ°¡ µÇ¸é ¹æ¼Û(Broadcast)À» ¶§¸³´Ï´Ù!
+	// 3. ì²´ë ¥ì´ 0 ì´í•˜ê°€ ë˜ë©´ ë°©ì†¡(Broadcast)ì„ ë•Œë¦½ë‹ˆë‹¤!
 	if (CurrentHealth <= 0.0f)
 	{
 		OnZeroHealth.Broadcast();
@@ -106,19 +106,19 @@ void UEldenStatComponent::RecalculateDerivedStats()
 
 void UEldenStatComponent::ConsumeStamina(float Amount)
 {
-	// ½ÇÁ¦ ½ºÅÂ¹Ì³Ê ±ğ±â
+	// ì‹¤ì œ ìŠ¤íƒœë¯¸ë„ˆ ê¹ê¸°
 	CurrentStamina = FMath::Clamp(CurrentStamina - Amount, 0.0f, MaxStamina);
 
-	// ½ºÅÂ¹Ì³Ê°¡ º¯ÇßÀ¸´Ï OnStaminaChanged ¹æ¼Û
+	// ìŠ¤íƒœë¯¸ë„ˆê°€ ë³€í–ˆìœ¼ë‹ˆ OnStaminaChanged ë°©ì†¡
 	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
 
-	// È¸º¹ Áß´Ü
+	// íšŒë³µ ì¤‘ë‹¨
 	bCanRegen = false;
 
-	// Å¸ÀÌ¸Ó Àç¼³Á¤
-	// ¸¸¾à 1.5ÃÊ µÚ¿¡ È¸º¹ÇÏ±â·Î ¿¹¾àÇß´Âµ¥, ±× »çÀÌ¿¡ ´Ù½Ã ±¸¸£¸é ±âÁ¸ ¿¹¾àÀº Ãë¼ÒÇØ¾ß ÇÏ¹Ç·Î Clear ÇÏ°í µé¾î°¨.
+	// íƒ€ì´ë¨¸ ì¬ì„¤ì •
+	// ë§Œì•½ 1.5ì´ˆ ë’¤ì— íšŒë³µí•˜ê¸°ë¡œ ì˜ˆì•½í–ˆëŠ”ë°, ê·¸ ì‚¬ì´ì— ë‹¤ì‹œ êµ¬ë¥´ë©´ ê¸°ì¡´ ì˜ˆì•½ì€ ì·¨ì†Œí•´ì•¼ í•˜ë¯€ë¡œ Clear í•˜ê³  ë“¤ì–´ê°.
 	GetWorld()->GetTimerManager().ClearTimer(RegenDelayTimerHandle);
-	// ClearÈÄ ´Ù½Ã Timer ¼¼ÆÃ, ½Ã°£ÀÌ StaminaRegen DelayÈÄ¿£ Regen ´Ù½Ã ÁøÇà
+	// Clearí›„ ë‹¤ì‹œ Timer ì„¸íŒ…, ì‹œê°„ì´ StaminaRegen Delayí›„ì—” Regen ë‹¤ì‹œ ì§„í–‰
 	GetWorld()->GetTimerManager().SetTimer(RegenDelayTimerHandle, this, &UEldenStatComponent::ResetRegen, StaminaRegenDelay, false);
 
 }
@@ -144,4 +144,12 @@ void UEldenStatComponent::Heal(float HealAmount)
 {
 	CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.0f, MaxHealth);
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+}
+
+void UEldenStatComponent::FullRestore()
+{
+	CurrentHealth = MaxHealth;
+	CurrentStamina = MaxStamina;
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
 }

@@ -1,10 +1,11 @@
-
+ï»¿
 
 #include "EldenRing_Mod/Actor/EldenGrace.h"
 #include "Blueprint/UserWidget.h"
 #include "GameFrameWork/PlayerController.h"
 #include "GameFrameWork/CharacterMovementComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/EldenGameMode.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
@@ -14,7 +15,7 @@ AEldenGrace::AEldenGrace()
 {
  	
 	PrimaryActorTick.bCanEverTick = true;
-	// ÄÄÆ÷³ÍÆ® »ı¼º ¹× °èÃş ±¸Á¶
+	// ì»´í¬ë„ŒíŠ¸ ìƒì„± ë° ê³„ì¸µ êµ¬ì¡°
 	InteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractSphere"));
 	RootComponent = InteractionSphere;
 
@@ -23,6 +24,10 @@ AEldenGrace::AEldenGrace()
 
 	InteractionSphere->OnComponentBeginOverlap.AddDynamic(this, &AEldenGrace::OnOverlapBegin);
 	InteractionSphere->OnComponentEndOverlap.AddDynamic(this, &AEldenGrace::OnOverlapEnd);
+
+	RespawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("RespawnPoint"));
+	RespawnPoint->SetupAttachment(RootComponent);
+	RespawnPoint->SetRelativeLocation(FVector(150.0f, 0.f, 90.f));
 }
 
 
@@ -53,6 +58,11 @@ void AEldenGrace::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	}
 }
 
+FTransform AEldenGrace::GetRespawnTransform() const
+{
+	return RespawnPoint->GetComponentTransform();
+}
+
 void AEldenGrace::Interact(AEldenCharacter* Player)
 {
 	if (!Player) return;
@@ -77,8 +87,14 @@ void AEldenGrace::Interact(AEldenCharacter* Player)
 		Player->SetState(ECharacterState::Interacting);
 	}
 
+	if (AEldenGameMode* GM = GetWorld()->GetAuthGameMode<AEldenGameMode>())
+	{
+		GM->RegisterGrace(this);
+	}
+
 	if (!Player->InventoryComponent) return;
 	Player->InventoryComponent->RefillPotions();
+
 
 	if (GEngine)
 	{

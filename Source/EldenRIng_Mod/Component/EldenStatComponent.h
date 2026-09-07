@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -13,9 +13,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRunesChangeDelegate, int32, NewRu
 UENUM(BlueprintType)
 enum class EEldenStatType : uint8
 {
-	Vigor       UMETA(DisplayName = "»ı¸í·Â"),
-	Endurance   UMETA(DisplayName = "Áö±¸·Â"),
-	Strength    UMETA(DisplayName = "±Ù·Â")
+	Vigor       UMETA(DisplayName = "ìƒëª…ë ¥"),
+	Endurance   UMETA(DisplayName = "ì§€êµ¬ë ¥"),
+	Strength    UMETA(DisplayName = "ê·¼ë ¥")
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -33,9 +33,9 @@ protected:
 
 public:
 	/*=============================================================================
-	 * ±âÃÊ ½ºÅÈ & ÀçÈ­ ½Ã½ºÅÛ
+	 * ê¸°ì´ˆ ìŠ¤íƒ¯ & ì¬í™” ì‹œìŠ¤í…œ
 	 *=============================================================================*/
-	// ÀüÃ¼ ·¹º§, »ı¸í·Â, Áö±¸·Â, ±Ù·Â
+	// ì „ì²´ ë ˆë²¨, ìƒëª…ë ¥, ì§€êµ¬ë ¥, ê·¼ë ¥
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	int32 Level = 1;
 
@@ -64,7 +64,7 @@ public:
 	void RecalculateDerivedStats();
 
 	/*=============================================================================
-	 * Ã¼·Â ½Ã½ºÅÛ (Health)
+	 * ì²´ë ¥ ì‹œìŠ¤í…œ (Health)
 	 *=============================================================================*/
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
@@ -81,13 +81,15 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnStatChangeDelegate OnHealthChanged;
 
-	// Ã¼·ÂÀÌ ²Ë Ã¡´ÂÁö È®ÀÎÇÏ´Â ÇÔ¼ö
+	// ì²´ë ¥ì´ ê½‰ ì°¼ëŠ”ì§€ í™•ì¸í•˜ëŠ” í•¨ìˆ˜
 	bool IsHealthFull() const;
 
 	void Heal(float HealAmount);
 
+	void FullRestore();
+
 	/*=============================================================================
-	 * ½ºÅÂ¹Ì³Ê ½Ã½ºÅÛ (Stamina)
+	 * ìŠ¤íƒœë¯¸ë„ˆ ì‹œìŠ¤í…œ (Stamina)
 	 *=============================================================================*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
 	float MaxStamina = 100.0f;
@@ -109,13 +111,13 @@ public:
 	FOnStatChangeDelegate OnStaminaChanged;
 
 
-	// ½ºÅÂ¹Ì³Ê ¼Ò¸ğ ÇÔ¼ö
+	// ìŠ¤íƒœë¯¸ë„ˆ ì†Œëª¨ í•¨ìˆ˜
 	UFUNCTION(BlueprintCallable, Category = "Stamina")
 	void ConsumeStamina(float Amount);
 
 	void ResetRegen();
 
-	// ·éÀ» ´õÇØÁÖ´Â Àü¿ë ÇÔ¼ö
+	// ë£¬ì„ ë”í•´ì£¼ëŠ” ì „ìš© í•¨ìˆ˜
 	UFUNCTION(BlueprintCallable, Category = "Rune")
 	void AddRunes(int32 Amount);
 
@@ -125,11 +127,11 @@ public:
 	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	// HUD¿¡¼­ °ªÀ» ÀĞ¾î°¥ ¼ö ÀÖµµ·Ï Getter Ãß°¡
+	// HUDì—ì„œ ê°’ì„ ì½ì–´ê°ˆ ìˆ˜ ìˆë„ë¡ Getter ì¶”ê°€
 	FORCEINLINE float GetCurrentStamina() const { return CurrentStamina; }
 	FORCEINLINE float GetMaxStamina() const { return MaxStamina; }
 
-	// HUD ¿¡¼­ °ªÀ» ÀĞ¾î°¥ ¼ö ÀÖµµ·Ï Getter Ãß°¡
+	// HUD ì—ì„œ ê°’ì„ ì½ì–´ê°ˆ ìˆ˜ ìˆë„ë¡ Getter ì¶”ê°€
 	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 };
