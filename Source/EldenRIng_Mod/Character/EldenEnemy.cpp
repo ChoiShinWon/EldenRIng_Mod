@@ -1,9 +1,10 @@
-
+﻿
 
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Component/EldenHitboxComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "EldenRing_Mod/AI/EnemyAIController.h"
 #include "EldenRing_Mod/StatUtils.h"
 #include "Components/CapsuleComponent.h"
@@ -38,6 +39,8 @@ AEldenEnemy::AEldenEnemy()
 
 	LeftHandHitbox = CreateDefaultSubobject<UEldenHitboxComponent>(TEXT("LeftHandHitbox"));
 	LeftHandHitbox->SetupAttachment(GetMesh(), FName("LeftWeaponSocket"));
+
+	PoiseComp = CreateDefaultSubobject<UEldenPoiseComponent>(TEXT("PoiseComp"));
 }
 
 
@@ -60,6 +63,10 @@ void AEldenEnemy::BeginPlay()
 		BlackboardComp = AIController-> GetBlackboardComponent();
 	}*/
 
+	if (PoiseComp)
+	{
+		PoiseComp->OnPoiseBroken.AddDynamic(this, &AEldenEnemy::OnPoiseBroken);
+	}
 	
 }
 
@@ -151,7 +158,12 @@ void AEldenEnemy::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 
 	// 공격이 끝나면 다시 이동 가능하게 설정
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking); // 공격이 끝나면 다시 이동 가능하게 설정
-}	
+}
+void AEldenEnemy::OnPoiseBroken()
+{
+	ApplyStun();
+}
+
 
 float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator,
 	class AActor* DamageCauser)
