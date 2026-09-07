@@ -1,4 +1,4 @@
-
+﻿
 #pragma once
 
 #include "CoreMinimal.h"
@@ -9,6 +9,7 @@
 
 class UWidgetComponent;
 class UEldenHitboxComponent;
+class UEldenPoiseComponent;
 class UParticleSystem;
 
 UCLASS()
@@ -46,6 +47,8 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float CurrentHealth;
+
+
 	
 	// 몬스터의 애니메이션 몽타주들
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
@@ -126,6 +129,12 @@ public:
 	// 공격 애니메이션이 끝났을 때 호출되는 함수 (델리게이트	로 연결)
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	UFUNCTION()
+	void OnPoiseBroken();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	UEldenPoiseComponent* PoiseComp;
 
 	// 공격 중인지 여부 (콤보 시스템 구현 시 활용)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")

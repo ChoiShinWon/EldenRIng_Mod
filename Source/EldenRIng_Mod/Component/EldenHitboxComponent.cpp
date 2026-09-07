@@ -2,6 +2,7 @@
 
 
 #include "EldenRing_Mod/Component/EldenHitboxComponent.h"
+#include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
@@ -66,6 +67,14 @@ void UEldenHitboxComponent::OnHitboxOverlap(UPrimitiveComponent* OverlapComponen
 
 	//  2. 즉시 데미지 전달 
 	UGameplayStatics::ApplyDamage(OtherActor, DamageAmount, GetOwner()->GetInstigatorController(), GetOwner(), UDamageType::StaticClass());
+
+	if (AEldenEnemy* HitEnemy = Cast<AEldenEnemy>(OtherActor))
+	{
+		if (HitEnemy->PoiseComp && !HitEnemy->bIsStunned && !HitEnemy->GetIsDead())
+		{
+			HitEnemy->PoiseComp->ApplyPoiseDamage(PoiseDamage);
+		}
+	}
 
 	//  3. TakeDamage 실행 결과, 대상(플레이어)이 가드에 성공했는지 물어봄
 	if (AEldenCharacter* TargetPlayer = Cast<AEldenCharacter>(OtherActor))
