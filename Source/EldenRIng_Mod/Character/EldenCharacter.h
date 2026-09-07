@@ -16,6 +16,9 @@ class UEldenStatComponent;
 class UEldenCombatComponent;
 class ULockOnComponent;
 class UPointLightComponent;
+class AEldenCharacter;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDiedDelegate, AEldenCharacter*, DeadPlayer);
 
 UENUM(BlueprintType)
 enum class ECharacterState : uint8
@@ -166,9 +169,12 @@ protected:
 	void OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 
-protected:
-	
-	
+	FVector  MeshDefaultRelLoc;
+	FRotator MeshDefaultRelRot;
+	FVector MeshDefaultRelScale;
+	FName    MeshDefaultProfile;
+	void HandleDeath();
+
 	/*=============================================================================
 	 * 스태미너 비용 설정 (Stamina Cost)
 	 *=============================================================================*/
@@ -245,7 +251,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	class UPointLightComponent* DrinkLight;
 
-	
+	void Revive(const FTransform&);
 	
 	// 캐릭터가 장착 중인 무기를 반환하는 함수
 	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon ;}
@@ -288,5 +294,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
 	class USoundBase* ParrySound;
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnPlayerDiedDelegate OnPlayerDied;
 
 };
