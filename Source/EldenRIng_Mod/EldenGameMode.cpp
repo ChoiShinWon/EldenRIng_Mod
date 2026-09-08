@@ -2,6 +2,8 @@
 #include "EldenRing_Mod/EldenGameMode.h"
 #include "EldenRing_Mod/Actor/EldenGrace.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Actor/Bloodstain.h"
+#include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -43,6 +45,8 @@ void AEldenGameMode::RegisterGrace(AEldenGrace* Grace)
 
 void AEldenGameMode::HandlePlayerDeath(AEldenCharacter* DeadPlayer)
 {
+	DropBloodstain(DeadPlayer);
+
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("플레이어 사망 감지 - 리스폰 대기"));
 	UE_LOG(LogTemp, Warning, TEXT("HandlePlayerDeath: %s"), *GetNameSafe(DeadPlayer));
 	GetWorldTimerManager().SetTimer(RespawnTimerHandle, this, &AEldenGameMode::RespawnPlayer,
@@ -83,4 +87,57 @@ void AEldenGameMode::RespawnPlayer()
 	{
 		CachedPC->PlayerCameraManager->StartCameraFade(1.f, 0.f, 1.f, FLinearColor::Black, false, false);
 	}
+}
+
+void AEldenGameMode::DropBloodstain(AEldenCharacter* DeadPlayer)
+{
+
+	// 널가드
+	if (!DeadPlayer || !DeadPlayer->StatComponent) return;
+
+
+	// 라인 트레이스 광선의 시작점과 끝점
+	const FVector StartLoc = DeadPlayer->GetActorLocation();
+	const FVector EndLoc = StartLoc - FVector(0.f, 0.f, 500.f);
+
+	// 결과를 담아올 빈 상자
+	FHitResult Hit;
+
+	// 광선이 플레이어 자신의 캡슐 메시에 먼저 맞으면 ImpactPoint가 시체 몸통이 되어버리기때문에
+	// 이 액터는 무시 등록
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(DeadPlayer);
+
+	// 트레이스 실행
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
+		Hit,
+		StartLoc, EndLoc,
+		ECC_Visibility,
+		Params);
+
+	// 스폰 위치
+	FVector SpawnLoc = bHit ? Hit.ImpactPoint : StartLoc;
+
+	// 회수 안 된 이전 블러드스테인 영구 소멸
+	if (ActiveBloodstain.IsValid()) ActiveBloodstain->Destroy();
+	// 손실 룬 확정
+	int32 Lost = DeadPlayer->StatComponent->CurrentRunes;
+	// 남은 룬이 없다면 실행 X
+	if (Lost <= 0) return;
+
+	// 스폰
+	FActorSpawnParameters Params2;
+	Params2.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	ABloodstain* Spawned = GetWorld()->SpawnActor<ABloodstain>(
+		BloodstainClass, SpawnLoc, FRotator::ZeroRotator, Params2);
+
+	if (!Spawned) return;
+	// 손실 룬을 Bloodstain에 전달
+	Spawned->InitBloodstain(Lost);
+	ActiveBloodstain = Spawned;
+
+	// 플레이어 룬 0으로
+	DeadPlayer->StatComponent->LoseAllRunes();
 }

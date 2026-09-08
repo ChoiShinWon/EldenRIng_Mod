@@ -123,8 +123,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
 	float AttackPower = 3;
-public:	
-	
+
+	// 사망시 룬을 모두 잃는 함수
+	void LoseAllRunes();
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	// HUD에서 값을 읽어갈 수 있도록 Getter 추가

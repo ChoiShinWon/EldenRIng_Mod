@@ -29,7 +29,13 @@ void UEldenStatComponent::BeginPlay()
 }
 
 
-// Called every frame
+void UEldenStatComponent::LoseAllRunes()
+{
+	CurrentRunes = 0;
+	OnRunesChanged.Broadcast(CurrentRunes);
+}
+
+
 void UEldenStatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -119,7 +125,8 @@ void UEldenStatComponent::ConsumeStamina(float Amount)
 	// 만약 1.5초 뒤에 회복하기로 예약했는데, 그 사이에 다시 구르면 기존 예약은 취소해야 하므로 Clear 하고 들어감.
 	GetWorld()->GetTimerManager().ClearTimer(RegenDelayTimerHandle);
 	// Clear후 다시 Timer 세팅, 시간이 StaminaRegen Delay후엔 Regen 다시 진행
-	GetWorld()->GetTimerManager().SetTimer(RegenDelayTimerHandle, this, &UEldenStatComponent::ResetRegen, StaminaRegenDelay, false);
+	GetWorld()->GetTimerManager().SetTimer(RegenDelayTimerHandle, this,
+		&UEldenStatComponent::ResetRegen, StaminaRegenDelay, false);
 
 }
 
