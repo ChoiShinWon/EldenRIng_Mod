@@ -1,5 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+﻿
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,6 +7,7 @@
 
 class AEldenCharacter;
 class AEldenGrace;
+class ABloodstain;
 
 UCLASS()
 class ELDENRING_MOD_API AEldenGameMode : public AGameModeBase
@@ -55,4 +55,14 @@ protected:
 	FTransform InitialSpawnTransform;
 
 	FTimerHandle RespawnTimerHandle;
+
+	// 마지막 방문 은총과 마찬가지로 위크 포인터 (관찰만, 소유 X)
+	UPROPERTY()
+	TWeakObjectPtr<ABloodstain> ActiveBloodstain;
+
+	// BP_EldenGamMode에서 BP_Bloodstain 지정
+	UPROPERTY(EditDefaultsOnly, Category = "Bloodstain")
+	TSubclassOf<ABloodstain> BloodstainClass;
+
+	void DropBloodstain(AEldenCharacter* DeadPlayer);
 };
