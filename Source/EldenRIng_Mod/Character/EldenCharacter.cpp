@@ -378,6 +378,9 @@ void AEldenCharacter::Revive(const FTransform& SpawnTransform)
 	// 리소스 풀 회복
 	if (StatComponent) StatComponent->FullRestore();
 	if (InventoryComponent) InventoryComponent->RefillPotions();
+
+	// 부활하면 플레이어 HUD 다시 Visible
+	if (CurrentHUD) CurrentHUD->SetVisibility(ESlateVisibility::Visible);
 }
 
 void AEldenCharacter::Dodge()
@@ -490,6 +493,12 @@ void AEldenCharacter::HandleDeath()
 	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetMesh()->SetSimulatePhysics(true);
+
+	// 죽었을때 플레이어 HUD 숨김
+	if (CurrentHUD)
+	{
+		CurrentHUD->SetVisibility(ESlateVisibility::Collapsed);
+	}
 
 	OnPlayerDied.Broadcast(this);
 }

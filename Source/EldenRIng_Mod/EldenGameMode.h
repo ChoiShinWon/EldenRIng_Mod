@@ -23,6 +23,14 @@ protected:
 
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	UPROPERTY()
+	APlayerController* CachedPC = nullptr;
+
+	UPROPERTY()
+	AEldenCharacter* CachedPlayer = nullptr;
+
 	UFUNCTION()
 	void HandlePlayerDeath(AEldenCharacter* DeadPlayer);
 
@@ -36,6 +44,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<class UUserWidget> YouDiedWidgetClass;
+
+	// 스폰된 인스턴스 보관용 멤버
+	UPROPERTY()
+	UUserWidget* SpawnedWidget = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Respawn")
 	float RespawnDelay = 5.f;
