@@ -2,6 +2,7 @@
 #include "EldenRing_Mod/EldenGameMode.h"
 #include "EldenRing_Mod/Actor/EldenGrace.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 
 AEldenGameMode::AEldenGameMode()
@@ -13,13 +14,22 @@ void AEldenGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	AEldenCharacter* PC = Cast<AEldenCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
-	if (PC)
+	CachedPC = UGameplayStatics::GetPlayerController(this, 0);
+
+	CachedPlayer = Cast<AEldenCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+
+	if (CachedPlayer)
 	{
-		PC->OnPlayerDied.AddDynamic(this, &AEldenGameMode::HandlePlayerDeath);
-		InitialSpawnTransform = PC->GetActorTransform();
+		CachedPlayer->OnPlayerDied.AddDynamic(this, &AEldenGameMode::HandlePlayerDeath);
+		InitialSpawnTransform = CachedPlayer->GetActorTransform();
 	}
 
+}
+
+void AEldenGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearTimer(RespawnTimerHandle);
+	Super::EndPlay(EndPlayReason);
 }
 
 void AEldenGameMode::RegisterGrace(AEldenGrace* Grace)
@@ -37,13 +47,40 @@ void AEldenGameMode::HandlePlayerDeath(AEldenCharacter* DeadPlayer)
 	UE_LOG(LogTemp, Warning, TEXT("HandlePlayerDeath: %s"), *GetNameSafe(DeadPlayer));
 	GetWorldTimerManager().SetTimer(RespawnTimerHandle, this, &AEldenGameMode::RespawnPlayer,
 		RespawnDelay, false);
+
+	if (CachedPC && CachedPC->PlayerCameraManager)
+	{
+		// 투명 -> 불투명(검정), 암전 시간
+		CachedPC->PlayerCameraManager->StartCameraFade(0.f, 1.f, 1.5f, FLinearColor::Black, false, true);
+	}
+
+	if (YouDiedWidgetClass && !SpawnedWidget)
+	{
+		SpawnedWidget = CreateWidget<UUserWidget>(GetWorld(), YouDiedWidgetClass);
+		if (SpawnedWidget)
+		{
+			SpawnedWidget->AddToViewport(10);
+		}
+	}
 }
 
 void AEldenGameMode::RespawnPlayer()
 {
-	AEldenCharacter* PC = Cast<AEldenCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
-	if (!PC) return;
+	if (!CachedPlayer) return;
 
 	FTransform Target = LastGrace.IsValid() ? LastGrace->GetRespawnTransform() : InitialSpawnTransform;
-	PC->Revive(Target);
+	CachedPlayer->Revive(Target);
+
+	// 위젯 제거 + null
+	if (SpawnedWidget)
+	{
+		SpawnedWidget->RemoveFromParent();
+		SpawnedWidget = nullptr;
+	}
+
+	// 페이드인 작업
+	if (CachedPC && CachedPC->PlayerCameraManager)
+	{
+		CachedPC->PlayerCameraManager->StartCameraFade(1.f, 0.f, 1.f, FLinearColor::Black, false, false);
+	}
 }
