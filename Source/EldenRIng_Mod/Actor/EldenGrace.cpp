@@ -90,6 +90,7 @@ void AEldenGrace::Interact(AEldenCharacter* Player)
 	if (AEldenGameMode* GM = GetWorld()->GetAuthGameMode<AEldenGameMode>())
 	{
 		GM->RegisterGrace(this);
+		GM->ResetAllEnemies();
 	}
 
 	if (!Player->InventoryComponent) return;

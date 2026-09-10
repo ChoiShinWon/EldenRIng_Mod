@@ -2,10 +2,12 @@
 #include "EldenRing_Mod/EldenGameMode.h"
 #include "EldenRing_Mod/Actor/EldenGrace.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "EldenRing_Mod/Actor/Bloodstain.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
+#include "EngineUtils.h"
 
 AEldenGameMode::AEldenGameMode()
 {
@@ -24,6 +26,14 @@ void AEldenGameMode::BeginPlay()
 	{
 		CachedPlayer->OnPlayerDied.AddDynamic(this, &AEldenGameMode::HandlePlayerDeath);
 		InitialSpawnTransform = CachedPlayer->GetActorTransform();
+	}
+
+	for (TActorIterator<AEldenEnemy> It(GetWorld()); It; ++It)
+	{
+		FEnemySpawnInfo EnemyInfo;
+		EnemyInfo.EnemyClass = It->GetClass();
+		EnemyInfo.SpawnTransform = It->GetActorTransform();
+		EnemySpawnSnapshot.Add(EnemyInfo);
 	}
 
 }
@@ -140,4 +150,33 @@ void AEldenGameMode::DropBloodstain(AEldenCharacter* DeadPlayer)
 
 	// 플레이어 룬 0으로
 	DeadPlayer->StatComponent->LoseAllRunes();
+}
+
+void AEldenGameMode::ResetAllEnemies()
+{
+	// 파괴 패스
+	// TActorIterator 순회 도중 Destroy() 하면 이터레이터가 불안정해질 수 있어
+	// 먼저 전부 배열에 모아두고, 순회가 끝난 뒤 따로 파괴
+	TArray<AEldenEnemy*> TempArray;
+	for (TActorIterator<AEldenEnemy> It(GetWorld()); It; ++It)
+	{
+		TempArray.Add(*It);
+	}
+	for (AEldenEnemy* E : TempArray)
+	{
+		if (IsValid(E)) E->Destroy(); // 살아있든 래그돌이든 무조건 제거
+	}
+
+	// 스폰 패스
+	for (const FEnemySpawnInfo& Info : EnemySpawnSnapshot)
+	{
+		FActorSpawnParameters SpawnPar;
+		SpawnPar.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		FVector Loc = Info.SpawnTransform.GetLocation();
+		FQuat Q = Info.SpawnTransform.GetRotation();
+		FRotator Rot = Q.Rotator();
+
+		GetWorld()->SpawnActor<AEldenEnemy>(Info.EnemyClass, Loc, Rot, SpawnPar);
+	}
 }
