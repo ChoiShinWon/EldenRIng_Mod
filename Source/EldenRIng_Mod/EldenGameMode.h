@@ -6,8 +6,22 @@
 #include "EldenGameMode.generated.h"
 
 class AEldenCharacter;
+class AEldenEnemy;
 class AEldenGrace;
 class ABloodstain;
+
+USTRUCT()
+struct FEnemySpawnInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TSubclassOf<AEldenEnemy> EnemyClass;
+
+	UPROPERTY()
+	FTransform SpawnTransform;
+
+};
 
 UCLASS()
 class ELDENRING_MOD_API AEldenGameMode : public AGameModeBase
@@ -18,6 +32,8 @@ public:
 	AEldenGameMode();
 
 	void RegisterGrace(AEldenGrace* Grace);
+
+	void ResetAllEnemies();
 
 protected:
 
@@ -65,4 +81,9 @@ protected:
 	TSubclassOf<ABloodstain> BloodstainClass;
 
 	void DropBloodstain(AEldenCharacter* DeadPlayer);
+
+	UPROPERTY()
+	TArray<FEnemySpawnInfo> EnemySpawnSnapshot;
+
+
 };
