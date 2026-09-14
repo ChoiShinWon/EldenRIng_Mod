@@ -11,6 +11,7 @@ class UWidgetComponent;
 class UEldenHitboxComponent;
 class UEldenPoiseComponent;
 class UParticleSystem;
+class UBehaviorTree;
 
 UCLASS()
 class ELDENRING_MOD_API AEldenEnemy : public ACharacter, public IITargetable
@@ -18,11 +19,10 @@ class ELDENRING_MOD_API AEldenEnemy : public ACharacter, public IITargetable
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	AEldenEnemy();
 
 protected:
-	// Called when the game starts or when spawned
+
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
@@ -59,6 +59,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* AttackMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	class UAnimMontage* SlamMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	float SlamAttackChance = 0.3f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* AggroMontage;
@@ -98,8 +104,13 @@ protected:
 	// 몬스터 잡았을 때 플레이어에게 줄 룬의 양
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
 	int32 RuneReward = 100;
-	
-public:	
+
+
+public:
+	// Enemy마다 할당할 Behavior Tree
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
+	class UBehaviorTree* EnemyBT;
+
 	// AI가 몬스터에 빙의할 때 엔진이 자동으로 호출해 주는 함수
 	virtual void PossessedBy(AController* NewController) override;
 
@@ -126,6 +137,8 @@ public:
 	// 공격 애니메이션을 재생하는 함수
 	void PlayAttackMontage();
 
+	void PlaySpecificMontage(class UAnimMontage* MontageToPlay);
+
 	// 공격 애니메이션이 끝났을 때 호출되는 함수 (델리게이트	로 연결)
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -140,19 +153,12 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bIsAttacking = false;
 
-	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	bool bIsParryable = false;*/
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bIsStunned = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* StunMontage;
-
-
-	// 노티파이에서 스테이트에서 호출할 패리 함수
-	/*void EnableParryWindow();
-	void DisableParryWindow();*/
 
 	// 패링 성공 시 외부(플레이어)에서 호출할 함수
 	void ApplyStun();

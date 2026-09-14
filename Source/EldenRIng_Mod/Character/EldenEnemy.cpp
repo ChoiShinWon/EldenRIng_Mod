@@ -149,18 +149,31 @@ void AEldenEnemy::PlayAttackMontage()
 		// 공격 애니메이션이 재생되는 동안에는 이동을 못하게 설정
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None); // 공격 중에는 이동 불가능하게 설정
 
+		PlaySpecificMontage(AttackMontage);
+	}
+}
 
-		AnimInstance->Montage_Play(AttackMontage);	
+void AEldenEnemy::PlaySpecificMontage(UAnimMontage* MontageToPlay)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
-		// 몽타주가 끝났을 때 호출될 델리게이트 설정
+	if (AnimInstance && MontageToPlay)
+	{
+		AnimInstance->Montage_Play(MontageToPlay);
 		FOnMontageEnded EndDelegate;
 		EndDelegate.BindUObject(this, &AEldenEnemy::OnAttackMontageEnded);
-		AnimInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+		AnimInstance->Montage_SetEndDelegate(EndDelegate, MontageToPlay);
 	}
 }
 
 void AEldenEnemy::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	if (Montage == AttackMontage && !bInterrupted && SlamMontage != nullptr && FMath::FRand() < SlamAttackChance)
+	{
+		PlaySpecificMontage(SlamMontage);
+		return;
+	}
+
 	// 공격 애니메이션이 끝났을 때 호출되는 함수. 공격 상태를 false로 되돌려줌.
 	bIsAttacking = false;
 
