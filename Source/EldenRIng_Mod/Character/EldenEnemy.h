@@ -140,8 +140,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bIsAttacking = false;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	bool bIsParryable = false;
+	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	bool bIsParryable = false;*/
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bIsStunned = false;
@@ -149,9 +149,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* StunMontage;
 
+
 	// 노티파이에서 스테이트에서 호출할 패리 함수
-	void EnableParryWindow();
-	void DisableParryWindow();
+	/*void EnableParryWindow();
+	void DisableParryWindow();*/
 
 	// 패링 성공 시 외부(플레이어)에서 호출할 함수
 	void ApplyStun();

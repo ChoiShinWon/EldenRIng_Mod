@@ -204,17 +204,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|State")
 	bool bIsInvincible = false;
 
-	// 역경직을 관리할 타이머 핸들
-	FTimerHandle HitStopTimerHandle;
-
-	// 느려진 시간을 다시 원상 복구 시키는 함수
-	void ResetTimeDilation();
 
 	/*=============================================================================
 	 * 아이템 사용 (Item Usage)
 	 *=============================================================================*/
 	
-
 	// 키보드를 눌렀을 때 실행할 함수
 	void UseItem();
 
@@ -266,6 +260,7 @@ public:
 	FORCEINLINE bool GetIsDead() const { return GetState() == ECharacterState::Dead; }
 
 	bool bShieldBlockedAttack = false;
+	bool bParrySucceeded = false;
 
 	bool GetIsLockedOn() const;
 	// 기본 데미지 처리 함수 오버라이드
@@ -283,17 +278,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void ApplyItemEffect();
 
-	// 애니메이션 노티파이 (AN_ParryCheck)에서 호출할 패링 검사 함수
-	void ParryCheck();
+	//// 애니메이션 노티파이 (AN_ParryCheck)에서 호출할 패링 검사 함수
+	//void ParryCheck();
 
-	/*=============================================================================
-	 * 퍼펙트 패리 전용 이펙트 & 사운드
-	 *=============================================================================*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
-	class UParticleSystem* ParryVFX;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Effect")
-	class USoundBase* ParrySound;
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnPlayerDiedDelegate OnPlayerDied;

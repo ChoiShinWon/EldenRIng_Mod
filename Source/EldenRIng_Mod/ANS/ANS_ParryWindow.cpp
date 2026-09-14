@@ -1,7 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "EldenRing_Mod/ANS/ANS_ParryWindow.h"
-#include "EldenRing_Mod/Character/EldenEnemy.h" 
+#include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Component/EldenCombatComponent.h"
 
 void UANS_ParryWindow::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
@@ -9,10 +10,11 @@ void UANS_ParryWindow::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequen
 
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		// ÀÌ ¾Ö´Ï¸ŞÀÌ¼ÇÀ» Àç»ıÇÏ´Â ÁÖÃ¼°¡ ¸ó½ºÅÍ¶ó¸é? ÆĞ¸µ Ã¢ ¿­±â!
-		if (AEldenEnemy* Enemy = Cast<AEldenEnemy>(MeshComp->GetOwner()))
+		// ì´ ì• ë‹ˆë©”ì´ì…˜ì„ ì¬ìƒí•˜ëŠ” ì£¼ì²´ê°€ ëª¬ìŠ¤í„°ë¼ë©´? íŒ¨ë§ ì°½ ì—´ê¸°!
+		if (AEldenCharacter* Player = Cast<AEldenCharacter>(MeshComp->GetOwner()))
 		{
-			Enemy->EnableParryWindow();
+			if (Player->CombatComponent)
+				Player->CombatComponent->SetParryWindowActive(true);
 		}
 	}
 }
@@ -23,10 +25,11 @@ void UANS_ParryWindow::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequence
 
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		// ¾Ö´Ï¸ŞÀÌ¼Ç ÁöÁ¤ ±¸°£ÀÌ ³¡³ª¸é ÆĞ¸µ Ã¢ ´İ±â!
-		if (AEldenEnemy* Enemy = Cast<AEldenEnemy>(MeshComp->GetOwner()))
+		// ì• ë‹ˆë©”ì´ì…˜ ì§€ì • êµ¬ê°„ì´ ëë‚˜ë©´ íŒ¨ë§ ì°½ ë‹«ê¸°!
+		if (AEldenCharacter* Player = Cast<AEldenCharacter>(MeshComp->GetOwner()))
 		{
-			Enemy->DisableParryWindow();
+			if (Player->CombatComponent)
+				Player->CombatComponent->SetParryWindowActive(false);
 		}
 	}
 }

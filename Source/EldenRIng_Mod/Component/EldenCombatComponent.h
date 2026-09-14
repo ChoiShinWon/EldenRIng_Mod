@@ -1,12 +1,13 @@
-#pragma once
+ï»¿#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Animation/AnimMontage.h"
 #include "EldenCombatComponent.generated.h"
 
+class AEldenEnemy;
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ELDENRING_MOD_API UEldenCombatComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -22,19 +23,19 @@ protected:
 public:	
 
 
-	// ÄŞº¸ °ø°İ¿ë ¸ùÅ¸ÁÖ ¼½¼ÇÀÌ 3°³·Î ³ª´µ¾î ÀÖ¾î¾ßÇÔ
+	// ì½¤ë³´ ê³µê²©ìš© ëª½íƒ€ì£¼ ì„¹ì…˜ì´ 3ê°œë¡œ ë‚˜ë‰˜ì–´ ìˆì–´ì•¼í•¨
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	TArray<UAnimMontage*> ComboMontages;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	class UAnimMontage* ParryMontage;
 
-	// ÇöÀç ÄŞº¸ ¹øÈ£
+	// í˜„ì¬ ì½¤ë³´ ë²ˆí˜¸
 	int32 ComboCount = 0;
-	// ´ÙÀ½ ÄŞº¸°¡ ¿¹¾àµÇ¾ú´ÂÁö È®ÀÎÇÏ´Â ÇÃ·¡±×
+	// ë‹¤ìŒ ì½¤ë³´ê°€ ì˜ˆì•½ë˜ì—ˆëŠ”ì§€ í™•ì¸í•˜ëŠ” í”Œë˜ê·¸
 	bool bComboQueued = false;
 
-	//// °ø°İ ÁßÀÎÁö ÆÇº°ÇÏ´Â º¯¼ö
+	//// ê³µê²© ì¤‘ì¸ì§€ íŒë³„í•˜ëŠ” ë³€ìˆ˜
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	//bool bIsAttacking;
 
@@ -51,16 +52,48 @@ public:
 
 	void ExecuteParry();
 
+	/*UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Combat|Parry")
+	float ParryRange = 200.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Parry")
+	float ParryRadius = 80.f;*/
+
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Combat|Parry")
+	float ParryFacingDot = 0.0f;
+
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Parry")
+	bool bDrawParryDebug = false;*/
+
+	UPROPERTY(EditAnywhere, Category = "Combat|Parry")
+    class UParticleSystem* ParryVFX;
+    UPROPERTY(EditAnywhere, Category = "Combat|Parry")
+    class USoundBase* ParrySound;
+
+	// ì—­ê²½ì§ì„ ê´€ë¦¬í•  íƒ€ì´ë¨¸ í•¸ë“¤
+	FTimerHandle HitStopTimerHandle;
+
+	//bool TryParryHit();   // ì„±ê³µ ì‹œ true
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Parry")
+	bool bParryWindowActive = false;
+
+	void SetParryWindowActive(bool bActive) { bParryWindowActive = bActive; }
+
+	// ì—¬ê¸°ì„œ ì´ ê³µê²©ì„ ë§‰ì„ ìˆ˜ ìˆëƒ ì§ˆì˜
+	bool TryDeflect(const FVector& HitLocation, AEldenEnemy* Attacker);
+
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void OnParryMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	
 private:
 
-	// ¼ÒÀ¯ÁÖÀÎ Ä³¸¯ÅÍÀÇ ¾Ö´Ï¸ŞÀÌ¼Ç ÀÎ½ºÅÏ½º¸¦ Ä³½ÌÇÏ±â À§ÇÑ º¯¼ö
+	void ResetTimeDilation();
+
+	// ì†Œìœ ì£¼ì¸ ìºë¦­í„°ì˜ ì• ë‹ˆë©”ì´ì…˜ ì¸ìŠ¤í„´ìŠ¤ë¥¼ ìºì‹±í•˜ê¸° ìœ„í•œ ë³€ìˆ˜
 	UPROPERTY()
 	class UAnimInstance* CachedAnimInstance;
 
-	// ÇÃ·¹ÀÌ¾î Ä³¸¯ÅÍ Ä³½Ì
+	// í”Œë ˆì´ì–´ ìºë¦­í„° ìºì‹±
 	UPROPERTY()
 	class AEldenCharacter* PlayerCharacter;
 };

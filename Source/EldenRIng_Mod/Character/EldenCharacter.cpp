@@ -505,7 +505,18 @@ void AEldenCharacter::HandleDeath()
 
 float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	
 	if (GetState() == ECharacterState::Dead) return 0.0f;
+
+	if (AEldenEnemy* Attacker = Cast<AEldenEnemy>(DamageCauser))
+	{
+		if (CombatComponent && CombatComponent->TryDeflect(Attacker->GetActorLocation(), Attacker))
+		{
+			bParrySucceeded = true;
+			return 0.0f;
+		}
+	}
+
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	bShieldBlockedAttack = false;
 	
@@ -642,82 +653,12 @@ void AEldenCharacter::DebugLevelUpStrength()
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("공격력 증가!"));
 }
 
-void AEldenCharacter::ParryCheck()
-{
-	// 현재 상태가 패링 시도중일 때만 작동
-	if (GetState() != ECharacterState::Parrying) return;
+//void AEldenCharacter::ParryCheck()
+//{
+//	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::White, TEXT(">> ParryCheck 노티파이 도달"));
+//	if (CombatComponent) CombatComponent->TryParryHit();
+//}
 
-	TArray<FHitResult> HitResults;
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(Parry), false, this);
-
-	// 전방 스윕 거리와 구체 두께 (무기 길이 맞춰서 조절 가능)
-	const float ParryRange = 200.f;
-	const float ParryRadius = 80.0f;
-
-	const FVector Start = GetActorLocation();
-	const FVector End = Start + GetActorForwardVector() * ParryRange;
-
-	// 내 캐릭터 앞쪽으로 구체를 쏴서 적이 있는지 검사
-	bool bHit = GetWorld()->SweepMultiByChannel(
-		HitResults, Start, End, FQuat::Identity,
-		ECollisionChannel::ECC_Pawn,
-		FCollisionShape::MakeSphere(ParryRadius),
-		Params);
-
-	if (!bHit) return;
-
-	for (const FHitResult& Result : HitResults)
-	{
-		if (AEldenEnemy* Enemy = Cast<AEldenEnemy>(Result.GetActor()))
-		{
-			// 적이 패링 가능 상태 (ANS_ParryWindow 구간) 인가?
-			if (!Enemy->bIsParryable) continue;
-
-			// 적이 내 정면에 있는가
-			FVector DirToEnemy = (Enemy->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-			float DotToEnemy = FVector::DotProduct(GetActorForwardVector(), DirToEnemy);
-
-			// 적이 나를 마주보고 있나 (뒤통수 / 옆구리 패링 방지)
-			float DotFacing = FVector::DotProduct(GetActorForwardVector(), Enemy->GetActorForwardVector());
-
-			// 적이 정면에 있고, 서로 마주보고 있다면 패링 성공
-			if (DotToEnemy > 0.0f && DotFacing < 0.0f)
-			{
-				Enemy->ApplyStun();
-
-				if (ParryVFX)
-				{
-					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParryVFX, Enemy->GetActorLocation());
-				}
-				if (ParrySound)
-				{
-					UGameplayStatics::PlaySoundAtLocation(GetWorld(), ParrySound, Enemy->GetActorLocation());
-				}
-
-				if (GEngine)
-				{
-					GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("패링 성공! 적 스턴!"));
-				}
-
-				
-
-				// 타격감을 위한 0.1초 멈춤 효과(역경직)
-				UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
-
-				GetWorld()->GetTimerManager().SetTimer(HitStopTimerHandle, this,
-					&AEldenCharacter::ResetTimeDilation, 0.01f, false);
-				break;
-			}
-		}
-	}
-}
-
-// 시간을 원래대로 돌리는 함수 구현
-void AEldenCharacter::ResetTimeDilation()
-{
-	// 게임 전체 속도를 다시 1.0 (정상 속도)으로 롤백
-	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
-}
 
 /*=============================================================================
  * 포션 로직 구현부
