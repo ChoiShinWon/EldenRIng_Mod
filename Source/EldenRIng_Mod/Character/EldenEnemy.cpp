@@ -131,6 +131,13 @@ void AEldenEnemy::PlayAttackMontage()
 	// 공격 애니메이션 재생 함수. 공격 중이거나 죽은 상태라면 재생하지 않음.
 	if (bIsAttacking || bIsDead || bIsStunned) return;
 	
+	if (CombatTarget)
+	{
+		FVector ToTarget = CombatTarget->GetActorLocation() - GetActorLocation();
+		ToTarget.Z = 0.f;
+		FRotator Face = ToTarget.Rotation();
+		SetActorRotation(FRotator(0.f, Face.Yaw, 0.f)); // 스냅
+	}
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
@@ -142,17 +149,31 @@ void AEldenEnemy::PlayAttackMontage()
 		// 공격 애니메이션이 재생되는 동안에는 이동을 못하게 설정
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None); // 공격 중에는 이동 불가능하게 설정
 
-		AnimInstance->Montage_Play(AttackMontage);	
+		PlaySpecificMontage(AttackMontage);
+	}
+}
 
-		// 몽타주가 끝났을 때 호출될 델리게이트 설정
+void AEldenEnemy::PlaySpecificMontage(UAnimMontage* MontageToPlay)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	if (AnimInstance && MontageToPlay)
+	{
+		AnimInstance->Montage_Play(MontageToPlay);
 		FOnMontageEnded EndDelegate;
 		EndDelegate.BindUObject(this, &AEldenEnemy::OnAttackMontageEnded);
-		AnimInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+		AnimInstance->Montage_SetEndDelegate(EndDelegate, MontageToPlay);
 	}
 }
 
 void AEldenEnemy::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	if (Montage == AttackMontage && !bInterrupted && SlamMontage != nullptr && FMath::FRand() < SlamAttackChance)
+	{
+		PlaySpecificMontage(SlamMontage);
+		return;
+	}
+
 	// 공격 애니메이션이 끝났을 때 호출되는 함수. 공격 상태를 false로 되돌려줌.
 	bIsAttacking = false;
 
@@ -294,15 +315,15 @@ void AEldenEnemy::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	SetLifeSpan(5.0f);
 }
 
-void AEldenEnemy::EnableParryWindow()
-{
-	bIsParryable = true;
-}
-
-void AEldenEnemy::DisableParryWindow()
-{
-	bIsParryable = false;
-}
+//void AEldenEnemy::EnableParryWindow()
+//{
+//	bIsParryable = true;
+//}
+//
+//void AEldenEnemy::DisableParryWindow()
+//{
+//	bIsParryable = false;
+//}
 
 void AEldenEnemy::ApplyStun()
 {
@@ -310,7 +331,7 @@ void AEldenEnemy::ApplyStun()
 
 	bIsStunned = true;
 	bIsAttacking = false;
-	bIsParryable = false;
+	/*bIsParryable = false;*/
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance)

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
@@ -6,6 +6,12 @@
 #include "Containers/Array.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Character/EldenEnemy.h"
+#include "Components/CapsuleComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "DrawDebugHelpers.h"
+#include "Engine/OverlapResult.h"
+#include "Engine/Engine.h"
 
 
 UEldenCombatComponent::UEldenCombatComponent()
@@ -128,18 +134,18 @@ void UEldenCombatComponent::ExecuteBlock()
 {
     if (!PlayerCharacter || !CachedAnimInstance) return;
 
-    // °ø°Ý ÁßÀÌ°Å³ª ±¸¸£´Â ÁßÀÌ ¾Æ´Ï¸é °¡µå ÀÚ¼¼ ÁøÀÔ Çã¿ë
+    // ê³µê²© ì¤‘ì´ê±°ë‚˜ êµ¬ë¥´ëŠ” ì¤‘ì´ ì•„ë‹ˆë©´ ê°€ë“œ ìžì„¸ ì§„ìž… í—ˆìš©
     if (PlayerCharacter->GetState() == ECharacterState::Idle)
     {
         PlayerCharacter->SetState(ECharacterState::Blocking);
 
-        // ÇÊ¿äÇÏ´Ù¸é ¹æÆÐ ¹æ¾î È÷Æ®¹Ú½º ÄÑ±â
+        // í•„ìš”í•˜ë‹¤ë©´ ë°©íŒ¨ ë°©ì–´ ížˆíŠ¸ë°•ìŠ¤ ì¼œê¸°
         if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
         {
             Shield->EnableShieldBlock();
         }
 
-        // TODO: ¹æÆÐ¸¦ µé°í ¼­ ÀÖ´Â ·çÇÁ ¾Ö´Ï¸ÞÀÌ¼Ç ¶Ç´Â ºí·»µå Æ÷Áî Àû¿ë
+        // TODO: ë°©íŒ¨ë¥¼ ë“¤ê³  ì„œ ìžˆëŠ” ë£¨í”„ ì• ë‹ˆë©”ì´ì…˜ ë˜ëŠ” ë¸”ë Œë“œ í¬ì¦ˆ ì ìš©
     }
 }
 
@@ -147,7 +153,7 @@ void UEldenCombatComponent::EndBlock()
 {
     if (!PlayerCharacter) return;
 
-    // °¡µå »óÅÂÀÏ ¶§¸¸ ÇØÁ¦ °¡´É
+    // ê°€ë“œ ìƒíƒœì¼ ë•Œë§Œ í•´ì œ ê°€ëŠ¥
     if (PlayerCharacter->GetState() == ECharacterState::Blocking)
     {
         PlayerCharacter->SetState(ECharacterState::Idle);
@@ -185,11 +191,42 @@ void UEldenCombatComponent::ExecuteParry()
     }
 }
 
+
+
+bool UEldenCombatComponent::TryDeflect(const FVector& HitLocation, AEldenEnemy* Attacker)
+{
+	if (!bParryWindowActive || !Attacker || !PlayerCharacter) return false;
+	FVector Fwd = PlayerCharacter->GetActorForwardVector();
+	FVector DirToHit = HitLocation - PlayerCharacter->GetActorLocation();
+	DirToHit.Z = 0.f;
+	DirToHit = DirToHit.GetSafeNormal();
+
+	float DotToHit = FVector::DotProduct(Fwd, DirToHit);              // ì •ë©´ì—ì„œ ì˜´?
+	float DotFacing = FVector::DotProduct(Fwd, Attacker->GetActorForwardVector());
+	
+	if (DotToHit <= 0.f || DotFacing >= ParryFacingDot) return false;
+	
+	Attacker->ApplyStun();
+	
+	if (ParryVFX)   UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParryVFX, HitLocation);
+    if (ParrySound) UGameplayStatics::PlaySoundAtLocation(GetWorld(), ParrySound, HitLocation);
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
+	GetWorld()->GetTimerManager().SetTimer(HitStopTimerHandle, this,
+	    &UEldenCombatComponent::ResetTimeDilation, 0.01f, false);
+
+	return true;
+}
+
 void UEldenCombatComponent::OnParryMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
     if (PlayerCharacter)
     {
-        // »óÅÂ¸¦ ´Ù½Ã Æò¼Ò(Idle)·Î º¹±¸
+        // ìƒíƒœë¥¼ ë‹¤ì‹œ í‰ì†Œ(Idle)ë¡œ ë³µêµ¬
         PlayerCharacter->SetState(ECharacterState::Idle);
     }
+}
+
+void UEldenCombatComponent::ResetTimeDilation()
+{
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.f);
 }

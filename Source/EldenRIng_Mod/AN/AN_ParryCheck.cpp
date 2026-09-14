@@ -1,4 +1,4 @@
-#include "EldenRing_Mod/AN/AN_ParryCheck.h"
+ï»¿#include "EldenRing_Mod/AN/AN_ParryCheck.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 
 void UAN_ParryCheck::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
@@ -7,10 +7,10 @@ void UAN_ParryCheck::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase*
 
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		// ¾Ö´Ï¸ŞÀÌ¼Ç ÁÖÀÎÀÌ ÇÃ·¹ÀÌ¾î¶ó¸é ParryCheck() ½ÇÇà
+		// ì• ë‹ˆë©”ì´ì…˜ ì£¼ì¸ì´ í”Œë ˆì´ì–´ë¼ë©´ ParryCheck() ì‹¤í–‰
 		if (AEldenCharacter* Player = Cast<AEldenCharacter>(MeshComp->GetOwner()))
 		{
-			Player->ParryCheck();
+			/*Player->ParryCheck();*/
 		}
 	}
 }
