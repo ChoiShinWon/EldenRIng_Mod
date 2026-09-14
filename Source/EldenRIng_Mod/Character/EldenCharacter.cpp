@@ -357,6 +357,29 @@ void AEldenCharacter::ToggleLockOn()
 	}
 }
 
+void AEldenCharacter::OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass)
+{
+	if (WidgetClass)
+	{
+		UUserWidget* LevelUpWidget = CreateWidget<UUserWidget>(GetWorld(), WidgetClass);
+		if (LevelUpWidget)
+		{
+			LevelUpWidget->AddToViewport();
+
+			if (APlayerController* PC = Cast < APlayerController>(GetController()))
+			{
+				PC->bShowMouseCursor = true;
+				FInputModeUIOnly InputMode;
+				InputMode.SetWidgetToFocus(LevelUpWidget->TakeWidget());
+				PC->SetInputMode(InputMode);
+			}
+		}
+
+		GetCharacterMovement()->StopMovementImmediately();
+		SetState(ECharacterState::Interacting);
+	}
+}
+
 void AEldenCharacter::Revive(const FTransform& SpawnTransform)
 {
 	GetMesh()->SetSimulatePhysics(false);

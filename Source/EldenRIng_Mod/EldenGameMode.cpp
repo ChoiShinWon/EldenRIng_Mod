@@ -5,6 +5,7 @@
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "EldenRing_Mod/Actor/Bloodstain.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "EngineUtils.h"
@@ -179,4 +180,13 @@ void AEldenGameMode::ResetAllEnemies()
 
 		GetWorld()->SpawnActor<AEldenEnemy>(Info.EnemyClass, Loc, Rot, SpawnPar);
 	}
+}
+
+void AEldenGameMode::HandleGraceRest(AEldenGrace* Grace, AEldenCharacter* Player)
+{
+	RegisterGrace(Grace);
+	ResetAllEnemies();
+	if (!Player || !Player->InventoryComponent) return;
+
+	Player->InventoryComponent->RefillPotions();
 }

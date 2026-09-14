@@ -1,4 +1,4 @@
-#include "EldenRing_Mod/Component/LockOnComponent.h"
+ï»¿#include "EldenRing_Mod/Component/LockOnComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "Kismet/GameplayStatics.h"
@@ -8,24 +8,29 @@
 
 ULockOnComponent::ULockOnComponent() { PrimaryComponentTick.bCanEverTick = true; }
 
+void ULockOnComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	OwnerCharacter = Cast<AEldenCharacter>(GetOwner());
+}
+
 void ULockOnComponent::ToggleLockOn()
 {
-	// ¿©±â¼­ ÁÖÀÎ(Ä³¸¯ÅÍ)À» ¹Ù·Î Ã£½À´Ï´Ù.
-	AEldenCharacter* OwnerChar = Cast<AEldenCharacter>(GetOwner());
-	if (!OwnerChar) return;
+	// ì—¬ê¸°ì„œ ì£¼ì¸(ìºë¦­í„°)ì„ ë°”ë¡œ ì°¾ìŠµë‹ˆë‹¤.
+	if (!OwnerCharacter) return;
 
-	// ¶ô¿ÂÁßÀÏ¶§
+	// ë½ì˜¨ì¤‘ì¼ë•Œ
 	if (CurrentTarget.IsValid())
 	{
 		IITargetable* TargetInterface = Cast<IITargetable>(CurrentTarget.Get());
-		// ¶ô¿Â ¸¶Å©°¡ ÀÖ´Ù¸é ¸¶Å© º¸¿©ÁÖ±â
+		// ë½ì˜¨ ë§ˆí¬ê°€ ìˆë‹¤ë©´ ë§ˆí¬ ë³´ì—¬ì£¼ê¸°
 		if (TargetInterface) TargetInterface->ShowTargetMark(false);
-		// ¶ô¿Â ´ë»ó ºñ¿ì±â
+		// ë½ì˜¨ ëŒ€ìƒ ë¹„ìš°ê¸°
 		CurrentTarget = nullptr;
-		OwnerChar->GetCharacterMovement()->bOrientRotationToMovement = true;
-		OwnerChar->GetCharacterMovement()->bUseControllerDesiredRotation = false;
+		OwnerCharacter->GetCharacterMovement()->bOrientRotationToMovement = true;
+		OwnerCharacter->GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	}
-	// ¶ô¿ÂÁßÀÌÁö ¾ÊÀ»¶§
+	// ë½ì˜¨ì¤‘ì´ì§€ ì•Šì„ë•Œ
 	else
 	{
 		FindBestTarget();
@@ -33,42 +38,44 @@ void ULockOnComponent::ToggleLockOn()
 		{
 			IITargetable* TargetInterface = Cast<IITargetable>(CurrentTarget.Get());
 			if (TargetInterface) TargetInterface->ShowTargetMark(true);
-			OwnerChar->GetCharacterMovement()->bOrientRotationToMovement = false;
-			OwnerChar->GetCharacterMovement()->bUseControllerDesiredRotation = true;
+			OwnerCharacter->GetCharacterMovement()->bOrientRotationToMovement = false;
+			OwnerCharacter->GetCharacterMovement()->bUseControllerDesiredRotation = true;
 		}
 	}
 }
 
 void ULockOnComponent::UpdateLockOn(float DeltaTime)
 {
-	AEldenCharacter* OwnerChar = Cast<AEldenCharacter>(GetOwner());
-	if (!OwnerChar || !CurrentTarget.IsValid()) return;
+	if (!OwnerCharacter || !CurrentTarget.IsValid()) return;
 
 	if (CurrentTarget->GetIsDead())
 	{
-		ToggleLockOn(); // ÇØÁ¦
+		ToggleLockOn(); // í•´ì œ
 		return;
 	}
 
-	float Distance = FVector::DistSquared(OwnerChar->GetActorLocation(), CurrentTarget->GetActorLocation());
+	float Distance = FVector::DistSquared(OwnerCharacter->GetActorLocation(), CurrentTarget->GetActorLocation());
 	if (Distance > MaxLockOnDistance * MaxLockOnDistance)
 	{
-		ToggleLockOn(); // ÇØÁ¦
+		ToggleLockOn(); // í•´ì œ
 		return;
 	}
+	AController* Controller = OwnerCharacter->GetController();
+	if (!Controller) return;
 
-	FRotator LookAtRot = UKismetMathLibrary::FindLookAtRotation(OwnerChar->GetActorLocation(), CurrentTarget->GetActorLocation());
+	FRotator LookAtRot = UKismetMathLibrary::FindLookAtRotation(OwnerCharacter->GetActorLocation(), CurrentTarget->GetActorLocation());
 	LookAtRot.Pitch -= 15.0f;
-	FRotator SmoothRot = FMath::RInterpTo(OwnerChar->GetController()->GetControlRotation(), LookAtRot, DeltaTime, 5.0f);
-	OwnerChar->GetController()->SetControlRotation(SmoothRot);
+	FRotator SmoothRot = FMath::RInterpTo(Controller->GetControlRotation(), LookAtRot, DeltaTime, 5.0f);
+
+	Controller->SetControlRotation(SmoothRot);
 
 	
 }
 
+
 void ULockOnComponent::FindBestTarget()
 {
-	AEldenCharacter* OwnerChar = Cast<AEldenCharacter>(GetOwner());
-	if (!OwnerChar) return;
+	if (!OwnerCharacter) return;
 
 	TArray<AActor*> FoundEnemies;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEldenEnemy::StaticClass(), FoundEnemies);
@@ -81,7 +88,7 @@ void ULockOnComponent::FindBestTarget()
 		AEldenEnemy* Enemy = Cast<AEldenEnemy>(Actor);
 		if (Enemy && !Enemy->GetIsDead())
 		{
-			float Dist = FVector::Dist(OwnerChar->GetActorLocation(), Actor->GetActorLocation());
+			float Dist = FVector::Dist(OwnerCharacter->GetActorLocation(), Actor->GetActorLocation());
 			if (Dist < MinDist) { MinDist = Dist; Closest = Enemy; }
 		}
 	}

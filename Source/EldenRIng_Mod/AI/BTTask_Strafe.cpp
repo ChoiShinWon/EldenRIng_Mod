@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Eldenring_Mod/AI/BTTask_Strafe.h"
@@ -15,29 +15,30 @@ UBTTask_Strafe::UBTTask_Strafe()
 EBTNodeResult::Type UBTTask_Strafe::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	AAIController* AIC = OwnerComp.GetAIOwner();
-	APawn* Pawn = AIC->GetPawn();
 	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
+	if (!AIC || !BB) return EBTNodeResult::Failed;
+	APawn* Pawn = AIC->GetPawn();
 	
 	AActor* TargetActor = Cast<AActor>(BB->GetValueAsObject(FName("TargetActor")));
 	if (!TargetActor || !Pawn) return EBTNodeResult::Failed;
 
-	// ÇÃ·¹ÀÌ¾î¿Í ¸ó½ºÅÍÀÇ À§Ä¡¸¦ °¡Á®¿È
+	// í”Œë ˆì´ì–´ì™€ ëª¬ìŠ¤í„°ì˜ ìœ„ì¹˜ë¥¼ ê°€ì ¸ì˜´
 	FVector PlayerLoc = TargetActor->GetActorLocation();
 	FVector MonsterLoc = Pawn->GetActorLocation();
 
-	// ÇÃ·¹ÀÌ¾î¸¦ ÇâÇÏ´Â ¹æÇâ º¤ÅÍ °è»ê
+	// í”Œë ˆì´ì–´ë¥¼ í–¥í•˜ëŠ” ë°©í–¥ ë²¡í„° ê³„ì‚°
 	FVector DirectionToMonster = (MonsterLoc - PlayerLoc).GetSafeNormal();
 
-	float SideStepDir = FMath::RandBool() ? 1.0f : -1.0f; // ¿ÞÂÊ ¶Ç´Â ¿À¸¥ÂÊÀ¸·Î ÀÌµ¿ÇÒ ¹æÇâ °áÁ¤
-	// ÇÃ·¹ÀÌ¾î¸¦ Áß½ÉÀ¸·Î ¿·À¸·Î ÀÌµ¿ÇÒ º¤ÅÍ °è»ê
+	float SideStepDir = FMath::RandBool() ? 1.0f : -1.0f; // ì™¼ìª½ ë˜ëŠ” ì˜¤ë¥¸ìª½ìœ¼ë¡œ ì´ë™í•  ë°©í–¥ ê²°ì •
+	// í”Œë ˆì´ì–´ë¥¼ ì¤‘ì‹¬ìœ¼ë¡œ ì˜†ìœ¼ë¡œ ì´ë™í•  ë²¡í„° ê³„ì‚°
 	FVector SideVector = FVector::CrossProduct(FVector::UpVector, DirectionToMonster) * SideStepDir; 
 
-	// ÃÖÁ¾ ¸ñÇ¥ À§Ä¡ °è»ê
+	// ìµœì¢… ëª©í‘œ ìœ„ì¹˜ ê³„ì‚°
 	FVector GoalLocation = MonsterLoc + (SideVector * StrafeDistance);
 
 	AIC->SetFocus(TargetActor);
 
-	// ³×ºñ°ÔÀÌ¼Ç ½Ã½ºÅÛÀ» »ç¿ëÇÏ¿© ¸ñÇ¥ À§Ä¡·Î ÀÌµ¿
+	// ë„¤ë¹„ê²Œì´ì…˜ ì‹œìŠ¤í…œì„ ì‚¬ìš©í•˜ì—¬ ëª©í‘œ ìœ„ì¹˜ë¡œ ì´ë™
 	AIC->MoveToLocation(GoalLocation, 50.0f, true);
 	
 	return EBTNodeResult::Succeeded;

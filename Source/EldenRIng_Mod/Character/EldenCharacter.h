@@ -267,6 +267,9 @@ public:
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 	void ToggleLockOn();
 
+	// 은총에서 레벨업 UI를 여는 함수
+	void OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass);
+
 	// 외부에서 무적 상태를 켜고 끌 수 있는 함수
 	void SetInvincible(bool bState);
 

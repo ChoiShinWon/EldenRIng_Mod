@@ -66,42 +66,16 @@ FTransform AEldenGrace::GetRespawnTransform() const
 void AEldenGrace::Interact(AEldenCharacter* Player)
 {
 	if (!Player) return;
+
 	if (LevelUpWidgetClass)
 	{
-		UUserWidget* LevelUpWidget = CreateWidget<UUserWidget>(GetWorld(), LevelUpWidgetClass);
-		if (LevelUpWidget)
-		{
-			LevelUpWidget->AddToViewport();
-
-			if (APlayerController* PC = Cast < APlayerController>(Player->GetController()))
-			{
-				PC->bShowMouseCursor = true;
-
-				FInputModeUIOnly InputMode;
-				InputMode.SetWidgetToFocus(LevelUpWidget->TakeWidget());
-				PC->SetInputMode(InputMode);
-			}
-		}
-
-		Player->GetCharacterMovement()->StopMovementImmediately();
-		Player->SetState(ECharacterState::Interacting);
+		Player->OpenLevelUpMenu(LevelUpWidgetClass);
 	}
 
 	if (AEldenGameMode* GM = GetWorld()->GetAuthGameMode<AEldenGameMode>())
 	{
-		GM->RegisterGrace(this);
-		GM->ResetAllEnemies();
+		GM->HandleGraceRest(this, Player);
 	}
-
-	if (!Player->InventoryComponent) return;
-	Player->InventoryComponent->RefillPotions();
-
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("Grace Found"));
-	}
-	UE_LOG(LogTemp, Log, TEXT("Grace Interact Called!"));
 
 }
 

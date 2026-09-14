@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
@@ -63,5 +63,8 @@ void AEldenWeapon::EnableWeaponCollision()
 
 void AEldenWeapon::DisableWeaponCollision()
 {
-	WeaponHitbox->DisableHitbox();
+	if (WeaponHitbox)
+	{
+		WeaponHitbox->DisableHitbox();
+	}
 }

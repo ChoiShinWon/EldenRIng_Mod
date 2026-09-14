@@ -35,6 +35,8 @@ public:
 
 	void ResetAllEnemies();
 
+	void HandleGraceRest(class AEldenGrace* Grace, class AEldenCharacter* Player);
+
 protected:
 
 	virtual void BeginPlay() override;
