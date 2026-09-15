@@ -310,7 +310,8 @@ void AEldenCharacter::Move(const FInputActionValue& Value)
 
 	LastMoveInput = MovementVector;
 
-	if (GetState() != ECharacterState::Idle && GetState() != ECharacterState::Blocking) return;
+	if (GetState() != ECharacterState::Idle && GetState() != ECharacterState::Blocking
+		&& GetState() != ECharacterState::Drinking) return;
 	
 	
 	if (Controller != nullptr)
@@ -377,6 +378,69 @@ void AEldenCharacter::OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass
 
 		GetCharacterMovement()->StopMovementImmediately();
 		SetState(ECharacterState::Interacting);
+	}
+}
+
+void AEldenCharacter::EnterGraceRest()
+{
+	// 플레이어 HUD, 무기, 방패 숨기기
+	if (CurrentHUD)
+	{
+		CurrentHUD->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->SetActorHiddenInGame(true);
+	}
+
+	if (EquippedShield)
+	{
+		EquippedShield->SetActorHiddenInGame(true);
+	}
+
+	GetCharacterMovement()->StopMovementImmediately();
+	SetState(ECharacterState::Interacting);
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	if (!AnimInstance) return;
+	AnimInstance->Montage_Play(SitMontage);
+
+}
+
+void AEldenCharacter::ExitGraceRest()
+{
+	// 단순 게터는 헤더로 안빼도 됨
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	if (!AnimInstance) return;
+	AnimInstance->Montage_Play(StandUpMontage);
+
+	// 델리게이트 등록
+	FOnMontageEnded StandUpEndDelegate;
+	StandUpEndDelegate.BindUObject(this, &AEldenCharacter::OnStandUpMontageEnded);
+	AnimInstance->Montage_SetEndDelegate(StandUpEndDelegate, StandUpMontage);
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		PC->SetViewTargetWithBlend(this, ExitCameraBlendTime);
+	}
+
+	if (CurrentHUD)
+	{
+		CurrentHUD->SetVisibility(ESlateVisibility::Visible);
+	}
+
+	// 무기랑 방패 다시 보이게
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->SetActorHiddenInGame(false);
+	}
+
+	if (EquippedShield)
+	{
+		EquippedShield->SetActorHiddenInGame(false);
 	}
 }
 
@@ -494,6 +558,11 @@ void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupte
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 	}
+}
+
+void AEldenCharacter::OnStandUpMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	SetState(ECharacterState::Idle);
 }
 
 void AEldenCharacter::OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -625,6 +694,8 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 
 void AEldenCharacter::StartSprint()
 {
+	if (GetState() == ECharacterState::Drinking) return;
+
 	if (StatComponent->CurrentStamina > 0.0f)
 	{
 		bIsSprinting = true;
@@ -721,6 +792,9 @@ void AEldenCharacter::UseItem()
 
 		SetState(ECharacterState::Drinking);
 
+		if (bIsSprinting) StopSprint();
+
+
 		SetDrinkingVisuals(true);
 
 		break;
@@ -765,6 +839,21 @@ void AEldenCharacter::ApplyItemEffect()
 		break;
 	}
 	// 나중에 마나 포션이 추가되면 여기서 FP를 회복시킵니다.
+	}
+}
+
+void AEldenCharacter::SetInteractableTarget(TScriptInterface<class IInteractable> NewTarget)
+{
+	CurrentInteractableTarget = NewTarget;
+
+	if (!CurrentHUD) return;
+	if (NewTarget)
+	{
+		CurrentHUD->ShowInteractPrompt(NewTarget->GetInteractionPrompt());
+	}
+	else
+	{
+		CurrentHUD->HideInteractPrompt();
 	}
 }
 

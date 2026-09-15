@@ -9,6 +9,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "Camera/CameraComponent.h"
 
 
 AEldenGrace::AEldenGrace()
@@ -28,6 +29,9 @@ AEldenGrace::AEldenGrace()
 	RespawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("RespawnPoint"));
 	RespawnPoint->SetupAttachment(RootComponent);
 	RespawnPoint->SetRelativeLocation(FVector(150.0f, 0.f, 90.f));
+
+	GraceCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("GraceCamera"));
+	GraceCamera->SetupAttachment(RootComponent);
 }
 
 
@@ -44,7 +48,7 @@ void AEldenGrace::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Ot
 	AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor);
 	if (Player)
 	{
-		Player->CurrentInteractableTarget = this;
+		Player->SetInteractableTarget(this);
 	}
 }
 
@@ -54,7 +58,7 @@ void AEldenGrace::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor);
 	if (Player)
 	{
-		Player->CurrentInteractableTarget = nullptr;
+		Player->SetInteractableTarget(nullptr);
 	}
 }
 
@@ -67,15 +71,35 @@ void AEldenGrace::Interact(AEldenCharacter* Player)
 {
 	if (!Player) return;
 
-	if (LevelUpWidgetClass)
+	Player->EnterGraceRest();
+
+	PendingPlayer = Player;
+
+	if (APlayerController* PC = Cast<APlayerController>(Player->GetController()))
 	{
-		Player->OpenLevelUpMenu(LevelUpWidgetClass);
+		PC->SetViewTargetWithBlend(this, CameraBlendTime);
 	}
+
+	GetWorldTimerManager().SetTimer(OpenMenuTimerHandle, this, &AEldenGrace::OnMenuDelayed,
+		CameraBlendTime, false);
 
 	if (AEldenGameMode* GM = GetWorld()->GetAuthGameMode<AEldenGameMode>())
 	{
 		GM->HandleGraceRest(this, Player);
 	}
 
+}
+
+FText AEldenGrace::GetInteractionPrompt() const
+{
+	return FText::FromString(TEXT("은총에서 쉬기"));
+}
+
+void AEldenGrace::OnMenuDelayed()
+{
+	if (PendingPlayer.IsValid() && LevelUpWidgetClass)
+	{
+		PendingPlayer->OpenLevelUpMenu(LevelUpWidgetClass);
+	}
 }
 

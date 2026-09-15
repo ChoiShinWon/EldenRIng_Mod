@@ -154,8 +154,7 @@ void UEldenLevelUpWidget::OnConfirmClicked()
 			PC->bShowMouseCursor = false;
 		}
 
-		// 캐릭터 원래 상태로 복구 (이동 가능하게)
-		PlayerCharacter->SetState(ECharacterState::Idle);
+		PlayerCharacter->ExitGraceRest();
 
 		RemoveFromParent();
 	}
@@ -172,8 +171,8 @@ void UEldenLevelUpWidget::OnCancelClicked()
 			PC->SetInputMode(InputMode);
 			PC->bShowMouseCursor = false;
 		}
-		// 캐릭터 원래 상태로 복구 (이동 가능하게)
-		PlayerCharacter->SetState(ECharacterState::Idle);
+
+		PlayerCharacter->ExitGraceRest();
 	}
 	
 	

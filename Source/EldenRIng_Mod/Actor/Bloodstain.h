@@ -24,6 +24,7 @@ public:
 
 	virtual void Interact(AEldenCharacter* Player) override;
 
+	virtual FText GetInteractionPrompt() const override;
 protected:
 	virtual void BeginPlay() override;
 

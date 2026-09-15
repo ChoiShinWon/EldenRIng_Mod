@@ -189,3 +189,14 @@ void UEldenHUDWidget::UpdateEquipmentUI(UTexture2D* RTexture, UTexture2D* LTextu
         }
     }
 }
+
+void UEldenHUDWidget::ShowInteractPrompt(const FText& PromptText)
+{
+	InteractPromptText->SetText(PromptText);
+	InteractPromptPanel->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UEldenHUDWidget::HideInteractPrompt()
+{
+	InteractPromptPanel->SetVisibility(ESlateVisibility::Collapsed);
+}
