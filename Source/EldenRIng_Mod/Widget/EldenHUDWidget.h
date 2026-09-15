@@ -17,6 +17,8 @@ class ELDENRING_MOD_API UEldenHUDWidget : public UUserWidget
 public:
 	void UpdateEquipmentUI(UTexture2D* RTexture, UTexture2D* LTexture, UTexture2D* ItemTexture, const FString& SkillName);
 
+	void ShowInteractPrompt(const FText& PromptText);
+	void HideInteractPrompt();
 protected:
 	// 위젯이 화면에 생성될 때 한번 호출되는 함수
 	virtual void NativeConstruct() override;
@@ -57,6 +59,15 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* PotionCountText;
 
+	UPROPERTY(meta = (BindWidget))
+	class UImage* InteractIcon;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* InteractPromptText;
+
+	UPROPERTY(meta = (BindWidget))
+	class UWidget* InteractPromptPanel;
+
 	UFUNCTION()
 	void OnRunesUpdated(int32 NewRunes);
 
@@ -71,6 +82,7 @@ protected:
 
 	UFUNCTION()
 	void OnPotionCountUpdated(int32 Current, int32 Max);
+
 
 	// 보간용 변수
 	float GhostPercent = 1.0f;

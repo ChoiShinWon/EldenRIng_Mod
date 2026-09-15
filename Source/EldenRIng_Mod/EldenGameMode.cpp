@@ -83,6 +83,8 @@ void AEldenGameMode::RespawnPlayer()
 {
 	if (!CachedPlayer) return;
 
+	ResetAllEnemies();
+
 	FTransform Target = LastGrace.IsValid() ? LastGrace->GetRespawnTransform() : InitialSpawnTransform;
 	CachedPlayer->Revive(Target);
 

@@ -130,6 +130,15 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* RollMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grace")
+	class UAnimMontage* SitMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grace")
+	class UAnimMontage* StandUpMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grace")
+	float ExitCameraBlendTime = 0.5f;
 	
 	FVector2D LastMoveInput;
 	
@@ -164,6 +173,9 @@ protected:
 	
 	UFUNCTION()
 	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	UFUNCTION()
+	void OnStandUpMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 	UFUNCTION()
 	void OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -224,8 +236,6 @@ public:
 	void SetState(ECharacterState NewState);
 	ECharacterState GetState() const;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TScriptInterface<class IInteractable> CurrentInteractableTarget;
 
 	/*=============================================================================
 	 * Components (컴포넌트)
@@ -273,6 +283,10 @@ public:
 	// 은총에서 레벨업 UI를 여는 함수
 	void OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass);
 
+	void EnterGraceRest();
+
+	void ExitGraceRest();
+
 	// 외부에서 무적 상태를 켜고 끌 수 있는 함수
 	void SetInvincible(bool bState);
 
@@ -288,4 +302,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnPlayerDiedDelegate OnPlayerDied;
 
+	void SetInteractableTarget(TScriptInterface<class IInteractable> NewTarget);
+
+private:
+	// CurrentInteractableTarget을 여기로 옮기기
+	TScriptInterface<class IInteractable> CurrentInteractableTarget;
 };
