@@ -676,11 +676,6 @@ void AEldenCharacter::DebugLevelUpStrength()
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("공격력 증가!"));
 }
 
-//void AEldenCharacter::ParryCheck()
-//{
-//	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::White, TEXT(">> ParryCheck 노티파이 도달"));
-//	if (CombatComponent) CombatComponent->TryParryHit();
-//}
 
 
 /*=============================================================================
