@@ -85,6 +85,12 @@ void UEldenHitboxComponent::OnHitboxOverlap(UPrimitiveComponent* OverlapComponen
 			return;
 		}
 
+		if (TargetPlayer->bDodgeInvincibleHit)
+		{
+			TargetPlayer->bDodgeInvincibleHit = false;
+			return;
+		}
+
 		if (TargetPlayer->bShieldBlockedAttack)
 		{
 			TargetPlayer->bShieldBlockedAttack = false; // 신호 초기화

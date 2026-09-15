@@ -531,6 +531,12 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 	
 	if (GetState() == ECharacterState::Dead) return 0.0f;
 
+	if (bIsInvincible)
+	{
+		bDodgeInvincibleHit = true;
+		return 0.0f;
+	}
+
 	if (AEldenEnemy* Attacker = Cast<AEldenEnemy>(DamageCauser))
 	{
 		if (CombatComponent && CombatComponent->TryDeflect(Attacker->GetActorLocation(), Attacker))
