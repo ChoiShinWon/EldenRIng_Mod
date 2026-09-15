@@ -262,6 +262,9 @@ public:
 	bool bShieldBlockedAttack = false;
 	bool bParrySucceeded = false;
 
+	// 무적 상태에서 피격을 판정을 씹었는지 신호
+	bool bDodgeInvincibleHit = false;
+
 	bool GetIsLockedOn() const;
 	// 기본 데미지 처리 함수 오버라이드
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
