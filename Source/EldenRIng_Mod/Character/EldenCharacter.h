@@ -281,9 +281,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void ApplyItemEffect();
 
-	//// 애니메이션 노티파이 (AN_ParryCheck)에서 호출할 패링 검사 함수
-	//void ParryCheck();
-
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnPlayerDiedDelegate OnPlayerDied;
