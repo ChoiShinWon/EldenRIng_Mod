@@ -1,4 +1,4 @@
-#pragma once
+Ôªø#pragma once
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "EldenRing_Mod/Interface/ITargetable.h"
@@ -10,13 +10,18 @@ class ELDENRING_MOD_API ULockOnComponent : public UActorComponent
 	GENERATED_BODY()
 public:
 	ULockOnComponent();
-	// ¿Œ¿⁄ ¡¶∞≈
+	// Ïù∏Ïûê Ï†úÍ±∞
 	void ToggleLockOn();
 	void UpdateLockOn(float DeltaTime);
 	bool HasTarget() const { return CurrentTarget.IsValid(); }
 
 protected:
+	virtual void BeginPlay() override;
+
+	// ÏùΩÍ∏∞ Ï†ÑÏö© Ï∞∏Ï°∞
 	TWeakObjectPtr<class AEldenEnemy> CurrentTarget;
+
+	class AEldenCharacter* OwnerCharacter;
 
 	void FindBestTarget();
 

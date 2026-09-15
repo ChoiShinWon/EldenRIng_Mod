@@ -19,6 +19,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/PointLightComponent.h"
+#include "Components/CapsuleComponent.h"
 
 
 AEldenCharacter::AEldenCharacter()
@@ -168,6 +169,10 @@ void AEldenCharacter::BeginPlay()
 		}
 	}
 
+    MeshDefaultRelLoc = GetMesh()->GetRelativeLocation();
+	MeshDefaultRelRot = GetMesh()->GetRelativeRotation();
+	MeshDefaultProfile = GetMesh()->GetCollisionProfileName();
+	MeshDefaultRelScale = GetMesh()->GetRelativeScale3D();
 	
 }
 
@@ -352,6 +357,55 @@ void AEldenCharacter::ToggleLockOn()
 	}
 }
 
+void AEldenCharacter::OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass)
+{
+	if (WidgetClass)
+	{
+		UUserWidget* LevelUpWidget = CreateWidget<UUserWidget>(GetWorld(), WidgetClass);
+		if (LevelUpWidget)
+		{
+			LevelUpWidget->AddToViewport();
+
+			if (APlayerController* PC = Cast < APlayerController>(GetController()))
+			{
+				PC->bShowMouseCursor = true;
+				FInputModeUIOnly InputMode;
+				InputMode.SetWidgetToFocus(LevelUpWidget->TakeWidget());
+				PC->SetInputMode(InputMode);
+			}
+		}
+
+		GetCharacterMovement()->StopMovementImmediately();
+		SetState(ECharacterState::Interacting);
+	}
+}
+
+void AEldenCharacter::Revive(const FTransform& SpawnTransform)
+{
+	GetMesh()->SetSimulatePhysics(false);
+	GetMesh()->SetCollisionProfileName(MeshDefaultProfile);
+	GetMesh()->AttachToComponent(GetCapsuleComponent(),
+		FAttachmentTransformRules::KeepRelativeTransform);
+	GetMesh()->SetRelativeLocationAndRotation(MeshDefaultRelLoc, MeshDefaultRelRot);
+	GetMesh()->SetRelativeScale3D(MeshDefaultRelScale);
+	// 위치 이동
+	SetActorLocationAndRotation(
+		SpawnTransform.GetLocation(),
+		SpawnTransform.GetRotation().Rotator(),
+		false, nullptr, ETeleportType::TeleportPhysics);
+	// 무브먼트, 상태
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	SetState(ECharacterState::Idle);
+	SetInvincible(false); // 빠뜨리면 부활 후 영구 무적
+
+	// 리소스 풀 회복
+	if (StatComponent) StatComponent->FullRestore();
+	if (InventoryComponent) InventoryComponent->RefillPotions();
+
+	// 부활하면 플레이어 HUD 다시 Visible
+	if (CurrentHUD) CurrentHUD->SetVisibility(ESlateVisibility::Visible);
+}
+
 void AEldenCharacter::Dodge()
 {
 	// 스태미너가 부족거나 이미 구르는 중이라면 무시
@@ -450,9 +504,48 @@ void AEldenCharacter::OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterr
 	}
 }
 
+void AEldenCharacter::HandleDeath()
+{
+	if (GetState() == ECharacterState::Dead) return;
+
+	SetState(ECharacterState::Dead);
+
+	SetInvincible(true);
+	GetCharacterMovement()->DisableMovement();
+	GetMesh()->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetSimulatePhysics(true);
+
+	// 죽었을때 플레이어 HUD 숨김
+	if (CurrentHUD)
+	{
+		CurrentHUD->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	OnPlayerDied.Broadcast(this);
+}
+
 float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	
 	if (GetState() == ECharacterState::Dead) return 0.0f;
+
+	if (bIsInvincible)
+	{
+		bDodgeInvincibleHit = true;
+		return 0.0f;
+	}
+
+	if (AEldenEnemy* Attacker = Cast<AEldenEnemy>(DamageCauser))
+	{
+		if (CombatComponent && CombatComponent->TryDeflect(Attacker->GetActorLocation(), Attacker))
+		{
+			bParrySucceeded = true;
+			return 0.0f;
+		}
+	}
+
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	bShieldBlockedAttack = false;
 	
@@ -501,8 +594,7 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 
 		if (LeftHealth <= 0.0f)
 		{
-			SetState(ECharacterState::Dead);
-			UE_LOG(LogTemp, Warning, TEXT("죽었다!"));
+			HandleDeath();
 		}
 		else if (ActualDamage > 0.0f)
 		{
@@ -590,82 +682,7 @@ void AEldenCharacter::DebugLevelUpStrength()
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("공격력 증가!"));
 }
 
-void AEldenCharacter::ParryCheck()
-{
-	// 현재 상태가 패링 시도중일 때만 작동
-	if (GetState() != ECharacterState::Parrying) return;
 
-	TArray<FHitResult> HitResults;
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(Parry), false, this);
-
-	// 전방 스윕 거리와 구체 두께 (무기 길이 맞춰서 조절 가능)
-	const float ParryRange = 200.f;
-	const float ParryRadius = 80.0f;
-
-	const FVector Start = GetActorLocation();
-	const FVector End = Start + GetActorForwardVector() * ParryRange;
-
-	// 내 캐릭터 앞쪽으로 구체를 쏴서 적이 있는지 검사
-	bool bHit = GetWorld()->SweepMultiByChannel(
-		HitResults, Start, End, FQuat::Identity,
-		ECollisionChannel::ECC_Pawn,
-		FCollisionShape::MakeSphere(ParryRadius),
-		Params);
-
-	if (!bHit) return;
-
-	for (const FHitResult& Result : HitResults)
-	{
-		if (AEldenEnemy* Enemy = Cast<AEldenEnemy>(Result.GetActor()))
-		{
-			// 적이 패링 가능 상태 (ANS_ParryWindow 구간) 인가?
-			if (!Enemy->bIsParryable) continue;
-
-			// 적이 내 정면에 있는가
-			FVector DirToEnemy = (Enemy->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-			float DotToEnemy = FVector::DotProduct(GetActorForwardVector(), DirToEnemy);
-
-			// 적이 나를 마주보고 있나 (뒤통수 / 옆구리 패링 방지)
-			float DotFacing = FVector::DotProduct(GetActorForwardVector(), Enemy->GetActorForwardVector());
-
-			// 적이 정면에 있고, 서로 마주보고 있다면 패링 성공
-			if (DotToEnemy > 0.0f && DotFacing < 0.0f)
-			{
-				Enemy->ApplyStun();
-
-				if (ParryVFX)
-				{
-					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParryVFX, Enemy->GetActorLocation());
-				}
-				if (ParrySound)
-				{
-					UGameplayStatics::PlaySoundAtLocation(GetWorld(), ParrySound, Enemy->GetActorLocation());
-				}
-
-				if (GEngine)
-				{
-					GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("패링 성공! 적 스턴!"));
-				}
-
-				
-
-				// 타격감을 위한 0.1초 멈춤 효과(역경직)
-				UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
-
-				GetWorld()->GetTimerManager().SetTimer(HitStopTimerHandle, this,
-					&AEldenCharacter::ResetTimeDilation, 0.01f, false);
-				break;
-			}
-		}
-	}
-}
-
-// 시간을 원래대로 돌리는 함수 구현
-void AEldenCharacter::ResetTimeDilation()
-{
-	// 게임 전체 속도를 다시 1.0 (정상 속도)으로 롤백
-	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
-}
 
 /*=============================================================================
  * 포션 로직 구현부

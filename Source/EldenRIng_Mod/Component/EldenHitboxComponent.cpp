@@ -79,6 +79,18 @@ void UEldenHitboxComponent::OnHitboxOverlap(UPrimitiveComponent* OverlapComponen
 	//  3. TakeDamage 실행 결과, 대상(플레이어)이 가드에 성공했는지 물어봄
 	if (AEldenCharacter* TargetPlayer = Cast<AEldenCharacter>(OtherActor))
 	{
+		if (TargetPlayer->bParrySucceeded)
+		{
+			TargetPlayer->bParrySucceeded = false;
+			return;
+		}
+
+		if (TargetPlayer->bDodgeInvincibleHit)
+		{
+			TargetPlayer->bDodgeInvincibleHit = false;
+			return;
+		}
+
 		if (TargetPlayer->bShieldBlockedAttack)
 		{
 			TargetPlayer->bShieldBlockedAttack = false; // 신호 초기화

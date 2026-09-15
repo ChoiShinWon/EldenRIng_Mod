@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -19,7 +19,7 @@ class ELDENRING_MOD_API UEldenLevelUpWidget : public UUserWidget
 protected:
 	virtual void NativeConstruct() override;
 
-	// »ı¸í·Â ¹öÆ° ¹× ÅØ½ºÆ®
+	// ìƒëª…ë ¥ ë²„íŠ¼ ë° í…ìŠ¤íŠ¸
 	UPROPERTY(meta = (BindWidget))
 	class UButton* Btn_VigorMinus;
 
@@ -33,7 +33,7 @@ protected:
 	class UTextBlock* Txt_OriginalVigor;
 		
 
-	// Áö±¸·Â ¹öÆ° ¹× ÅØ½ºÆ®
+	// ì§€êµ¬ë ¥ ë²„íŠ¼ ë° í…ìŠ¤íŠ¸
 	UPROPERTY(meta = (BindWidget))
 	class UButton* Btn_EnduranceMinus;
 
@@ -46,7 +46,7 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* Txt_OriginalEndurance;
 
-	// °ø°İ·Â ¹öÆ° ¹× ÅØ½ºÆ®
+	// ê³µê²©ë ¥ ë²„íŠ¼ ë° í…ìŠ¤íŠ¸
 	UPROPERTY(meta = (BindWidget))
 	class UButton* Btn_StrengthMinus;
 
@@ -59,23 +59,23 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* Txt_OriginalStrength;
 
-	// ÃÖÁ¾ È®ÀÎ ¹öÆ°
+	// ìµœì¢… í™•ì¸ ë²„íŠ¼
 	UPROPERTY(meta = (BindWidget))
 	class UButton* Btn_Confirm;
 
-	// Ãë¼Ò, ³ª°¡±â ¹öÆ°
+	// ì·¨ì†Œ, ë‚˜ê°€ê¸° ë²„íŠ¼
 	UPROPERTY(meta = (BindWidget))
 	class UButton* Btn_Cancel;
 
-	// ³²Àº ·éÀ» Ç¥½ÃÇÒ ÅØ½ºÆ® ºí·Ï
+	// ë‚¨ì€ ë£¬ì„ í‘œì‹œí•  í…ìŠ¤íŠ¸ ë¸”ë¡
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* Txt_LevelUpRunes;
 
-	// ³²Àº ·éÀ» °è»êÇØ¼­ ÅØ½ºÆ®¸¦ °»½ÅÇØÁÙ ÇÔ¼ö
+	// ë‚¨ì€ ë£¬ì„ ê³„ì‚°í•´ì„œ í…ìŠ¤íŠ¸ë¥¼ ê°±ì‹ í•´ì¤„ í•¨ìˆ˜
 	void UpdateRuneText();
 	
 
-	// ÀÓ½Ã µ¥ÀÌÅÍ ¹× ÂüÁ¶ º¯¼ö ¼±¾ğ
+	// ì„ì‹œ ë°ì´í„° ë° ì°¸ì¡° ë³€ìˆ˜ ì„ ì–¸
 	int32 PendingVigor;
 	int32 PendingEndurance;
 	int32 PendingStrength;
@@ -110,5 +110,7 @@ protected:
 
 	UFUNCTION()
 	void OnCancelClicked();
+
+	void TryChangeStat(int32& PendingStat, int32 BaseStat, class UTextBlock* ValueText, int32 Delta);
 	
 };

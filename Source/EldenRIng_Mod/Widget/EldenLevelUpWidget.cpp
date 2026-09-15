@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "EldenRing_Mod/Widget/EldenLevelUpWidget.h"
@@ -85,144 +85,44 @@ void UEldenLevelUpWidget::UpdateRuneText()
 
 void UEldenLevelUpWidget::OnVigorPlusClicked()
 {
-	int32 Cost = 500;
-	if (PlayerCharacter && PlayerStatComponent)
-	{
-		if (PlayerStatComponent->CurrentRunes >= TotalPendingRuneCost + Cost)
-		{
-			PendingVigor++;
-			TotalPendingRuneCost += Cost;
-			if (Txt_VigorValue)
-			{
-				Txt_VigorValue->SetText(FText::AsNumber(PendingVigor));
-				if (PendingVigor > PlayerStatComponent->Vigor)
-				{
-					Txt_VigorValue->SetColorAndOpacity(FSlateColor(FLinearColor(0.2f, 0.6f, 1.0f)));
-				}
-			}
-			UpdateRuneText();
-		}
-
-		else
-		{
-			// ���߿� �� �����ϴٴ� �޽��� �߰�
-		}
-	}
-	
+	if (!PlayerCharacter || !PlayerStatComponent) return;
+	TryChangeStat(PendingVigor, PlayerStatComponent->Vigor, Txt_VigorValue, +1);
 	
 }
 
 void UEldenLevelUpWidget::OnVigorMinusClicked()
 {
-	int32 Cost = 500;
-	if (PlayerCharacter && PlayerStatComponent)
-	{
-		if (PendingVigor > PlayerStatComponent->Vigor)
-		{
-			PendingVigor--;
-			TotalPendingRuneCost -= Cost;
-
-			if (Txt_VigorValue)
-			{
-				Txt_VigorValue->SetText(FText::AsNumber(PendingVigor));
-				if (PendingVigor == PlayerStatComponent->Vigor)
-				{
-					Txt_VigorValue->SetColorAndOpacity(FSlateColor(FLinearColor::White));
-				}
-			}
-			UpdateRuneText();
-		}
-	}
+	if (!PlayerCharacter || !PlayerStatComponent) return;
+	TryChangeStat(PendingVigor, PlayerStatComponent->Vigor, Txt_VigorValue, -1);
 }
 
 void UEldenLevelUpWidget::OnEndurancePlusClicked()
 {
-	int32 Cost = 500;
-	if (PlayerCharacter && PlayerStatComponent)
-	{
-		if (PlayerStatComponent->CurrentRunes >= TotalPendingRuneCost + Cost)
-		{
-			PendingEndurance++;
-			TotalPendingRuneCost += Cost;
-			if (Txt_EnduranceValue)
-			{
-				Txt_EnduranceValue->SetText(FText::AsNumber(PendingEndurance));
-				if (PendingEndurance > PlayerStatComponent->Endurance)
-				{
-					Txt_EnduranceValue->SetColorAndOpacity(FSlateColor(FLinearColor(0.2f, 0.6f, 1.0f)));
-				}
-			}
-			UpdateRuneText();
-		}
-	}
+	if (!PlayerCharacter || !PlayerStatComponent) return;
+	TryChangeStat(PendingEndurance, PlayerStatComponent->Endurance, Txt_EnduranceValue, +1);
 	
 }
 
 void UEldenLevelUpWidget::OnEnduranceMinusClicked()
 {
-	int32 Cost = 500;
-	if (PlayerStatComponent)
-	{
-		if (PlayerCharacter && PendingEndurance > PlayerStatComponent->Endurance)
-		{
-			PendingEndurance--;
-			TotalPendingRuneCost -= Cost;
-			if (Txt_EnduranceValue)
-			{
-				Txt_EnduranceValue->SetText(FText::AsNumber(PendingEndurance));
-				if (PendingEndurance == PlayerStatComponent->Endurance)
-				{
-					Txt_EnduranceValue->SetColorAndOpacity(FSlateColor(FLinearColor::White));
-				}
-			}
-			UpdateRuneText();
-		}
-	}
+	if (!PlayerCharacter || !PlayerStatComponent) return;
+	TryChangeStat(PendingEndurance, PlayerStatComponent->Endurance, Txt_EnduranceValue, -1);
+
 	
 }
 
 void UEldenLevelUpWidget::OnStrengthPlusClicked()
 {
-	int32 Cost = 500;
-	if (PlayerCharacter && PlayerStatComponent)
-	{
-		if (PlayerStatComponent->CurrentRunes >= TotalPendingRuneCost + Cost)
-		{
-			PendingStrength++;
-			TotalPendingRuneCost += Cost;
-			if (Txt_StrengthValue)
-			{
-				Txt_StrengthValue->SetText(FText::AsNumber(PendingStrength));
-				if (PendingStrength > PlayerStatComponent->Strength)
-				{
-					Txt_StrengthValue->SetColorAndOpacity(FSlateColor(FLinearColor(0.2f, 0.6f, 1.0f)));
-				}
-			}
-			UpdateRuneText();
+	if (!PlayerCharacter || !PlayerStatComponent) return;
+	TryChangeStat(PendingStrength, PlayerStatComponent->Strength, Txt_StrengthValue, +1);
 
-		}
-
-	}
-	
 }
 
 void UEldenLevelUpWidget::OnStrengthMinusClicked()
 {
-	int32 Cost = 500;
-	if (PlayerCharacter && PendingStrength > PlayerStatComponent->Strength)
-	{
-		PendingStrength--;
-		TotalPendingRuneCost -= Cost;
-		if (Txt_StrengthValue)
-		{
-			Txt_StrengthValue->SetText(FText::AsNumber(PendingStrength));
-			if (PendingStrength == PlayerStatComponent->Strength)
-			{
-				Txt_StrengthValue->SetColorAndOpacity(FSlateColor(FLinearColor::White));
-			}
-		}
-		UpdateRuneText();
-	}
+	if (!PlayerCharacter || !PlayerStatComponent) return;
+	TryChangeStat(PendingStrength, PlayerStatComponent->Strength, Txt_StrengthValue, -1);
+
 }
 
 void UEldenLevelUpWidget::OnConfirmClicked()
@@ -235,12 +135,12 @@ void UEldenLevelUpWidget::OnConfirmClicked()
 
 		PlayerStatComponent->Level += LevelGained;
 
-		// ���� Ȯ��
+		// 스탯 확정
 		PlayerStatComponent->Vigor = PendingVigor;
 		PlayerStatComponent->Endurance = PendingEndurance;
 		PlayerStatComponent->Strength = PendingStrength;
 
-		PlayerStatComponent->CurrentRunes -= TotalPendingRuneCost; // ��¥ ����
+		PlayerStatComponent->CurrentRunes -= TotalPendingRuneCost; // 진짜 결제
 
 		PlayerStatComponent->OnRunesChanged.Broadcast(PlayerStatComponent->CurrentRunes);
 
@@ -254,7 +154,7 @@ void UEldenLevelUpWidget::OnConfirmClicked()
 			PC->bShowMouseCursor = false;
 		}
 
-		// ĳ���� ���� ���·� ���� (�̵� �����ϰ�)
+		// 캐릭터 원래 상태로 복구 (이동 가능하게)
 		PlayerCharacter->SetState(ECharacterState::Idle);
 
 		RemoveFromParent();
@@ -272,10 +172,64 @@ void UEldenLevelUpWidget::OnCancelClicked()
 			PC->SetInputMode(InputMode);
 			PC->bShowMouseCursor = false;
 		}
-		// ĳ���� ���� ���·� ���� (�̵� �����ϰ�)
+		// 캐릭터 원래 상태로 복구 (이동 가능하게)
 		PlayerCharacter->SetState(ECharacterState::Idle);
 	}
 	
 	
 	RemoveFromParent();
+}
+
+
+// Pending은 미결정된 값임. 참조로 받아서 원본을 실제로 바꿈
+// BaseStat은 원래 스탯값
+// ValueText 화면에 숫자를 띄워줄 텍스트 위젯
+// Delta - Plus 면 +1, Minus면 -1. 증감 방향이랑 조건 분기를 결정
+void UEldenLevelUpWidget::TryChangeStat(int32& PendingStat, int32 BaseStat, UTextBlock* ValueText, int32 Delta)
+{
+	int32 Cost = 500;
+	bool bChanged = false;
+
+	if (!PlayerStatComponent) return;
+
+	if (Delta > 0)
+	{
+		if (PlayerStatComponent->CurrentRunes >= TotalPendingRuneCost + Cost)
+		{
+			PendingStat += Delta; // Delta가 +1이라 자동으로 증가
+			TotalPendingRuneCost += Delta * Cost; // Delta가 +1이라 증가
+			bChanged = true;
+		}
+
+	}
+
+	if (Delta < 0)
+	{
+		if (PendingStat > BaseStat)
+		{
+			PendingStat += Delta; // Delta가 -1이라 자동으로 감소
+			TotalPendingRuneCost += Delta * Cost; // Delta가 -1이라 자동으로 -500
+			bChanged = true;
+		}
+	}
+
+	if (bChanged && ValueText)
+	{
+		ValueText->SetText(FText::AsNumber(PendingStat));
+
+		// 바꾼 후 값이 원래 값보다 크다면
+		if (PendingStat > BaseStat)
+		{
+			// 파란색으로 색깔 변경
+			ValueText->SetColorAndOpacity(FSlateColor(FLinearColor(0.2f, 0.6f, 1.0f)));
+		}
+		// 바꾼 후 값이 원래보다 작거나 같다면
+		else
+		{   // 하얀색으로 둔다
+			ValueText->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+		}
+
+		// 룬 텍스트 갱신
+		UpdateRuneText();
+	}
 }

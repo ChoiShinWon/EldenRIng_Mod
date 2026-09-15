@@ -1,4 +1,4 @@
-
+﻿
 #pragma once
 
 #include "CoreMinimal.h"
@@ -26,6 +26,9 @@ protected:
 	UStaticMeshComponent* GraceMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	USceneComponent* RespawnPoint;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* InteractionSphere;
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
@@ -45,6 +48,6 @@ public:
 	void OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	
+	FTransform GetRespawnTransform() const;
 
 };
