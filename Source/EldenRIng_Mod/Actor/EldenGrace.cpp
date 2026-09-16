@@ -5,6 +5,7 @@
 #include "GameFrameWork/PlayerController.h"
 #include "GameFrameWork/CharacterMovementComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
 #include "EldenRing_Mod/EldenGameMode.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
@@ -71,7 +72,7 @@ void AEldenGrace::Interact(AEldenCharacter* Player)
 {
 	if (!Player) return;
 
-	Player->EnterGraceRest();
+	Player->GraceRestComponent->EnterRest();
 
 	PendingPlayer = Player;
 

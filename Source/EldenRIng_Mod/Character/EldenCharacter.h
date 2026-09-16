@@ -130,15 +130,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* RollMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grace")
-	class UAnimMontage* SitMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grace")
-	class UAnimMontage* StandUpMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grace")
-	float ExitCameraBlendTime = 0.5f;
 	
 	FVector2D LastMoveInput;
 	
@@ -174,8 +165,7 @@ protected:
 	UFUNCTION()
 	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	UFUNCTION()
-	void OnStandUpMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
 
 	UFUNCTION()
 	void OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -255,6 +245,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	class UPointLightComponent* DrinkLight;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenGraceRestComponent* GraceRestComponent;
+
 	void Revive(const FTransform&);
 	
 	// 캐릭터가 장착 중인 무기를 반환하는 함수
@@ -283,12 +276,15 @@ public:
 	// 은총에서 레벨업 UI를 여는 함수
 	void OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass);
 
-	void EnterGraceRest();
-
-	void ExitGraceRest();
 
 	// 외부에서 무적 상태를 켜고 끌 수 있는 함수
 	void SetInvincible(bool bState);
+
+	// HUD 보이기/ 감싸기
+	void SetHUDVisible(bool bVisible);
+
+	// 장착 무기 방패 숨기기
+	void SetEquippedItemsHidden(bool bHidden);
 
 	void DebugLevelUpVigor();
 	void DebugLevelUpEndurance();

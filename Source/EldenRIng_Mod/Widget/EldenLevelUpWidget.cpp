@@ -4,6 +4,7 @@
 #include "EldenRing_Mod/Widget/EldenLevelUpWidget.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
@@ -154,7 +155,7 @@ void UEldenLevelUpWidget::OnConfirmClicked()
 			PC->bShowMouseCursor = false;
 		}
 
-		PlayerCharacter->ExitGraceRest();
+		PlayerCharacter->GraceRestComponent->ExitRest();
 
 		RemoveFromParent();
 	}
@@ -172,7 +173,7 @@ void UEldenLevelUpWidget::OnCancelClicked()
 			PC->bShowMouseCursor = false;
 		}
 
-		PlayerCharacter->ExitGraceRest();
+		PlayerCharacter->GraceRestComponent->ExitRest();
 	}
 	
 	

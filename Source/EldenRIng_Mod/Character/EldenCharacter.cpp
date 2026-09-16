@@ -5,6 +5,7 @@
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/LockOnComponent.h"
+#include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
 #include "EldenRing_Mod/Interface/Interactable.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -25,13 +26,13 @@
 AEldenCharacter::AEldenCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 	// 스프링 암 생성 및 루트 컴포넌트에 부착
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.0f; // 카메라와 캐릭터 사이의 거리
 	CameraBoom->bUsePawnControlRotation = true; // 마우스 움직임에 따라 셀카봉 회전
-	
+
 	// 카메라 생성 및 스프링 암 끝에 부착
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); //셀카봉 끝 소켓에 연결
@@ -45,12 +46,11 @@ AEldenCharacter::AEldenCharacter()
 	DrinkLight->SetCastShadows(false); // 짧게 켜지는 연출용
 	DrinkLight->SetVisibility(false); // 평소엔 꺼둠
 
-
 	// 캐릭터 본체가 마우스 회전(컨트롤러)을 무조건 따라가지 않도록 분리
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
-	
+
 	// 캐릭터가 걷거나 뛰는 방향(이동 방향)을 자연스럽게 바라보도록 설정
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
@@ -59,10 +59,13 @@ AEldenCharacter::AEldenCharacter()
 	StatComponent = CreateDefaultSubobject<UEldenStatComponent>(TEXT("StatComponent"));
 
 	CombatComponent = CreateDefaultSubobject<UEldenCombatComponent>(TEXT("CombatComponent"));
-	
+
 	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 
 	InventoryComponent = CreateDefaultSubobject<UEldenInventoryComponent>(TEXT("InventoryComponent"));
+
+	// 축복 컴포넌트 생성
+	GraceRestComponent = CreateDefaultSubobject<UEldenGraceRestComponent>(TEXT("GraceRestComponent"));
 }
 
 void AEldenCharacter::SetState(ECharacterState NewState)
@@ -79,7 +82,7 @@ ECharacterState AEldenCharacter::GetState() const
 void AEldenCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	// 1. 내 캐릭터를 조종하는 PlayerController를 가져와서 IMC 등록
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
@@ -91,7 +94,7 @@ void AEldenCharacter::BeginPlay()
 			}
 		}
 	}
-	
+
 	// 무기 스폰 및 장착 로직
 	// 에디터에서 무기 클래스를 칸에 제대로 넣었는지 확인
 	if (WeaponClass != nullptr)
@@ -100,12 +103,12 @@ void AEldenCharacter::BeginPlay()
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
 		SpawnParams.Instigator = GetInstigator();
-		
+
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		
+
 		EquippedWeapon = GetWorld()->SpawnActor<AEldenWeapon>(WeaponClass,
-			GetActorLocation(),GetActorRotation(), SpawnParams);
-		
+			GetActorLocation(), GetActorRotation(), SpawnParams);
+
 		// 스폰 성공하면 손에 있는 소켓에 갖다 붙임
 		if (EquippedWeapon != nullptr)
 		{
@@ -142,8 +145,8 @@ void AEldenCharacter::BeginPlay()
 		// 초기 룬 테스트 세팅
 		StatComponent->CurrentRunes = 10000;
 	}
-	
-	
+
+
 	if (HUDWidgetClass)
 	{
 		CurrentHUD = CreateWidget<UEldenHUDWidget>(GetWorld(), HUDWidgetClass);
@@ -164,16 +167,16 @@ void AEldenCharacter::BeginPlay()
 				ShieldTexture = EquippedShield->GetIcon();
 				CurrentSkillName = EquippedShield->GetSkillName();
 			}
-			CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture, 
+			CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture,
 				InventoryComponent ? InventoryComponent->GetCurrentItemIcon() : nullptr, CurrentSkillName);
 		}
 	}
 
-    MeshDefaultRelLoc = GetMesh()->GetRelativeLocation();
+	MeshDefaultRelLoc = GetMesh()->GetRelativeLocation();
 	MeshDefaultRelRot = GetMesh()->GetRelativeRotation();
 	MeshDefaultProfile = GetMesh()->GetCollisionProfileName();
 	MeshDefaultRelScale = GetMesh()->GetRelativeScale3D();
-	
+
 }
 
 
@@ -181,18 +184,18 @@ void AEldenCharacter::BeginPlay()
 void AEldenCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
+
 	if (bIsSprinting && GetVelocity().Size() > 0.0f)
 	{
 		StatComponent->ConsumeStamina(SprintStaminaCost * DeltaTime);
-		
+
 		// 달리다가 스태미너 떨어지면 멈춤
 		if (StatComponent->CurrentStamina <= 0.0f)
 		{
 			StopSprint();
 		}
 	}
-	
+
 	// 회복 가능 상태이고 최대치가 아니면 매 프레임 회복시킴
 	if (StatComponent->bCanRegen && StatComponent->CurrentStamina < StatComponent->MaxStamina)
 	{
@@ -211,7 +214,7 @@ void AEldenCharacter::Tick(float DeltaTime)
 void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	
+
 	// 2. 입력 신호가 들어올 때 내 클래스의 Move, Look 함수와 묶어주기
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
@@ -234,12 +237,12 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		}
 		if (ParryAction)
 		{
-			
+
 			EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Started, this, &AEldenCharacter::StartParry);
 		}
 		if (SprintAction)
 		{
-			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this , &AEldenCharacter::StartSprint);
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AEldenCharacter::StartSprint);
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AEldenCharacter::StopSprint);
 		}
 		if (JumpAction)
@@ -299,7 +302,7 @@ void AEldenCharacter::StartParry()
 {
 	if (CombatComponent)
 	{
-		CombatComponent->ExecuteParry(); 
+		CombatComponent->ExecuteParry();
 	}
 }
 
@@ -312,18 +315,18 @@ void AEldenCharacter::Move(const FInputActionValue& Value)
 
 	if (GetState() != ECharacterState::Idle && GetState() != ECharacterState::Blocking
 		&& GetState() != ECharacterState::Drinking) return;
-	
-	
+
+
 	if (Controller != nullptr)
 	{
 		// 카메라가 바라보는 방향을 가져와서 Pitch, Roll 무시하고 평면(Yaw) 방향만 추출
 		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw,0);
-		
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
+
 		// 그 방향을 기준으로 앞과 오른쪽이 어디인지 절대 벡터로 계산
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-		
+
 		// 캐릭터에 힘 가하기
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
@@ -333,7 +336,7 @@ void AEldenCharacter::Move(const FInputActionValue& Value)
 void AEldenCharacter::Look(const FInputActionValue& Value)
 {
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
-	
+
 	if (Controller != nullptr)
 	{
 		AddControllerYawInput(LookAxisVector.X);
@@ -381,68 +384,6 @@ void AEldenCharacter::OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass
 	}
 }
 
-void AEldenCharacter::EnterGraceRest()
-{
-	// 플레이어 HUD, 무기, 방패 숨기기
-	if (CurrentHUD)
-	{
-		CurrentHUD->SetVisibility(ESlateVisibility::Collapsed);
-	}
-
-	if (EquippedWeapon)
-	{
-		EquippedWeapon->SetActorHiddenInGame(true);
-	}
-
-	if (EquippedShield)
-	{
-		EquippedShield->SetActorHiddenInGame(true);
-	}
-
-	GetCharacterMovement()->StopMovementImmediately();
-	SetState(ECharacterState::Interacting);
-
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-
-	if (!AnimInstance) return;
-	AnimInstance->Montage_Play(SitMontage);
-
-}
-
-void AEldenCharacter::ExitGraceRest()
-{
-	// 단순 게터는 헤더로 안빼도 됨
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-
-	if (!AnimInstance) return;
-	AnimInstance->Montage_Play(StandUpMontage);
-
-	// 델리게이트 등록
-	FOnMontageEnded StandUpEndDelegate;
-	StandUpEndDelegate.BindUObject(this, &AEldenCharacter::OnStandUpMontageEnded);
-	AnimInstance->Montage_SetEndDelegate(StandUpEndDelegate, StandUpMontage);
-
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
-	{
-		PC->SetViewTargetWithBlend(this, ExitCameraBlendTime);
-	}
-
-	if (CurrentHUD)
-	{
-		CurrentHUD->SetVisibility(ESlateVisibility::Visible);
-	}
-
-	// 무기랑 방패 다시 보이게
-	if (EquippedWeapon)
-	{
-		EquippedWeapon->SetActorHiddenInGame(false);
-	}
-
-	if (EquippedShield)
-	{
-		EquippedShield->SetActorHiddenInGame(false);
-	}
-}
 
 void AEldenCharacter::Revive(const FTransform& SpawnTransform)
 {
@@ -494,13 +435,13 @@ void AEldenCharacter::Dodge()
 		StatComponent->ConsumeStamina(DodgeStaminaCost);
 		SetState(ECharacterState::Rolling);
 
-		
+
 		// 구르기 시작할 때, 캐릭터가 이동 방향을 바라보도록 강제로 설정
 		GetCharacterMovement()->bOrientRotationToMovement = false;
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
 		bUseControllerRotationYaw = false;
-		
-		
+
+
 		// 현재 캐릭터가 이동 중이던 방향(속도)을 가져옵니다. (WASD를 누르고 있으면 그 방향이 됨)
 		FVector DodgeDir = GetVelocity().GetSafeNormal();
 
@@ -545,7 +486,7 @@ void AEldenCharacter::Dodge()
 void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	SetState(ECharacterState::Idle);
-	
+
 	if (LockOnComponent->HasTarget())
 	{
 		// 락온 중이었다면 다시 적을 노려보게 복구
@@ -558,11 +499,6 @@ void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupte
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 	}
-}
-
-void AEldenCharacter::OnStandUpMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	SetState(ECharacterState::Idle);
 }
 
 void AEldenCharacter::OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -597,7 +533,7 @@ void AEldenCharacter::HandleDeath()
 
 float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	
+
 	if (GetState() == ECharacterState::Dead) return 0.0f;
 
 	if (bIsInvincible)
@@ -617,7 +553,7 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	bShieldBlockedAttack = false;
-	
+
 
 	// 가드 상태이고 공격자가 있을 때만 각도 계산
 	if (GetState() == ECharacterState::Blocking && DamageCauser != nullptr)
@@ -683,7 +619,7 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 				{
 					AnimInstance->StopAllMontages(0.1f);
 				}
-			
+
 			}
 		}
 	}
@@ -701,7 +637,7 @@ void AEldenCharacter::StartSprint()
 		bIsSprinting = true;
 		GetCharacterMovement()->MaxWalkSpeed = 800.0f;
 	}
-} 
+}
 
 void AEldenCharacter::StopSprint()
 {
@@ -711,13 +647,13 @@ void AEldenCharacter::StopSprint()
 
 void AEldenCharacter::Attack()
 {
-	
-	if (GetState()== ECharacterState::Rolling || GetState() == ECharacterState::Dead) return;
-	
-	
+
+	if (GetState() == ECharacterState::Rolling || GetState() == ECharacterState::Dead) return;
+
+
 	if (CombatComponent)
 	{
-		
+
 		CombatComponent->ExecuteAttack();
 	}
 
@@ -733,6 +669,30 @@ bool AEldenCharacter::GetIsLockedOn() const
 void AEldenCharacter::SetInvincible(bool bState)
 {
 	bIsInvincible = bState;
+}
+
+void AEldenCharacter::SetHUDVisible(bool bVisible)
+{
+	if (CurrentHUD)
+	{
+		if (bVisible) CurrentHUD->SetVisibility(ESlateVisibility::Visible);
+		else CurrentHUD->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void AEldenCharacter::SetEquippedItemsHidden(bool bInHidden)
+{
+	if (EquippedWeapon)
+	{
+		if (bInHidden) EquippedWeapon->SetActorHiddenInGame(true);
+		else EquippedWeapon->SetActorHiddenInGame(false);
+	}
+
+	if (EquippedShield)
+	{
+		if (bInHidden) EquippedShield->SetActorHiddenInGame(true);
+		else EquippedShield->SetActorHiddenInGame(false);
+	}
 }
 
 void AEldenCharacter::DebugLevelUpVigor()
@@ -783,12 +743,12 @@ void AEldenCharacter::UseItem()
 
 		if (!AnimInstance || !UseMontage) return;
 
-		
+
 		AnimInstance->Montage_Play(UseMontage);
 		FOnMontageEnded PotionEndDelegate;
 		PotionEndDelegate.BindUObject(this, &AEldenCharacter::OnPotionMontageEnded);
 		AnimInstance->Montage_SetEndDelegate(PotionEndDelegate, UseMontage);
-		
+
 
 		SetState(ECharacterState::Drinking);
 
