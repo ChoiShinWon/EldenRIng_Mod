@@ -35,9 +35,6 @@ public:
 	// 다음 콤보가 예약되었는지 확인하는 플래그
 	bool bComboQueued = false;
 
-	//// 공격 중인지 판별하는 변수
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	//bool bIsAttacking;
 
 	void ExecuteAttack();
 
@@ -52,17 +49,10 @@ public:
 
 	void ExecuteParry();
 
-	/*UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Combat|Parry")
-	float ParryRange = 200.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Parry")
-	float ParryRadius = 80.f;*/
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Combat|Parry")
 	float ParryFacingDot = 0.0f;
 
-	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Parry")
-	bool bDrawParryDebug = false;*/
 
 	UPROPERTY(EditAnywhere, Category = "Combat|Parry")
     class UParticleSystem* ParryVFX;
