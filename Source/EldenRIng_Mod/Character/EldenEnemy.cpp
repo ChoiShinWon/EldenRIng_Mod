@@ -57,11 +57,6 @@ void AEldenEnemy::BeginPlay()
 		PawnSensingComp->OnSeePawn.AddDynamic(this, &AEldenEnemy::OnSeePlayer);
 	}
 
-	/*AAIController* AIController = Cast<AAIController>(GetController());
-	if (AIController)
-	{
-		BlackboardComp = AIController-> GetBlackboardComponent();
-	}*/
 
 	if (PoiseComp)
 	{
@@ -315,15 +310,6 @@ void AEldenEnemy::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	SetLifeSpan(5.0f);
 }
 
-//void AEldenEnemy::EnableParryWindow()
-//{
-//	bIsParryable = true;
-//}
-//
-//void AEldenEnemy::DisableParryWindow()
-//{
-//	bIsParryable = false;
-//}
 
 void AEldenEnemy::ApplyStun()
 {
