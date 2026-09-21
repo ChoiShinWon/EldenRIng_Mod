@@ -173,7 +173,6 @@ void AEldenCharacter::BeginPlay()
 }
 
 
-// Called every frame
 void AEldenCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -201,10 +200,13 @@ void AEldenCharacter::Tick(float DeltaTime)
 		LockOnComponent->UpdateLockOn(DeltaTime);
 	}
 
+	
 	if (bIsLunging)
 	{
+		// 애니메이션 에셋 Root Motion 오류로, 이동은 코드가 매 프레임 밀어준다.
+		// AddMovementInput은 "방향 + 세기"만 제출
+		// 실제 속도는 CharacterMovementComponent의 MaxWalkSpeed, MaxAcceleration이 결정
 		AddMovementInput(GetActorForwardVector(), 1.0f);
-
 	}
 
 }
@@ -536,15 +538,22 @@ void AEldenCharacter::HandleDeath()
 
 float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-
+	// 죽었다면 무시
 	if (GetState() == ECharacterState::Dead) return 0.0f;
 
+	// 회피 무적 프레임: 구르기 중 판정 타이밍이면 데미지 자체를 안 받고,
+	// 무적으로 씹었다는 신호만 세팅.
 	if (bIsInvincible)
 	{
 		bDodgeInvincibleHit = true;
 		return 0.0f;
 	}
 
+	// 패리 판정은 반드시 Super::TakeDamage보다 먼저 검사
+	// 여기서 성공하면 데미지를 아예 적용하지 않고 0으로 조기 반환
+	// 패리는 데미지를 0으로 줄이는게 아니라 데미지 계산 자체를 발생시키지 않는다는 설계
+	// 만약 이 블록이 Super::TakeDamage 뒤에 있다면, 이미 체력이 깎인 뒤에 뒤늦게 취소하는 꼴
+	// HP 변경 델리게이트가 그러면 불필요하게 한 번 더 발생하게 되는 부작용이 생길 수 있음
 	if (AEldenEnemy* Attacker = Cast<AEldenEnemy>(DamageCauser))
 	{
 		if (CombatComponent && CombatComponent->TryDeflect(Attacker->GetActorLocation(), Attacker))
@@ -566,10 +575,11 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 		// 캐릭터 정면 벡터와 내적 (180도 이내면 양수)
 		float DotToEnemy = FVector::DotProduct(GetActorForwardVector(), DamageDir);
 
+		// 내적의 값이 0보다 크므로
 		// 정면에서 날아온 공격만 방어 성공 (뒤통수 맞으면 가드 무효)
 		if (DotToEnemy > 0.0f)
 		{
-			// 방어 시 소모할 스태미나 양 (기획에 따라 공격력의 50%로 설정)
+			// 방어 시 소모할 스태미나 양 (공격력의 50%로 설정)
 			float StaminaCost = DamageAmount * 0.5f;
 
 			if (StatComponent && StatComponent->CurrentStamina >= StaminaCost)
@@ -587,8 +597,6 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 				StatComponent->CurrentStamina = 0.0f;
 				SetState(ECharacterState::Idle); // 가드 해제
 				if (EquippedShield) EquippedShield->DisableShieldBlock(); // 방패 박스도 끄기
-
-				UE_LOG(LogTemp, Error, TEXT(" 가드 붕괴! 데미지 100%% 관통!"));
 			}
 		}
 	}
@@ -664,9 +672,13 @@ void AEldenCharacter::Attack()
 
 void AEldenCharacter::StartAttackLunge(float Speed)
 {
+	// Lunging 갱신, CurrentLungeSpeed를 함수의 매개변수로 대입
 	bIsLunging = true;
 	CurrentLungeSpeed = Speed;
+
+	// 돌진이 끝난 뒤, 원래 걷기 속도로 복원해야 하므로 속도를 덮어쓰기 전에 기존 값을 저장해야 함
 	SavedWalkSpeedBeforeLunge = GetCharacterMovement()->MaxWalkSpeed;
+	// 저장한 후에 스피드 값 갱신
 	GetCharacterMovement()->MaxWalkSpeed = Speed;
 }
 
@@ -674,7 +686,7 @@ void AEldenCharacter::StopAttackLunge()
 {
 	bIsLunging = false;
 
-	// 원래 속도로 복구
+	// 몽타주 재생 시 돌진이 끝난 뒤 원래 걷기 속도로 복구
 	GetCharacterMovement()->MaxWalkSpeed = SavedWalkSpeedBeforeLunge;
 }
 
@@ -796,13 +808,16 @@ void AEldenCharacter::SwitchItem()
 
 void AEldenCharacter::SwitchWeapon()
 {
+	// 공격 구르기 가드 등 다른 행동 중엔 무기 교체 금지
 	if (GetState() != ECharacterState::Idle) return;
+
+	// 무기가 1개 이하면 교체라는 행위 자체가 의미가 없기에 return
 	if (SpawnedWeapons.Num() < 2) return;
 
-	// 지금 장착 중인 무기 숨기기
+	// 지금 장착 중인 무기 숨기고
 	SpawnedWeapons[CurrentWeaponIndex]->SetActorHiddenInGame(true);
 
-	// %연산자로 배열 끝에 도달하면 다시 0으로 되돌아가기
+	// 인덱스를 다음 슬롯으로 순환 (배열 끝에서 다시 0으로 돌아오는 원형 순회)
 	CurrentWeaponIndex = (CurrentWeaponIndex + 1) % SpawnedWeapons.Num();
 
 	// 바꿀 무기 보이기
@@ -811,12 +826,16 @@ void AEldenCharacter::SwitchWeapon()
 
 	if (EquippedShield)
 	{
+		
 		if (EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded)
 		{
+			// 두손 무기로 바꿨다면 방패를 숨긴다.
 			EquippedShield->SetActorHiddenInGame(true);
 		}
 		else if (EquippedWeapon->GetWeaponStance() == EWeaponStance::OneHanded)
 		{
+			// 두손 무기에서 한손 무기로 되돌아왔을때 방패를 다시 꺼낸다
+			// 여기가 빠지면 두손 무기로 바꾸고나서 방패가 영원히 안보이게 되는 버그가 생김
 			EquippedShield->SetActorHiddenInGame(false);
 		}
 	}
@@ -825,9 +844,9 @@ void AEldenCharacter::SwitchWeapon()
 
 void AEldenCharacter::SetDrinkingVisuals(bool bDrinking)
 {
-	if (EquippedShield) EquippedShield->SetActorHiddenInGame(bDrinking);
-
 	if (DrinkLight) DrinkLight->SetVisibility(bDrinking);
+	if (EquippedWeapon && EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded) return;
+	if (EquippedShield) EquippedShield->SetActorHiddenInGame(bDrinking);
 }
 
 void AEldenCharacter::ApplyItemEffect()
@@ -877,6 +896,10 @@ void AEldenCharacter::RefreshEquipmentUI()
 		WeaponTexture = EquippedWeapon->GetIcon();
 		CurrentSkillName = EquippedWeapon->GetSkillName();
 	}
+	// 방패를 장착하고 있는가가 아니라, 지금 화면에 방패가 보이는가를 기준으로 UI 갱신
+	// EquippedShield 포인터 자체는 두손 무기 장착 중에도 계속 살아있음
+	// SetActorHiddenInGame만 했지 슬롯에서 빼거나 nullptr로 비운게 아니기 때문
+	// 포인터 유무만 따지면 두손 무기 장착 중에도 방패 UI가 보이기 때문에 IsHidden() 체크
 	if (EquippedShield && !EquippedShield->IsHidden())
 	{
 		ShieldTexture = EquippedShield->GetIcon();

@@ -140,15 +140,24 @@ void UEldenCombatComponent::CheckComboQueue()
     }
 }
 
+// 방어(우클릭) 실행 함수
 void UEldenCombatComponent::ExecuteBlock()
 {
+	// null 체크들
     if (!PlayerCharacter || !CachedAnimInstance) return;
+
+	// 무기 미장착 상태에서 가드 로직을 태우면 이후 GetWeaponStance() 호출에서
+	// 널 포인터 역참조가 나므로, 가드 조건 검사 전에 반드시 먼저 걸러야 함.
 	if (PlayerCharacter->GetEquippedWeapon() == nullptr) return;
+
+	// 대검은 양손이 무기를 쥐고 있어서 방패를 들 손이 없다는 설정.
+	// 두손 무기 장착 중엔 가드 자체를 시작하지 못하게 여기서 조기 리턴
 	if (PlayerCharacter->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
 
     // 공격 중이거나 구르는 중이 아니면 가드 자세 진입 허용
     if (PlayerCharacter->GetState() == ECharacterState::Idle)
     {
+		// 플레이어 상태 가드로 설정
         PlayerCharacter->SetState(ECharacterState::Blocking);
 
         // 필요하다면 방패 방어 히트박스 켜기
@@ -157,7 +166,6 @@ void UEldenCombatComponent::ExecuteBlock()
             Shield->EnableShieldBlock();
         }
 
-        // TODO: 방패를 들고 서 있는 루프 애니메이션 또는 블렌드 포즈 적용
     }
 }
 
@@ -177,12 +185,16 @@ void UEldenCombatComponent::EndBlock()
     }
 }
 
+// 패리 실행 함수
 void UEldenCombatComponent::ExecuteParry()
 {
+	// null 체크들
     if (!PlayerCharacter || !CachedAnimInstance) return;
 	if (PlayerCharacter->GetEquippedWeapon() == nullptr) return;
+	// 패리도 방패로 받아치는 액션이므로 동일한 이유로 두손 무기일 땐 비활성화
 	if (PlayerCharacter->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
- 
+
+	// 죽었거나 구르거나 가드중이 아니라면 패리 실행 불가
     if (PlayerCharacter->GetState() == ECharacterState::Dead ||
         PlayerCharacter->GetState() == ECharacterState::Rolling ||
         PlayerCharacter->GetState() == ECharacterState::Blocking)
@@ -190,9 +202,11 @@ void UEldenCombatComponent::ExecuteParry()
          return;
     }
 
+	// 조건 통과하면 패리 상태로 Set
     PlayerCharacter->SetState(ECharacterState::Parrying);
        
 
+	// 패리 몽타주
     if (ParryMontage)
     {
         CachedAnimInstance->Montage_Play(ParryMontage, 1.0f);

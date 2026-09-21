@@ -52,11 +52,17 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 			
 		}
 
+		// GetState()는 CombatComponent가 있든 말든 항상 안전하게 호출 가능하므로
+		// 아래 오버레이 조건 계산 전에 이번 프레임의 최신 무기 스탠스를 먼저 갱신한다.
+		// 이 줄이 아래보다 늦게 오면 CurrentWeaponStance가 한 프레임 지연된 값으로 쓰이는 버그가 생김
 		if (EldenCharacter->GetEquippedWeapon())
 		{
 			CurrentWeaponStance = EldenCharacter->GetEquippedWeapon()->GetWeaponStance();
 		}
 
+		// 상체 IDLE 오버레이를 언제 꺼야 하는지가 아니라 언제 켜도 되는지를 화이트리스트로 정의
+		// Attacking/Rolling/Damaged 등 풀바디 몽타주 상태를 하나씩 배제하는 대신
+		// Idle(대검일 때만)이거나, Blocking일 때만 허용 -> 새 상태가 추가돼도 기본값이 안전하게 유지됨
 		bShouldShowWeaponIdleOverlay =
 			EldenCharacter->GetState() == ECharacterState::Idle &&
 			CurrentWeaponStance == EWeaponStance::TwoHanded ||

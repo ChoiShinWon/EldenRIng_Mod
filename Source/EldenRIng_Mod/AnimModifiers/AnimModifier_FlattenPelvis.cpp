@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "EldenRing_Mod/AnimModifiers/AnimModifier_FlattenPelvis.h"
@@ -10,15 +10,12 @@ void UAnimModifier_FlattenPelvis::OnApply_Implementation(UAnimSequence* Animatio
 {
 	if (!AnimationSequence) return;
 
+	// AnimSequence의 실제 본 트랙 데이터를 읽기 전용으로 들여다보는 인터페이스
 	const IAnimationDataModel* Model = AnimationSequence->GetDataModel();
 	if (!Model) return;
 
-	// GetBoneAnimationTracks/FindBoneTrackByName 등은 UE 5.2부터 deprecated돼서
-	// IsValidBoneTrackName + GetBoneTrackTransforms 조합으로 대체
 	if (!Model->IsValidBoneTrackName(PelvisBoneName))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[FlattenPelvis] '%s' 본을 못 찾음!"), *PelvisBoneName.ToString());
-
 		TArray<FName> AllNames;
 		Model->GetBoneTrackNames(AllNames);
 		for (const FName& Name : AllNames)
@@ -46,6 +43,9 @@ void UAnimModifier_FlattenPelvis::OnApply_Implementation(UAnimSequence* Animatio
 		Pos.X = 0.0f;
 		Pos.Y = 0.0f;
 
+
+		// Model은 double 기반 FTransform/FVector를 쓰고, 실제 저장되는 키 포맷은
+		// float(32비트) 기반인 FVector3f/FQuat4f라서 여기서 명시적으로 다운캐스트
 		NewPosKeys.Add(FVector3f(Pos));
 		NewRotKeys.Add(FQuat4f(T.GetRotation()));
 		NewScaleKeys.Add(FVector3f(T.GetScale3D()));

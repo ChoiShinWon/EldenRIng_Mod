@@ -103,10 +103,17 @@ bool UEldenStatComponent::LevelUpStat(EEldenStatType StatToLevelUp)
 void UEldenStatComponent::RecalculateDerivedStats()
 {
 	float OldMaxHealth = MaxHealth;
+
+	// 레벨업 시 Vigor 등 스탯에 따라 파생 스탯(MaxHealth 등)을 재계산
 	MaxHealth = 100.0f + (Vigor * 25.0f);
 	MaxStamina = 100.0f + (Endurance * 2.0f);
 	AttackPower = 3 + (Strength * 3.0f);
-	
+
+	// MaxHealth가 늘어난 만큼 CurrentHealth도 그대로 밀어올림
+	// 단순히 CurrentHealth를 새 MaxHealth로 클램프/리셋 해버리면
+	// 체력 80/100이던 캐릭터가 레벨업으로 Max가 150이 되었을 때 70을 잃은 채로 시작하는게 아니라
+	// 그냥 80/150(=70 잃은 상태 유지)이 되어야 하는데
+	// 잃었던 체력의 절대량을 그대로 보존하기 위해 계산
 	CurrentHealth += (MaxHealth - OldMaxHealth);
 }
 
