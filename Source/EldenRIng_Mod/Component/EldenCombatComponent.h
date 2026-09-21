@@ -23,10 +23,6 @@ protected:
 public:	
 
 
-	// 콤보 공격용 몽타주 섹션이 3개로 나뉘어 있어야함
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
-	TArray<UAnimMontage*> ComboMontages;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	class UAnimMontage* ParryMontage;
 
@@ -86,4 +82,8 @@ private:
 	// 플레이어 캐릭터 캐싱
 	UPROPERTY()
 	class AEldenCharacter* PlayerCharacter;
+
+	// 포인터로 리턴해야 nullptr 가능
+	const TArray<UAnimMontage*>* GetCurrentComboMontages() const;
+
 };

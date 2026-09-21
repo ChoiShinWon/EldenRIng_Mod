@@ -6,6 +6,7 @@
 #include "Containers/Array.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -75,6 +76,11 @@ void UEldenCombatComponent::ExecuteAttack()
         return;
     }
 
+	const TArray<UAnimMontage*>* ComboMontagesPtr = GetCurrentComboMontages();
+	if (!ComboMontagesPtr) return;
+
+	const TArray<UAnimMontage*>& ComboMontages = *ComboMontagesPtr;
+
     if (ComboMontages.Num() == 0)
     {
         return;
@@ -110,6 +116,10 @@ void UEldenCombatComponent::CheckComboQueue()
     if (!PlayerCharacter || !PlayerCharacter->GetMesh()) return;
 
     if (PlayerCharacter->bDodgeQueued) return;
+
+	const TArray<UAnimMontage*>* ComboMontagesPtr = GetCurrentComboMontages();
+	if (!ComboMontagesPtr) return;
+	const TArray<UAnimMontage*>& ComboMontages = *ComboMontagesPtr;
 
     if (PlayerCharacter && CachedAnimInstance)
     {
@@ -229,4 +239,13 @@ void UEldenCombatComponent::OnParryMontageEnded(UAnimMontage* Montage, bool bInt
 void UEldenCombatComponent::ResetTimeDilation()
 {
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.f);
+}
+
+const TArray<UAnimMontage*>* UEldenCombatComponent::GetCurrentComboMontages() const
+{
+	if (!PlayerCharacter) return nullptr;
+	AEldenWeapon* CurrentWeapon = PlayerCharacter->GetEquippedWeapon();
+	if (!CurrentWeapon) return nullptr;
+
+	return &CurrentWeapon->GetComboMontages();
 }

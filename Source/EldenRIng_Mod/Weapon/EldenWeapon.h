@@ -1,9 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Animation/AnimMontage.h"
 #include "EldenWeapon.generated.h"
 
 class UEldenHitboxComponent;
@@ -40,9 +41,12 @@ protected:
 	FString SkillName;
 	
 
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
 	float BaseDamage = 20.0f;
+
+	// 콤보 몽타주 배열
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Combat")
+	TArray<UAnimMontage*> ComboMontages;
 
 	// 칼날에 씌울 충돌체
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -51,4 +55,6 @@ protected:
 public:
 	FORCEINLINE class UTexture2D* GetIcon() const { return ItemIcon; }
 	FORCEINLINE const FString& GetSkillName() const { return SkillName; }
+
+	FORCEINLINE const TArray<UAnimMontage*>& GetComboMontages() const { return ComboMontages; }
 };
