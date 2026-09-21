@@ -143,6 +143,8 @@ void UEldenCombatComponent::CheckComboQueue()
 void UEldenCombatComponent::ExecuteBlock()
 {
     if (!PlayerCharacter || !CachedAnimInstance) return;
+	if (PlayerCharacter->GetEquippedWeapon() == nullptr) return;
+	if (PlayerCharacter->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
 
     // 공격 중이거나 구르는 중이 아니면 가드 자세 진입 허용
     if (PlayerCharacter->GetState() == ECharacterState::Idle)
@@ -178,27 +180,28 @@ void UEldenCombatComponent::EndBlock()
 void UEldenCombatComponent::ExecuteParry()
 {
     if (!PlayerCharacter || !CachedAnimInstance) return;
-    if (PlayerCharacter)
+	if (PlayerCharacter->GetEquippedWeapon() == nullptr) return;
+	if (PlayerCharacter->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
+ 
+    if (PlayerCharacter->GetState() == ECharacterState::Dead ||
+        PlayerCharacter->GetState() == ECharacterState::Rolling ||
+        PlayerCharacter->GetState() == ECharacterState::Blocking)
     {
-        if (PlayerCharacter->GetState() == ECharacterState::Dead ||
-            PlayerCharacter->GetState() == ECharacterState::Rolling ||
-            PlayerCharacter->GetState() == ECharacterState::Blocking)
-        {
-            return;
-        }
+         return;
+    }
 
-        PlayerCharacter->SetState(ECharacterState::Parrying);
+    PlayerCharacter->SetState(ECharacterState::Parrying);
        
 
-        if (ParryMontage)
-        {
-            CachedAnimInstance->Montage_Play(ParryMontage, 1.0f);
+    if (ParryMontage)
+    {
+        CachedAnimInstance->Montage_Play(ParryMontage, 1.0f);
             
-            FOnMontageEnded ParryEndDelegate;
-            ParryEndDelegate.BindUObject(this, &UEldenCombatComponent::OnParryMontageEnded);
-            CachedAnimInstance->Montage_SetEndDelegate(ParryEndDelegate, ParryMontage);
-        }
+        FOnMontageEnded ParryEndDelegate;
+        ParryEndDelegate.BindUObject(this, &UEldenCombatComponent::OnParryMontageEnded);
+        CachedAnimInstance->Montage_SetEndDelegate(ParryEndDelegate, ParryMontage);
     }
+   
 }
 
 

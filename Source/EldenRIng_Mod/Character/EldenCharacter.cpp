@@ -201,9 +201,14 @@ void AEldenCharacter::Tick(float DeltaTime)
 		LockOnComponent->UpdateLockOn(DeltaTime);
 	}
 
+	if (bIsLunging)
+	{
+		AddMovementInput(GetActorForwardVector(), 1.0f);
+
+	}
+
 }
 
-// Called to bind functionality to input
 void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -657,6 +662,22 @@ void AEldenCharacter::Attack()
 
 }
 
+void AEldenCharacter::StartAttackLunge(float Speed)
+{
+	bIsLunging = true;
+	CurrentLungeSpeed = Speed;
+	SavedWalkSpeedBeforeLunge = GetCharacterMovement()->MaxWalkSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = Speed;
+}
+
+void AEldenCharacter::StopAttackLunge()
+{
+	bIsLunging = false;
+
+	// 원래 속도로 복구
+	GetCharacterMovement()->MaxWalkSpeed = SavedWalkSpeedBeforeLunge;
+}
+
 bool AEldenCharacter::GetIsLockedOn() const
 {
 	return LockOnComponent && LockOnComponent->HasTarget();
@@ -787,6 +808,18 @@ void AEldenCharacter::SwitchWeapon()
 	// 바꿀 무기 보이기
 	SpawnedWeapons[CurrentWeaponIndex]->SetActorHiddenInGame(false);
 	EquippedWeapon = SpawnedWeapons[CurrentWeaponIndex];
+
+	if (EquippedShield)
+	{
+		if (EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded)
+		{
+			EquippedShield->SetActorHiddenInGame(true);
+		}
+		else if (EquippedWeapon->GetWeaponStance() == EWeaponStance::OneHanded)
+		{
+			EquippedShield->SetActorHiddenInGame(false);
+		}
+	}
 	RefreshEquipmentUI();
 }
 
@@ -844,7 +877,7 @@ void AEldenCharacter::RefreshEquipmentUI()
 		WeaponTexture = EquippedWeapon->GetIcon();
 		CurrentSkillName = EquippedWeapon->GetSkillName();
 	}
-	if (EquippedShield)
+	if (EquippedShield && !EquippedShield->IsHidden())
 	{
 		ShieldTexture = EquippedShield->GetIcon();
 		CurrentSkillName = EquippedShield->GetSkillName();

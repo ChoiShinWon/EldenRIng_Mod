@@ -202,6 +202,11 @@ protected:
 	// 달리고 있는지 확인
 	bool bIsSprinting = false;
 
+	bool bIsLunging = false;
+	float CurrentLungeSpeed = 0.0f;
+
+	float SavedWalkSpeedBeforeLunge = 0.0f;
+
 	/*=============================================================================
 	 * 락온 시스템 (Lock - On)
 	 *=============================================================================*/
@@ -279,6 +284,10 @@ public:
 
 	// 무적 상태에서 피격을 판정을 씹었는지 신호
 	bool bDodgeInvincibleHit = false;
+
+	void StartAttackLunge(float Speed);
+	void StopAttackLunge();
+
 
 	bool GetIsLockedOn() const;
 	// 기본 데미지 처리 함수 오버라이드
