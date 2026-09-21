@@ -82,10 +82,12 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 	if (Pawn)
 	{
 		bHasAggro = true;
-
 		CombatTarget = Pawn;
-
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+		// bHasRoared는 ResetAggro()에서 리섿되지 않는, 이 적의 생에 전체에 걸친 1회성 플래그다.
+		// 포효 몽타주는 이 적을 처음 어그로 걸 때 딱 한 번만 재생된다.
+		// 시야 밖으로 나갔다가 다시 감지되어도 포효 없이 즉시 전투에 들어감.
 		if (!bHasRoared)
 		{
 			bHasRoared = true;
@@ -94,6 +96,9 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 				AnimInstance->Montage_Play(AggroMontage);
 
 				// 몽타주가 끝났을 때 호출될 델리게이트 설정
+				// 포효 몽타주 재생중에는 아직 SetAggroTarget 호출을 안하므로
+				// AI는 몽타주가 끝나는 순간까지 실제 전투 행동을 시작하지 않는다.
+				// 포효하는 동안은 가만히 서서 연출만 재생하기 위한 의도적 지연
 				FOnMontageEnded EndDelegate;
 				EndDelegate.BindUObject(this, &AEldenEnemy::OnAggroMontageEnded);
 				AnimInstance->Montage_SetEndDelegate(EndDelegate, AggroMontage);
@@ -102,6 +107,7 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 		}
 		else
 		{
+			// 이미 한번 포효했다면 연출 없이 즉시 전투 AI에게 타겟 넘기기
 			if (EnemyController)
 			{
 				EnemyController->SetAggroTarget(CombatTarget);
@@ -216,12 +222,12 @@ float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 	return ActualDamage;
 }
 
+// 플레이어가 은총 휴식하거나 죽고 부활했을때 어그로 초기화를 위해 실행되는 함수
 void AEldenEnemy::ResetAggro()
 {
 	bHasAggro = false;
-
 	CombatTarget = nullptr;
-
+	// bHasAggro는 여기서 의도적으로 리셋하지 않는다
 
 	if (EnemyController) 
 	{
