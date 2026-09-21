@@ -95,29 +95,37 @@ void AEldenCharacter::BeginPlay()
 		}
 	}
 
-	// 무기 스폰 및 장착 로직
-	// 에디터에서 무기 클래스를 칸에 제대로 넣었는지 확인
-	if (WeaponClass != nullptr)
+
+	for (TSubclassOf<AEldenWeapon> SlotClass : WeaponSlots)
 	{
+		// 이 슬롯만 건너뛰고 나머지 무기는 계속 스폰 (return하면 BeginPlay 전체가 끊김)
+		if (!SlotClass) continue;
+
 		// 월드에 무기 액터 생성
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
 		SpawnParams.Instigator = GetInstigator();
 
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AEldenWeapon* NewWeapon = GetWorld()->SpawnActor<AEldenWeapon>(SlotClass, GetActorLocation(),
+			GetActorRotation(), SpawnParams);
+		FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
 
-		EquippedWeapon = GetWorld()->SpawnActor<AEldenWeapon>(WeaponClass,
-			GetActorLocation(), GetActorRotation(), SpawnParams);
-
-		// 스폰 성공하면 손에 있는 소켓에 갖다 붙임
-		if (EquippedWeapon != nullptr)
+		if (NewWeapon)
 		{
-			// 부착 규칙: 위치, 회전, 스케일 모두 소켓 따라가기
-			FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-			// 무기의 루트 컴포넌트를 캐릭터 Mesh에 있는 RightHandSocket에 붙이기
-			EquippedWeapon->AttachToComponent(GetMesh(), AttachmentRules, FName("RightHandSocket"));
+			NewWeapon->AttachToComponent(GetMesh(), AttachmentRules, FName("RightHandSocket"));
+
+			// .Add()의 리턴값 = 방금 이 무기가 배열에서 몇번째로 들어갔는지
+			// 이 인덱스가 0이 아니면 (첫 무기가 아니면) 겹쳐 보이지 않게 숨겨둔다.
+			int32 NewIndex = SpawnedWeapons.Add(NewWeapon);
+
+			if (NewIndex != 0)
+			{
+				NewWeapon->SetActorHiddenInGame(true);
+			}
 		}
 	}
+
+	EquippedWeapon = SpawnedWeapons.IsValidIndex(0) ? SpawnedWeapons[0] : nullptr;
 
 	if (ShieldClass != nullptr)
 	{
@@ -153,22 +161,7 @@ void AEldenCharacter::BeginPlay()
 		if (CurrentHUD)
 		{
 			CurrentHUD->AddToViewport();
-			UTexture2D* WeaponTexture = nullptr;
-			UTexture2D* ShieldTexture = nullptr;
-			FString CurrentSkillName = TEXT("");
-
-			if (EquippedWeapon)
-			{
-				WeaponTexture = EquippedWeapon->GetIcon();
-				CurrentSkillName = EquippedWeapon->GetSkillName();
-			}
-			if (EquippedShield)
-			{
-				ShieldTexture = EquippedShield->GetIcon();
-				CurrentSkillName = EquippedShield->GetSkillName();
-			}
-			CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture,
-				InventoryComponent ? InventoryComponent->GetCurrentItemIcon() : nullptr, CurrentSkillName);
+			RefreshEquipmentUI();
 		}
 	}
 
@@ -267,6 +260,11 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		if (SwitchItemAction)
 		{
 			EnhancedInputComponent->BindAction(SwitchItemAction, ETriggerEvent::Started, this, &AEldenCharacter::SwitchItem);
+		}
+
+		if (SwitchWeaponAction)
+		{
+			EnhancedInputComponent->BindAction(SwitchWeaponAction, ETriggerEvent::Started, this, &AEldenCharacter::SwitchWeapon);
 		}
 
 		if (UseItemAction)
@@ -775,6 +773,23 @@ void AEldenCharacter::SwitchItem()
 	InventoryComponent->SelectNextItem();
 }
 
+void AEldenCharacter::SwitchWeapon()
+{
+	if (GetState() != ECharacterState::Idle) return;
+	if (SpawnedWeapons.Num() < 2) return;
+
+	// 지금 장착 중인 무기 숨기기
+	SpawnedWeapons[CurrentWeaponIndex]->SetActorHiddenInGame(true);
+
+	// %연산자로 배열 끝에 도달하면 다시 0으로 되돌아가기
+	CurrentWeaponIndex = (CurrentWeaponIndex + 1) % SpawnedWeapons.Num();
+
+	// 바꿀 무기 보이기
+	SpawnedWeapons[CurrentWeaponIndex]->SetActorHiddenInGame(false);
+	EquippedWeapon = SpawnedWeapons[CurrentWeaponIndex];
+	RefreshEquipmentUI();
+}
+
 void AEldenCharacter::SetDrinkingVisuals(bool bDrinking)
 {
 	if (EquippedShield) EquippedShield->SetActorHiddenInGame(bDrinking);
@@ -815,6 +830,27 @@ void AEldenCharacter::SetInteractableTarget(TScriptInterface<class IInteractable
 	{
 		CurrentHUD->HideInteractPrompt();
 	}
+}
+
+void AEldenCharacter::RefreshEquipmentUI()
+{
+	if (!CurrentHUD) return;
+	UTexture2D* WeaponTexture = nullptr;
+	UTexture2D* ShieldTexture = nullptr;
+	FString CurrentSkillName = TEXT("");
+
+	if (EquippedWeapon)
+	{
+		WeaponTexture = EquippedWeapon->GetIcon();
+		CurrentSkillName = EquippedWeapon->GetSkillName();
+	}
+	if (EquippedShield)
+	{
+		ShieldTexture = EquippedShield->GetIcon();
+		CurrentSkillName = EquippedShield->GetSkillName();
+	}
+	CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture,
+		InventoryComponent ? InventoryComponent->GetCurrentItemIcon() : nullptr, CurrentSkillName);
 }
 
 void AEldenCharacter::OnPotionMontageEnded(UAnimMontage* Montage, bool bInterrupted)

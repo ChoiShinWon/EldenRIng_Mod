@@ -96,6 +96,9 @@ protected:
 	UInputAction* SwitchItemAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* SwitchWeaponAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* AttackAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
@@ -138,11 +141,18 @@ protected:
 	 *=============================================================================*/
     // 에디터에서 장착할 무기 클래스
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<class AEldenWeapon> WeaponClass;
+	TArray<TSubclassOf<class AEldenWeapon>> WeaponSlots;
 	
 	// 실제로 월드에 스폰되어 내 손에 들려있는 무기를 가리키는 포인터
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	class AEldenWeapon* EquippedWeapon;
+
+	// 스폰된 무기 액터를 전부를 보관할 배열
+	UPROPERTY()
+	TArray<class AEldenWeapon*> SpawnedWeapons;
+
+	// 현재 인덱스
+	int32 CurrentWeaponIndex = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shield")
 	TSubclassOf<class AEldenShield> ShieldClass;
@@ -215,6 +225,8 @@ protected:
 	void UseItem();
 
 	void SwitchItem();
+
+	void SwitchWeapon();
 
 	void SetDrinkingVisuals(bool bDrinking);
 
@@ -303,4 +315,8 @@ public:
 private:
 	// CurrentInteractableTarget을 여기로 옮기기
 	TScriptInterface<class IInteractable> CurrentInteractableTarget;
+
+	// HUD 장비 아이콘 갱신 헬퍼
+	void RefreshEquipmentUI();
+
 };

@@ -1,8 +1,9 @@
-
+﻿
 
 #include "EldenRing_Mod/Character/EldenAnimInstance.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
+#include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "KismetAnimationLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -51,5 +52,14 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 			
 		}
 
+		if (EldenCharacter->GetEquippedWeapon())
+		{
+			CurrentWeaponStance = EldenCharacter->GetEquippedWeapon()->GetWeaponStance();
+		}
+
+		bShouldShowWeaponIdleOverlay =
+			EldenCharacter->GetState() == ECharacterState::Idle &&
+			CurrentWeaponStance == EWeaponStance::TwoHanded ||
+			EldenCharacter->GetState() == ECharacterState::Blocking;
 	}
 }

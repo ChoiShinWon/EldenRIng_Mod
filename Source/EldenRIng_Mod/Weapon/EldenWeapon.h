@@ -8,6 +8,14 @@
 #include "EldenWeapon.generated.h"
 
 class UEldenHitboxComponent;
+class USceneComponent;
+
+UENUM(BlueprintType)
+enum class EWeaponStance : uint8
+{
+	OneHanded UMETA(DisplayName = "OneHanded"),
+	TwoHanded UMETA(DisplayName = "TwoHanded")
+};
 
 UCLASS()
 class ELDENRING_MOD_API AEldenWeapon : public AActor
@@ -29,6 +37,9 @@ public:
 protected:
 
 	virtual void BeginPlay() override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	USceneComponent* WeaponRoot;
 	
 	// 무기 외형 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -48,6 +59,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Combat")
 	TArray<UAnimMontage*> ComboMontages;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	EWeaponStance WeaponStance = EWeaponStance::OneHanded;
+
 	// 칼날에 씌울 충돌체
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	class UEldenHitboxComponent* WeaponHitbox;
@@ -57,4 +71,6 @@ public:
 	FORCEINLINE const FString& GetSkillName() const { return SkillName; }
 
 	FORCEINLINE const TArray<UAnimMontage*>& GetComboMontages() const { return ComboMontages; }
+
+	FORCEINLINE EWeaponStance GetWeaponStance() const { return WeaponStance; }
 };
