@@ -235,10 +235,10 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 			EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Started, this, &AEldenCharacter::StartBlock);
 			EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Completed, this, &AEldenCharacter::StopBlock);
 		}
-		if (ParryAction)
+		if (FKeyAction)
 		{
 
-			EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Started, this, &AEldenCharacter::StartParry);
+			EnhancedInputComponent->BindAction(FKeyAction, ETriggerEvent::Started, this, &AEldenCharacter::StartParryOrSkill);
 		}
 		if (SprintAction)
 		{
@@ -303,12 +303,18 @@ void AEldenCharacter::StopBlock()
 	}
 }
 
-void AEldenCharacter::StartParry()
+void AEldenCharacter::StartParryOrSkill()
 {
-	if (CombatComponent)
-	{
+	if (!CombatComponent) return;
+    if (EquippedShield && !EquippedShield->IsHidden())
+    {
 		CombatComponent->ExecuteParry();
+	}	
+	else
+	{
+		CombatComponent->ExecuteWeaponSkill();
 	}
+
 }
 
 // 이동 및 회전 로직

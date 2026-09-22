@@ -48,7 +48,7 @@ void UEldenHitboxComponent::OnHitboxOverlap(UPrimitiveComponent* OverlapComponen
 	// 적 종류가 늘어나서 AEldenEnemy를 상속하는 여러 서브클래스가 생기면
 	// 서로 다른 서브클래스끼리는 이 체크를 통과 못해서 아군 오사가 발생할 수 있음.
 	// 지금은 적이 전부 같은 클래스라서 우연히 맞물려 동작하는 상태
-	if (ActualAttacker && ActualAttacker->GetClass() == OtherActor->GetClass()) return;
+	if (Cast<AEldenEnemy>(ActualAttacker) && Cast<AEldenEnemy>(OtherActor)) return; 
 
 	// 다단히트 방지: 한 번의 스윙 (EnableHitbox->DisableHitbox 구간) 동안
 	// 이미 맞은 대상은 HitActors 배열에 쌓아두고 재타격을 막음.

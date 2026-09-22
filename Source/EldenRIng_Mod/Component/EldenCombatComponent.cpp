@@ -2,6 +2,7 @@
 
 
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
+#include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "GameFramework/Character.h" 
 #include "Containers/Array.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
@@ -10,6 +11,7 @@
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/Engine.h"
@@ -194,10 +196,11 @@ void UEldenCombatComponent::ExecuteParry()
 	// 패리도 방패로 받아치는 액션이므로 동일한 이유로 두손 무기일 땐 비활성화
 	if (PlayerCharacter->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
 
-	// 죽었거나 구르거나 가드중이 아니라면 패리 실행 불가
+	// 죽었거나 구르거나 가드중이라면 패리 실행 불가
     if (PlayerCharacter->GetState() == ECharacterState::Dead ||
         PlayerCharacter->GetState() == ECharacterState::Rolling ||
-        PlayerCharacter->GetState() == ECharacterState::Blocking)
+        PlayerCharacter->GetState() == ECharacterState::Blocking ||
+		PlayerCharacter->GetState() == ECharacterState::Parrying)
     {
          return;
     }
@@ -216,6 +219,121 @@ void UEldenCombatComponent::ExecuteParry()
         CachedAnimInstance->Montage_SetEndDelegate(ParryEndDelegate, ParryMontage);
     }
    
+}
+
+void UEldenCombatComponent::ExecuteWeaponSkill()
+{
+	if (!PlayerCharacter || !CachedAnimInstance) return;
+	if (PlayerCharacter->GetEquippedWeapon() == nullptr) return;
+	if (PlayerCharacter->GetEquippedShield() && !PlayerCharacter->GetEquippedShield()->IsHidden()) return;
+
+	// 죽었거나 구르거나 가드중이라면 스킬 실행 불가
+	if (PlayerCharacter->GetState() == ECharacterState::Dead ||
+		PlayerCharacter->GetState() == ECharacterState::Rolling ||
+		PlayerCharacter->GetState() == ECharacterState::Blocking ||
+		PlayerCharacter->GetState() == ECharacterState::UsingSkill)
+	{
+		return;
+	}
+	AEldenWeapon* Weapon = PlayerCharacter->GetEquippedWeapon();
+
+	PlayerCharacter->SetState(ECharacterState::UsingSkill);
+
+	if (Weapon->GetSkillMontage())
+	{
+		CachedAnimInstance->Montage_Play(Weapon->GetSkillMontage());
+		FOnMontageEnded SkillEndDelegate;
+		SkillEndDelegate.BindUObject(this, &UEldenCombatComponent::OnSkillMontageEnded);
+		CachedAnimInstance->Montage_SetEndDelegate(SkillEndDelegate, Weapon->GetSkillMontage());
+	}
+}
+
+
+void UEldenCombatComponent::OnSkillMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (PlayerCharacter)
+	{
+		// 상태를 다시 평소(Idle)로 복구
+		PlayerCharacter->SetState(ECharacterState::Idle);
+	}
+}
+
+void UEldenCombatComponent::PerformSkillStrike()
+{
+	if (!PlayerCharacter) return;
+	AEldenWeapon* Weapon = PlayerCharacter->GetEquippedWeapon();
+	if (!Weapon) return;
+	
+
+	FVector Start = PlayerCharacter->GetActorLocation() +
+		(PlayerCharacter->GetActorForwardVector() * Weapon->GetSkillTraceForwardOffset());
+
+	FVector End = Start + PlayerCharacter->GetActorForwardVector() * Weapon->GetSkillTraceLength();
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(PlayerCharacter);
+
+	TArray<FHitResult> OutHits;
+	UKismetSystemLibrary::BoxTraceMultiForObjects(
+		GetWorld(), Start, End,
+		Weapon->GetSkillTraceBoxExtent(),
+		PlayerCharacter->GetActorRotation(),
+		ObjectTypes, false, ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		OutHits, true);
+
+	TSet<AActor*> HitActors;
+	for (FHitResult Hit : OutHits)
+	{
+		AActor* HitActor = Hit.GetActor();
+		if (!HitActor) continue;
+
+		if (HitActors.Contains(HitActor)) continue;
+		else
+		{
+			HitActors.Add(HitActor);
+		}
+		if (HitActor == PlayerCharacter) continue;
+
+		UGameplayStatics::ApplyDamage(HitActor, Weapon->GetSkillDamage(),
+			PlayerCharacter->GetInstigatorController(), PlayerCharacter,
+			UDamageType::StaticClass());
+
+		if (AEldenEnemy* Enemy = Cast<AEldenEnemy>(HitActor))
+		{
+			if (Enemy->PoiseComp)
+			{
+				Enemy->PoiseComp->ApplyPoiseDamage(Weapon->GetSkillPoiseDamage());
+			}
+		}
+	}
+	// Start~End 구간에 파티클을 N개(SkillVFXSpawnCount) 나눠 스폰해서
+	// 한 지점에서만 반짝이 아니라 타격 범위 전체를 따라 길게 이어지는 연출
+	// 스킬 한 번 쓸 때마다 여러 개를 새로 만들고 버리는게 반복되므로
+	// AutorRelease 풀링으로 파티클 컴포넌트를 매번 새로 할당하지 않고 재사용
+	if (Weapon->GetSkillVFX())
+	{
+		for (int32 i = 0; i < Weapon->GetSkillVFXSpawnCount(); i++)
+		{
+			// Count가 1이어도 0으로 안나눠지게 최소 1 보장
+			int32 Denominator = FMath::Max(Weapon->GetSkillVFXSpawnCount() - 1, 1);
+
+			// i 번째 파티클이 Start(0.0)~End(1.0) 사이 어디쯤 놓일지 비율 계산
+			float Alpha = (float)i / (float)Denominator;
+			FVector SpawnPoint = FMath::Lerp(Start, End, Alpha);
+
+			// 스킬 한 번에 파티클을 여러 개 새로 만들고 바로 버리는 걸 반복하므로,
+			// AutoRelease로 재생 끝난 파티클 컴포넌트를 진짜로 파괴하지 않고
+			// 월드의 파티클 풀에 반납했다가 다음 스폰 때 재사용하게 함 (매번 새로 할당하는 비용 절감)
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), Weapon->GetSkillVFX(), SpawnPoint,
+				PlayerCharacter->GetActorRotation(), FVector(1.f), true, EPSCPoolMethod::AutoRelease);
+		}
+	}
+	
 }
 
 

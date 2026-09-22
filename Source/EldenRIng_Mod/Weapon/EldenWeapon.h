@@ -59,6 +59,34 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Combat")
 	TArray<UAnimMontage*> ComboMontages;
 
+	// 스킬 전용 몽타주
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Skill")
+	class UAnimMontage* SkillMontage;
+
+	// 스킬 데미지량
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Skill")
+	float SkillDamage = 50.0f;
+
+	// 스킬 포이즈 데미지
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Skill")
+	float SkillPoiseDamage = 20.0f;
+
+	// 스킬 이펙트
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Skill")
+	class UParticleSystem* SkillVFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Skill")
+	int32 SkillVFXSpawnCount = 7;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Skill")
+	float SkillTraceForwardOffset = 50.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Skill")
+	float SkillTraceLength = 150.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Skill")
+	FVector SkillTraceBoxExtent = FVector(50.f, 50.f, 50.f);
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	EWeaponStance WeaponStance = EWeaponStance::OneHanded;
 
@@ -67,10 +95,17 @@ protected:
 	class UEldenHitboxComponent* WeaponHitbox;
 	
 public:
+	// 게터 함수 목록
 	FORCEINLINE class UTexture2D* GetIcon() const { return ItemIcon; }
 	FORCEINLINE const FString& GetSkillName() const { return SkillName; }
-
 	FORCEINLINE const TArray<UAnimMontage*>& GetComboMontages() const { return ComboMontages; }
-
 	FORCEINLINE EWeaponStance GetWeaponStance() const { return WeaponStance; }
+	FORCEINLINE class UAnimMontage* GetSkillMontage() const { return SkillMontage; }
+	FORCEINLINE float GetSkillDamage() const { return SkillDamage; }
+	FORCEINLINE float GetSkillPoiseDamage() const { return SkillPoiseDamage; }
+	FORCEINLINE class UParticleSystem* GetSkillVFX() const { return SkillVFX; }
+	FORCEINLINE int32 GetSkillVFXSpawnCount() const { return SkillVFXSpawnCount; }
+	FORCEINLINE float GetSkillTraceForwardOffset() const { return SkillTraceForwardOffset; }
+	FORCEINLINE FVector GetSkillTraceBoxExtent() const { return SkillTraceBoxExtent; }
+	FORCEINLINE float GetSkillTraceLength() const { return SkillTraceLength; }
 };
