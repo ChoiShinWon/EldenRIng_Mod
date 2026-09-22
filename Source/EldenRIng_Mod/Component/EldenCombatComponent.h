@@ -45,6 +45,15 @@ public:
 
 	void ExecuteParry();
 
+	// ExecuteParry랑 거의 동일한 구조
+	void ExecuteWeaponSkill();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void OnSkillMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	// AN_WeaponSkillHit이 임팩트 프레임에 호출할 함수
+	void PerformSkillStrike();
+
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Combat|Parry")
 	float ParryFacingDot = 0.0f;
@@ -52,6 +61,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Combat|Parry")
     class UParticleSystem* ParryVFX;
+
     UPROPERTY(EditAnywhere, Category = "Combat|Parry")
     class USoundBase* ParrySound;
 

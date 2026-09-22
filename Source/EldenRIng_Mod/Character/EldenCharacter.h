@@ -28,6 +28,7 @@ enum class ECharacterState : uint8
 	Rolling UMETA(DisplayName = "Rolling"),
 	Blocking UMETA(DisplayName = "Blocking"),
 	Parrying UMETA(DisplayName = "Parrying"),
+	UsingSkill UMETA(DisplayName = "UsingSkill"),
 	Dead UMETA(DisplayName = "Dead"),
 	Interacting UMETA(DisplayName = "Interact"),
 	Damaged UMETA(DisplayName = "Damaged"),
@@ -105,13 +106,13 @@ protected:
 	UInputAction* BlockAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	UInputAction* ParryAction;
+	UInputAction* FKeyAction;
 
 	
 
 	void StartBlock();
 	void StopBlock(); // 가드를 뗄 때 처리용
-	void StartParry(); // 패리 시도용
+	void StartParryOrSkill(); // 패리, 스킬 시도용
 	
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LockOn")
