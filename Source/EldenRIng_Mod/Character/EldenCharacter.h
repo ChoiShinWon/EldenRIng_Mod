@@ -329,4 +329,6 @@ private:
 	// HUD 장비 아이콘 갱신 헬퍼
 	void RefreshEquipmentUI();
 
+	void StartDrinkingPotion();
+
 };

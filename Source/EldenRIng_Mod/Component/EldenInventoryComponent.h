@@ -63,13 +63,15 @@ public:
 	void ConsumeItem();
 
 	// 외부(캐릭터)에서 포션의 회복량을 가져갈 수 있게 해주는 게터 함수
-	float GetPotionHealAmount() const;
+	float GetPotionRestoreAmount() const;
 
 	// 포션 리필 함수
 	void RefillPotions();
 
 	// 현재 선택된 아이템의 아이콘을 돌려주는 Getter 함수
 	UTexture2D* GetCurrentItemIcon() const;
+
+	FLinearColor GetCurrentDrinkGlowColor() const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnSelectedItemChangedDelegate OnSelectedItemChanged;

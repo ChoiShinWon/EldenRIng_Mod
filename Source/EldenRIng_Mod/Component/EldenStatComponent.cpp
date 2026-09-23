@@ -1,16 +1,13 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+﻿
 
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/StatUtils.h"
 #include "Engine/World.h" // 타이머 매니저(GetWorld())를 사용하기 위해 필수
 #include "TimerManager.h"
 
-// Sets default values for this component's properties
 UEldenStatComponent::UEldenStatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-
 
 }
 
@@ -22,8 +19,9 @@ void UEldenStatComponent::BeginPlay()
 
 	RecalculateDerivedStats();
 
-	// 게임 시작 시 체력과 스태미너를 꽉 채워줌.
+	// 게임 시작 시 체력과 마나, 스태미너를 꽉 채워줌.
 	CurrentHealth = MaxHealth;
+	CurrentMana = MaxMana;
 	CurrentStamina = MaxStamina;
 	
 }
@@ -86,6 +84,9 @@ bool UEldenStatComponent::LevelUpStat(EEldenStatType StatToLevelUp)
 		Vigor += 1;
 		break;
 
+	case EEldenStatType::Mind:
+		Mind += 1;
+		break;
 	case EEldenStatType::Endurance:
 		Endurance += 1;
 		break;
@@ -103,9 +104,11 @@ bool UEldenStatComponent::LevelUpStat(EEldenStatType StatToLevelUp)
 void UEldenStatComponent::RecalculateDerivedStats()
 {
 	float OldMaxHealth = MaxHealth;
+	float OldMana = MaxMana;
 
 	// 레벨업 시 Vigor 등 스탯에 따라 파생 스탯(MaxHealth 등)을 재계산
 	MaxHealth = 100.0f + (Vigor * 25.0f);
+	MaxMana = 100.0f + (Mind * 25.0f);
 	MaxStamina = 100.0f + (Endurance * 2.0f);
 	AttackPower = 3 + (Strength * 3.0f);
 
@@ -115,6 +118,7 @@ void UEldenStatComponent::RecalculateDerivedStats()
 	// 그냥 80/150(=70 잃은 상태 유지)이 되어야 하는데
 	// 잃었던 체력의 절대량을 그대로 보존하기 위해 계산
 	CurrentHealth += (MaxHealth - OldMaxHealth);
+	CurrentMana += (MaxMana - OldMana);
 }
 
 void UEldenStatComponent::ConsumeStamina(float Amount)
@@ -163,7 +167,31 @@ void UEldenStatComponent::Heal(float HealAmount)
 void UEldenStatComponent::FullRestore()
 {
 	CurrentHealth = MaxHealth;
+	CurrentMana = MaxMana;
 	CurrentStamina = MaxStamina;
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+	OnManaChanged.Broadcast(CurrentMana, MaxMana);
 	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
+}
+
+bool UEldenStatComponent::HasEnoughMana(float Amount) const
+{
+	return CurrentMana >= Amount;
+}
+
+void UEldenStatComponent::ConsumeMana(float Amount)
+{
+	CurrentMana = FMath::Clamp(CurrentMana - Amount, 0.0f, MaxMana);
+	OnManaChanged.Broadcast(CurrentMana, MaxMana);
+}
+
+void UEldenStatComponent::RestoreMana(float Amount)
+{
+	CurrentMana = FMath::Clamp(CurrentMana + Amount, 0.0f, MaxMana);
+	OnManaChanged.Broadcast(CurrentMana, MaxMana);
+}
+
+bool UEldenStatComponent::IsManaFull() const
+{
+	return CurrentMana >= MaxMana;
 }

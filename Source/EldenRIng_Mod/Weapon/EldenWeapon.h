@@ -50,6 +50,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "UI")
 	FString SkillName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Skill")
+	float SkillManaCost = 20.0f;
 	
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
@@ -108,4 +111,5 @@ public:
 	FORCEINLINE float GetSkillTraceForwardOffset() const { return SkillTraceForwardOffset; }
 	FORCEINLINE FVector GetSkillTraceBoxExtent() const { return SkillTraceBoxExtent; }
 	FORCEINLINE float GetSkillTraceLength() const { return SkillTraceLength; }
+	FORCEINLINE float GetSkillManaCost() const { return SkillManaCost; }
 };

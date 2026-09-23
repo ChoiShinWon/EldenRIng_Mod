@@ -1,6 +1,8 @@
 ﻿
 
 #include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
+#include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -53,7 +55,8 @@ void UEldenGraceRestComponent::ExitRest()
 	{
 		PC->SetViewTargetWithBlend(OwnerCharacter, ExitCameraBlendTime);
 	}
-
+	OwnerCharacter->InventoryComponent->RefillPotions();
+	OwnerCharacter->StatComponent->FullRestore();
 	OwnerCharacter->SetHUDVisible(true);
 	OwnerCharacter->SetEquippedItemsHidden(false);
 

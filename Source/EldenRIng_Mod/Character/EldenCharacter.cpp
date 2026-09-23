@@ -40,7 +40,6 @@ AEldenCharacter::AEldenCharacter()
 
 	DrinkLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("DrinkLight"));
 	DrinkLight->SetupAttachment(GetMesh(), FName("LeftHandSocket"));
-	DrinkLight->SetLightColor(FLinearColor::Red);
 	DrinkLight->SetAttenuationRadius(80.0f);
 	DrinkLight->SetIntensity(1.0f);
 	DrinkLight->SetCastShadows(false); // 짧게 켜지는 연출용
@@ -727,8 +726,14 @@ void AEldenCharacter::SetEquippedItemsHidden(bool bInHidden)
 
 	if (EquippedShield)
 	{
-		if (bInHidden) EquippedShield->SetActorHiddenInGame(true);
-		else EquippedShield->SetActorHiddenInGame(false);
+		if (bInHidden)
+		{
+			EquippedShield->SetActorHiddenInGame(true);
+		}
+		else if (!(EquippedWeapon && EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded))
+		{
+			EquippedShield->SetActorHiddenInGame(false);
+		}
 	}
 }
 
@@ -756,6 +761,26 @@ void AEldenCharacter::DebugLevelUpStrength()
  * 포션 로직 구현부
  *=============================================================================*/
 
+void AEldenCharacter::StartDrinkingPotion()
+{
+	if (!InventoryComponent->CanUseItem()) return;
+
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimMontage* UseMontage = InventoryComponent->GetCurrentUseMontage();
+	if (!AnimInstance || !UseMontage) return;
+
+	AnimInstance->Montage_Play(UseMontage);
+	FOnMontageEnded PotionEndDelegate;
+	PotionEndDelegate.BindUObject(this, &AEldenCharacter::OnPotionMontageEnded);
+	AnimInstance->Montage_SetEndDelegate(PotionEndDelegate, UseMontage);
+
+	SetState(ECharacterState::Drinking);
+
+	if (bIsSprinting) StopSprint();
+	SetDrinkingVisuals(true);
+}
+
 void AEldenCharacter::UseItem()
 {
 	// 1. 공통 예외 처리 (어떤 아이템이든 구르거나 죽어있을 땐 못 씀)
@@ -772,28 +797,15 @@ void AEldenCharacter::UseItem()
 	{
 		// 
 		if (StatComponent->IsHealthFull()) return;
-		if (!InventoryComponent->CanUseItem()) return;
+		StartDrinkingPotion();
 
+		break;
+	}
 
-		UAnimMontage* UseMontage = InventoryComponent->GetCurrentUseMontage();
-		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-
-		if (!AnimInstance || !UseMontage) return;
-
-
-		AnimInstance->Montage_Play(UseMontage);
-		FOnMontageEnded PotionEndDelegate;
-		PotionEndDelegate.BindUObject(this, &AEldenCharacter::OnPotionMontageEnded);
-		AnimInstance->Montage_SetEndDelegate(PotionEndDelegate, UseMontage);
-
-
-		SetState(ECharacterState::Drinking);
-
-		if (bIsSprinting) StopSprint();
-
-
-		SetDrinkingVisuals(true);
-
+	case EItemType::Mana_Potion:
+	{
+		if (StatComponent->IsManaFull()) return;
+		StartDrinkingPotion();
 		break;
 	}
 
@@ -850,6 +862,11 @@ void AEldenCharacter::SwitchWeapon()
 
 void AEldenCharacter::SetDrinkingVisuals(bool bDrinking)
 {
+	if (bDrinking && DrinkLight && InventoryComponent)
+	{
+		DrinkLight->SetLightColor(InventoryComponent->GetCurrentDrinkGlowColor());
+	} 
+
 	if (DrinkLight) DrinkLight->SetVisibility(bDrinking);
 	if (EquippedWeapon && EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded) return;
 	if (EquippedShield) EquippedShield->SetActorHiddenInGame(bDrinking);
@@ -867,11 +884,17 @@ void AEldenCharacter::ApplyItemEffect()
 	case EItemType::HP_Potion:
 	{
 		InventoryComponent->ConsumeItem();
-		float HealAmount = InventoryComponent->GetPotionHealAmount();
-		StatComponent->Heal(HealAmount);
+		float RestoreAmount = InventoryComponent->GetPotionRestoreAmount();
+		StatComponent->Heal(RestoreAmount);
 		break;
 	}
-	// 나중에 마나 포션이 추가되면 여기서 FP를 회복시킵니다.
+	case EItemType::Mana_Potion:
+	{
+		InventoryComponent->ConsumeItem();
+		float RestoreAmount = InventoryComponent->GetPotionRestoreAmount();
+		StatComponent->RestoreMana(RestoreAmount);
+		break;
+	}
 	}
 }
 
@@ -914,6 +937,8 @@ void AEldenCharacter::RefreshEquipmentUI()
 	CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture,
 		InventoryComponent ? InventoryComponent->GetCurrentItemIcon() : nullptr, CurrentSkillName);
 }
+
+
 
 void AEldenCharacter::OnPotionMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {

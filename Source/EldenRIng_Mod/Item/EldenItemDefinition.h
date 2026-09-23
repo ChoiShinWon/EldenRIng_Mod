@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+癤�// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -14,8 +14,8 @@ UENUM(BlueprintType)
 enum class EItemType : uint8
 {
 	None UMETA(DisplayName = "None"),
-	HP_Potion UMETA(DisplayName = "HPPotion")
-	// 나중에 마나 물약이나 사용 아이템 등을 여기에 추가
+	HP_Potion UMETA(DisplayName = "HPPotion"),
+	Mana_Potion UMETA(DisplayName = "ManaPotion")
 };
 
 
@@ -42,4 +42,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	float HealAmount = 30.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	FLinearColor DrinkGlowColor = FLinearColor::Red;
 };

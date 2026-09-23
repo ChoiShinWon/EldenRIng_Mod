@@ -30,7 +30,13 @@ protected:
 	class UProgressBar* StaminaBar;
 
 	UPROPERTY(meta = (BindWidget))
-	class UProgressBar* GhostBar;
+	class UProgressBar* GhostStaminaBar;
+
+	UPROPERTY(meta = (BindWidget))
+	class UProgressBar* ManaBar;
+
+	UPROPERTY(meta = (BindWidget))
+	class UProgressBar* GhostManaBar;
 
 	UPROPERTY(meta = (BindWidget))
 	class UProgressBar* HPBar;
@@ -75,6 +81,9 @@ protected:
 	void OnHealthUpdated(float CurrentHealth, float MaxHealth);
 
 	UFUNCTION()
+	void OnManaUpdated(float CurrentMana, float MaxMana);
+
+	UFUNCTION()
 	void OnStaminaUpdated(float CurrentStamina, float MaxStamina);
 
 	UFUNCTION()
@@ -85,8 +94,9 @@ protected:
 
 
 	// 보간용 변수
-	float GhostPercent = 1.0f;
+	float GhostStaminaPercent = 1.0f;
 	float GhostHPPercent = 1.0f;
+	float GhostManaPercent = 1.0f;
     
 	// 매 프레임 업데이트 (블루프린트의 Tick 역할)
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
@@ -98,4 +108,9 @@ private:
 
 	float TargetHPPercent = 1.0f;
 	float TargetStaminaPercent = 1.0f;
+	float TargetManaPercent = 1.0f;
+
+	void UpdateStatBar(class UProgressBar* Bar, float& OutTargetPercent, float CurrentValue, float MaxValue);
+
+	void TickGhostBar(class UProgressBar* GhostBarWidget, float& GhostPercent, float TargetPercent, float DeltaTime);
 };

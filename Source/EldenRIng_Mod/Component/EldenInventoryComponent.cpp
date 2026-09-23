@@ -31,7 +31,7 @@ void UEldenInventoryComponent::ConsumeItem()
 	BroadcastPotionCount();
 }
 
-float UEldenInventoryComponent::GetPotionHealAmount() const
+float UEldenInventoryComponent::GetPotionRestoreAmount() const
 {
 	const UEldenItemDefinition* Def = GetSelectedDefinition();
 	return Def ? Def->HealAmount : 0.0f;
@@ -51,6 +51,12 @@ UTexture2D* UEldenInventoryComponent::GetCurrentItemIcon() const
 {
 	const UEldenItemDefinition* Def = GetSelectedDefinition();
 	return Def ? Def->Icon : nullptr;
+}
+
+FLinearColor UEldenInventoryComponent::GetCurrentDrinkGlowColor() const
+{
+	const UEldenItemDefinition* Def = GetSelectedDefinition();
+	return Def ? Def->DrinkGlowColor : FLinearColor::White;
 }
 
 void UEldenInventoryComponent::SetSelectedIndex(int32 NewIndex)
