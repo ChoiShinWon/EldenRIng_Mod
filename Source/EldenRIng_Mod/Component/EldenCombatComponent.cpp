@@ -3,6 +3,7 @@
 
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "EldenRing_Mod/Component/EldenPoiseComponent.h"
+#include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "GameFramework/Character.h" 
 #include "Containers/Array.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
@@ -236,6 +237,10 @@ void UEldenCombatComponent::ExecuteWeaponSkill()
 		return;
 	}
 	AEldenWeapon* Weapon = PlayerCharacter->GetEquippedWeapon();
+
+	const float ManaCost = Weapon->GetSkillManaCost();
+	if (!PlayerCharacter->StatComponent->HasEnoughMana(ManaCost)) return;
+	PlayerCharacter->StatComponent->ConsumeMana(ManaCost);
 
 	PlayerCharacter->SetState(ECharacterState::UsingSkill);
 

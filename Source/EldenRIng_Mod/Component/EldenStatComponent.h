@@ -14,6 +14,7 @@ UENUM(BlueprintType)
 enum class EEldenStatType : uint8
 {
 	Vigor       UMETA(DisplayName = "생명력"),
+	Mind        UMETA(DisplayName = "정신력"),
 	Endurance   UMETA(DisplayName = "지구력"),
 	Strength    UMETA(DisplayName = "근력")
 };
@@ -41,6 +42,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	int32 Vigor = 10;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	int32 Mind = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	int32 Endurance = 10;
@@ -87,6 +91,31 @@ public:
 	void Heal(float HealAmount);
 
 	void FullRestore();
+
+	/*=============================================================================
+	* 정신력 시스템 (Mana)
+	*=============================================================================*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mana")
+	float MaxMana = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mana")
+	float CurrentMana = 100.0f;
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnStatChangeDelegate OnManaChanged;
+
+	UFUNCTION(BlueprintPure, Category = "Mana")
+	bool HasEnoughMana(float Amount) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Mana")
+	void ConsumeMana(float Amount);
+
+	UFUNCTION(BlueprintCallable, Category = "Mana")
+	void RestoreMana(float Amount);
+
+	// 마나가 꽉 찼는지 확인하는 함수
+	bool IsManaFull() const;
+
 
 	/*=============================================================================
 	 * 스태미너 시스템 (Stamina)
@@ -136,4 +165,8 @@ public:
 	// HUD 에서 값을 읽어갈 수 있도록 Getter 추가
 	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+
+	// 마나용 게터함수
+	FORCEINLINE float GetCurrentMana() const { return CurrentMana; }
+	FORCEINLINE float GetMaxMana() const { return MaxMana; }
 };

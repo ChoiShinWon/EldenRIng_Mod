@@ -18,10 +18,12 @@ void UEldenHUDWidget::NativeConstruct()
         PlayerRef->StatComponent->OnHealthChanged.AddDynamic(this, &UEldenHUDWidget::OnHealthUpdated);
         PlayerRef->StatComponent->OnStaminaChanged.AddDynamic(this, &UEldenHUDWidget::OnStaminaUpdated);
         PlayerRef->StatComponent->OnRunesChanged.AddDynamic(this, &UEldenHUDWidget::OnRunesUpdated);
+		PlayerRef->StatComponent->OnManaChanged.AddDynamic(this, &UEldenHUDWidget::OnManaUpdated);
 
         OnHealthUpdated(PlayerRef->StatComponent->GetCurrentHealth(), PlayerRef->StatComponent->GetMaxHealth());
         OnStaminaUpdated(PlayerRef->StatComponent->GetCurrentStamina(), PlayerRef->StatComponent->GetMaxStamina());
         OnRunesUpdated(PlayerRef->StatComponent->CurrentRunes);
+		OnManaUpdated(PlayerRef->StatComponent->GetCurrentMana(), PlayerRef->StatComponent->GetMaxMana());
        
 
     }
@@ -43,7 +45,8 @@ void UEldenHUDWidget::NativeDestruct()
         PlayerRef->StatComponent->OnHealthChanged.RemoveDynamic(this, &UEldenHUDWidget::OnHealthUpdated);
         PlayerRef->StatComponent->OnStaminaChanged.RemoveDynamic(this, &UEldenHUDWidget::OnStaminaUpdated);
         PlayerRef->StatComponent->OnRunesChanged.RemoveDynamic(this, &UEldenHUDWidget::OnRunesUpdated);
-    }
+		PlayerRef->StatComponent->OnManaChanged.RemoveDynamic(this, &UEldenHUDWidget::OnManaUpdated);
+	}
 
     if (PlayerRef && PlayerRef->InventoryComponent)
     {
@@ -66,20 +69,17 @@ void UEldenHUDWidget::OnRunesUpdated(int32 NewRunes)
 
 void UEldenHUDWidget::OnHealthUpdated(float CurrentHealth, float MaxHealth)
 {
-    if (MaxHealth > 0.0f)
-    {
-        TargetHPPercent = CurrentHealth / MaxHealth;
-        if (HPBar) HPBar->SetPercent(TargetHPPercent);
-    }
+	UpdateStatBar(HPBar, TargetHPPercent, CurrentHealth, MaxHealth);
+}
+
+void UEldenHUDWidget::OnManaUpdated(float CurrentMana, float MaxMana)
+{
+	UpdateStatBar(ManaBar, TargetManaPercent, CurrentMana, MaxMana);
 }
 
 void UEldenHUDWidget::OnStaminaUpdated(float CurrentStamina, float MaxStamina)
 {
-    if (MaxStamina > 0.0f)
-    {
-        TargetStaminaPercent = CurrentStamina / MaxStamina;
-        if (StaminaBar) StaminaBar->SetPercent(TargetStaminaPercent);
-    }
+	UpdateStatBar(StaminaBar, TargetStaminaPercent, CurrentStamina, MaxStamina);
 }
 
 void UEldenHUDWidget::OnSelectedItemChanged()
@@ -113,19 +113,26 @@ void UEldenHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
     Super::NativeTick(MyGeometry, InDeltaTime);
 
     //  StatComponent가 있는지 확인
-    if (PlayerRef && PlayerRef->StatComponent && StaminaBar && GhostBar && HPBar && GhostHPBar)
+    if (PlayerRef && PlayerRef->StatComponent && StaminaBar && GhostStaminaBar && HPBar && GhostHPBar && ManaBar && GhostManaBar)
     {
-        
-
-        // 노란색 바 보간
-        GhostPercent = FStatUtils::InterpGhostValue(GhostPercent, TargetStaminaPercent, InDeltaTime, 5.0f);
-        GhostBar->SetPercent(GhostPercent);
-
-        
-
-        GhostHPPercent = FStatUtils::InterpGhostValue(GhostHPPercent, TargetHPPercent, InDeltaTime, 5.0f);
-        GhostHPBar->SetPercent(GhostHPPercent);
+		TickGhostBar(GhostStaminaBar, GhostStaminaPercent, TargetStaminaPercent, InDeltaTime);
+		TickGhostBar(GhostHPBar, GhostHPPercent, TargetHPPercent, InDeltaTime);
+		TickGhostBar(GhostManaBar, GhostManaPercent, TargetManaPercent, InDeltaTime);
     }
+}
+
+void UEldenHUDWidget::UpdateStatBar(UProgressBar* Bar, float& OutTargetPercent, float CurrentValue, float MaxValue)
+{
+	if (MaxValue <= 0) return;
+	OutTargetPercent = CurrentValue / MaxValue;
+	if (Bar) Bar->SetPercent(OutTargetPercent);
+}
+
+void UEldenHUDWidget::TickGhostBar(UProgressBar* GhostBarWidget, float& GhostPercent, float TargetPercent, float DeltaTime)
+{
+	if (!GhostBarWidget) return;
+	GhostPercent = FStatUtils::InterpGhostValue(GhostPercent, TargetPercent, DeltaTime, 5.0f);
+	GhostBarWidget->SetPercent(GhostPercent);
 }
 
 

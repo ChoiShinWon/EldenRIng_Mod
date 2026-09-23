@@ -18,16 +18,19 @@ void UEldenLevelUpWidget::NativeConstruct()
 	{
 		PlayerStatComponent = PlayerCharacter->StatComponent;
 		PendingVigor = PlayerStatComponent->Vigor;
+		PendingMind = PlayerStatComponent->Mind;
 		PendingEndurance = PlayerStatComponent->Endurance;
 		PendingStrength = PlayerStatComponent->Strength;
 		TotalPendingRuneCost = 0;
 		UpdateRuneText();
 
 		Txt_VigorValue->SetText(FText::AsNumber(PendingVigor));
+		Txt_MindValue->SetText(FText::AsNumber(PendingMind));
 		Txt_EnduranceValue->SetText(FText::AsNumber(PendingEndurance));
 		Txt_StrengthValue->SetText(FText::AsNumber(PendingStrength));
 
 		Txt_OriginalVigor->SetText(FText::AsNumber(PlayerStatComponent->Vigor));
+		Txt_OriginalMind->SetText(FText::AsNumber(PlayerStatComponent->Mind));
 		Txt_OriginalEndurance->SetText(FText::AsNumber(PlayerStatComponent->Endurance));
 		Txt_OriginalStrength->SetText(FText::AsNumber(PlayerStatComponent->Strength));
 	}
@@ -41,6 +44,16 @@ void UEldenLevelUpWidget::NativeConstruct()
 	if (Btn_VigorMinus)
 	{
 		Btn_VigorMinus->OnClicked.AddDynamic(this, &UEldenLevelUpWidget::OnVigorMinusClicked);
+	}
+
+	if (Btn_MindPlus)
+	{
+		Btn_MindPlus->OnClicked.AddDynamic(this, &UEldenLevelUpWidget::OnMindPlusClicked);
+	}
+
+	if (Btn_MindMinus)
+	{
+		Btn_MindMinus->OnClicked.AddDynamic(this, &UEldenLevelUpWidget::OnMindMinusClicked);
 	}
 
 	if (Btn_EndurancePlus)
@@ -97,6 +110,19 @@ void UEldenLevelUpWidget::OnVigorMinusClicked()
 	TryChangeStat(PendingVigor, PlayerStatComponent->Vigor, Txt_VigorValue, -1);
 }
 
+void UEldenLevelUpWidget::OnMindPlusClicked()
+{
+	if (!PlayerCharacter || !PlayerStatComponent) return;
+	TryChangeStat(PendingMind, PlayerStatComponent->Mind, Txt_MindValue, +1);
+
+}
+
+void UEldenLevelUpWidget::OnMindMinusClicked()
+{
+	if (!PlayerCharacter || !PlayerStatComponent) return;
+	TryChangeStat(PendingMind, PlayerStatComponent->Mind, Txt_MindValue, -1);
+}
+
 void UEldenLevelUpWidget::OnEndurancePlusClicked()
 {
 	if (!PlayerCharacter || !PlayerStatComponent) return;
@@ -132,12 +158,14 @@ void UEldenLevelUpWidget::OnConfirmClicked()
 	{
 		int32 LevelGained = (PendingVigor - PlayerStatComponent->Vigor) +
 			(PendingEndurance - PlayerStatComponent->Endurance) +
+			(PendingMind - PlayerStatComponent->Mind) +
 			(PendingStrength - PlayerStatComponent->Strength);
 
 		PlayerStatComponent->Level += LevelGained;
 
 		// 스탯 확정
 		PlayerStatComponent->Vigor = PendingVigor;
+		PlayerStatComponent->Mind = PendingMind;
 		PlayerStatComponent->Endurance = PendingEndurance;
 		PlayerStatComponent->Strength = PendingStrength;
 
