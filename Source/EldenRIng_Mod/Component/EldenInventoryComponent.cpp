@@ -176,6 +176,16 @@ FLinearColor UEldenInventoryComponent::GetCurrentDrinkGlowColor() const
 	return Def ? Def->DrinkGlowColor : FLinearColor::White;
 }
 
+const TArray<TObjectPtr<UEldenItemDefinition>>& UEldenInventoryComponent::GetItemOrder() const
+{
+	return ItemOrder;
+}
+
+int32 UEldenInventoryComponent::GetMaxEquippedSlots() const
+{
+	return MaxEquippedSlots;
+}
+
 void UEldenInventoryComponent::SetSelectedConsumable(UEldenItemDefinition* Selected)
 {
 	SelectedConsumable = Selected;
@@ -202,6 +212,11 @@ void UEldenInventoryComponent::SelectNextItem()
 	}
 
 	SetSelectedConsumable(CycleOrder[NextIndex]);
+}
+
+const TArray<TObjectPtr<UEldenItemDefinition>>& UEldenInventoryComponent::GetEquippedConsumables() const
+{
+	return EquippedConsumables;
 }
 
 

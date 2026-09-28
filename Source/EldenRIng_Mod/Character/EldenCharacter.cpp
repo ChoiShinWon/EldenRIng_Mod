@@ -15,6 +15,7 @@
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Widget/EldenHUDWidget.h"
+#include "EldenRing_Mod/Widget/EldenMenuWidget.h"
 #include "EldenRing_Mod/StatUtils.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "Kismet/GameplayStatics.h"
@@ -278,6 +279,11 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 			EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Started, this, &AEldenCharacter::UseItem);
 		}
 
+		if (ToggleMenuAction)
+		{
+			EnhancedInputComponent->BindAction(ToggleMenuAction, ETriggerEvent::Started, this, &AEldenCharacter::ToggleInventoryMenu);
+		}
+
 		PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &AEldenCharacter::DebugLevelUpVigor);
 		PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AEldenCharacter::DebugLevelUpEndurance);
 		PlayerInputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AEldenCharacter::DebugLevelUpStrength);
@@ -389,6 +395,42 @@ void AEldenCharacter::OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass
 			}
 		}
 
+		GetCharacterMovement()->StopMovementImmediately();
+		SetState(ECharacterState::Interacting);
+	}
+}
+
+void AEldenCharacter::ToggleInventoryMenu()
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (InventoryMenuWidget)
+	{
+		InventoryMenuWidget->RemoveFromParent();
+		InventoryMenuWidget = nullptr;
+
+		if (PC)
+		{
+			PC->bShowMouseCursor = false;
+			FInputModeGameOnly InputMode;
+			PC->SetInputMode(InputMode);
+		}
+
+		SetState(ECharacterState::Idle);
+		
+	}
+	else
+	{
+		UEldenMenuWidget* MenuWidget = CreateWidget<UEldenMenuWidget>(GetWorld(), InventoryMenuWidgetClass);
+		MenuWidget->InitMenu(InventoryComponent);
+		InventoryMenuWidget = MenuWidget;
+		InventoryMenuWidget->AddToViewport();
+		if (PC)
+		{
+			PC->bShowMouseCursor = true;
+			FInputModeGameAndUI InputMode;
+			InputMode.SetWidgetToFocus(MenuWidget->TakeWidget());
+			PC->SetInputMode(InputMode);
+		}
 		GetCharacterMovement()->StopMovementImmediately();
 		SetState(ECharacterState::Interacting);
 	}

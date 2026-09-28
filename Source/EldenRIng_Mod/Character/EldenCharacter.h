@@ -68,6 +68,13 @@ protected:
 	// 생성된 위젯을 저장할 포인터
 	UPROPERTY()
 	class UEldenHUDWidget* CurrentHUD;
+
+	// 에디터에서 EldenMenuWidget BP 지정
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<class UUserWidget> InventoryMenuWidgetClass;
+
+	UPROPERTY()
+	class UEldenMenuWidget* InventoryMenuWidget;
 	
 	/*=============================================================================
 	 * Enhanced Input 
@@ -108,6 +115,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* FKeyAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* ToggleMenuAction;
 	
 
 	void StartBlock();
@@ -298,6 +307,8 @@ public:
 	// 은총에서 레벨업 UI를 여는 함수
 	void OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass);
 
+	// 인벤토리 메뉴 여는 함수
+	void ToggleInventoryMenu();
 
 	// 외부에서 무적 상태를 켜고 끌 수 있는 함수
 	void SetInvincible(bool bState);

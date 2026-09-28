@@ -49,7 +49,7 @@ protected:
 	TObjectPtr<UEldenItemDefinition> SelectedConsumable = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "Item")
-	int32 MaxEquippedSlots = 4;
+	int32 MaxEquippedSlots = 10;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	TArray<TObjectPtr<UEldenItemDefinition>> EquippedConsumables;
@@ -108,6 +108,11 @@ public:
 
 	FLinearColor GetCurrentDrinkGlowColor() const;
 
+	// ItemOrder를 읽기 전용으로 가져올 Getter 함수
+	const TArray <TObjectPtr<UEldenItemDefinition>>& GetItemOrder() const;
+
+	int32 GetMaxEquippedSlots() const;
+
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnSelectedItemChangedDelegate OnSelectedItemChanged;
 
@@ -128,6 +133,8 @@ public:
 	}
 	
 	void SelectNextItem();
+
+	const TArray<TObjectPtr<UEldenItemDefinition>>& GetEquippedConsumables() const;
 	
 private:
 	void BroadcastPotionCount();
