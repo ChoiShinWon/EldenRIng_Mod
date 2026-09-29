@@ -421,7 +421,7 @@ void AEldenCharacter::ToggleInventoryMenu()
 	else
 	{
 		UEldenMenuWidget* MenuWidget = CreateWidget<UEldenMenuWidget>(GetWorld(), InventoryMenuWidgetClass);
-		MenuWidget->InitMenu(InventoryComponent);
+		MenuWidget->InitMenu(InventoryComponent, StatComponent);
 		InventoryMenuWidget = MenuWidget;
 		InventoryMenuWidget->AddToViewport();
 		if (PC)

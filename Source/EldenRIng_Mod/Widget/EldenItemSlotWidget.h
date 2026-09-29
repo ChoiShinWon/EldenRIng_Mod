@@ -26,6 +26,9 @@ protected:
 	class UTextBlock* ItemCountText;
 
 	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* ItemNameText;
+
+	UPROPERTY(meta = (BindWidget))
 	class UButton* ItemClickButton;
 
 	UPROPERTY()

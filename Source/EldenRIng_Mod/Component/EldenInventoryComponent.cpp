@@ -114,6 +114,11 @@ bool UEldenInventoryComponent::RemoveItem(UEldenItemDefinition* Definition, int3
 	if (!FoundSlot) return false; // 애초에 갖고 있지 않은 아이템은 뺄 수 없다
 
 	FoundSlot->Count = FMath::Clamp(FoundSlot->Count - Amount, 0, FoundSlot->Definition->MaxCount);
+	if (FoundSlot->Count == 0)
+	{
+		ItemMap.Remove(Definition);
+		ItemOrder.Remove(Definition);
+	}
 
 	return true;
 }
