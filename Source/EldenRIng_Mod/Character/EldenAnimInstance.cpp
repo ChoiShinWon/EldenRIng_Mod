@@ -3,6 +3,7 @@
 #include "EldenRing_Mod/Character/EldenAnimInstance.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
+#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "KismetAnimationLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -55,9 +56,9 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 		// GetState()는 CombatComponent가 있든 말든 항상 안전하게 호출 가능하므로
 		// 아래 오버레이 조건 계산 전에 이번 프레임의 최신 무기 스탠스를 먼저 갱신한다.
 		// 이 줄이 아래보다 늦게 오면 CurrentWeaponStance가 한 프레임 지연된 값으로 쓰이는 버그가 생김
-		if (EldenCharacter->GetEquippedWeapon())
+		if (EldenCharacter->EquipmentComponent->GetEquippedWeapon())
 		{
-			CurrentWeaponStance = EldenCharacter->GetEquippedWeapon()->GetWeaponStance();
+			CurrentWeaponStance = EldenCharacter->EquipmentComponent->GetEquippedWeapon()->GetWeaponStance();
 		}
 
 		// 상체 IDLE 오버레이를 언제 꺼야 하는지가 아니라 언제 켜도 되는지를 화이트리스트로 정의

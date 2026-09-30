@@ -1,6 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "EldenRing_Mod/Weapon/ANS_WeaponCollision.h"
+#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "Components/BoxComponent.h"
@@ -12,7 +13,7 @@ void UANS_WeaponCollision::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSe
 	// 1. 주인을 찾습니다.
 	if (AEldenCharacter* Character = Cast<AEldenCharacter>(MeshComp->GetOwner()))
 	{
-		if(AEldenWeapon * Weapon = Character->GetEquippedWeapon())
+		if(AEldenWeapon * Weapon = Character->EquipmentComponent->GetEquippedWeapon())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[1] 노티파이 실행: 무기 콜리전 ON 요청"));
 			Weapon->EnableWeaponCollision();
@@ -33,7 +34,7 @@ void UANS_WeaponCollision::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequ
 	// 주인 찾기
 	if (AEldenCharacter* Character = Cast<AEldenCharacter>(MeshComp->GetOwner()))
 	{
-		if (AEldenWeapon* Weapon = Character->GetEquippedWeapon())
+		if (AEldenWeapon* Weapon = Character->EquipmentComponent->GetEquippedWeapon())
 		{
 			Weapon->DisableWeaponCollision();
 		}

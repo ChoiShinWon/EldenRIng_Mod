@@ -6,6 +6,7 @@
 #include "GameFrameWork/CharacterMovementComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
+#include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "EldenRing_Mod/EldenGameMode.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
@@ -49,7 +50,7 @@ void AEldenGrace::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Ot
 	AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor);
 	if (Player)
 	{
-		Player->SetInteractableTarget(this);
+		Player->InteractionComponent->SetInteractableTarget(this);
 	}
 }
 
@@ -59,7 +60,7 @@ void AEldenGrace::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor);
 	if (Player)
 	{
-		Player->SetInteractableTarget(nullptr);
+		Player->InteractionComponent->SetInteractableTarget(nullptr);
 	}
 }
 

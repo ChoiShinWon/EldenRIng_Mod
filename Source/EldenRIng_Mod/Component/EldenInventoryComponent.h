@@ -35,13 +35,40 @@ protected:
 	
 	virtual void BeginPlay() override;
  
+
+	// 해시 기반 보유량 조회용
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	TArray<FEldenItemSlot> ItemSlots;
+	TMap<TObjectPtr<UEldenItemDefinition>, FEldenItemSlot> ItemMap;
 
+	// UI/ 핫바 순회용 순서 보존 배열
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	TArray<TObjectPtr<UEldenItemDefinition>> ItemOrder;
+
+	// 지금 선택된 소모품 정의
 	UPROPERTY(VisibleAnywhere, Category = "Item")
-	int32 SelectedIndex = 0;
+	TObjectPtr<UEldenItemDefinition> SelectedConsumable = nullptr;
 
-public:	
+	UPROPERTY(EditAnywhere, Category = "Item")
+	int32 MaxEquippedSlots = 10;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+	TArray<TObjectPtr<UEldenItemDefinition>> EquippedConsumables;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Item")
+	TObjectPtr<UEldenItemDefinition> HPPotionDef;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Item")
+	TObjectPtr<UEldenItemDefinition> ManaPotionDef;
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	bool EquipConsumable(UEldenItemDefinition* Definition);
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	bool UnequipConsumable(UEldenItemDefinition* Definition);
+
+
+
 	// 캐릭터가 지금 무슨 아이템 들고있냐고 물어볼 때 대답해줄 Getter 함수
 	EItemType GetCurrentSelectedItem() const 
 	{ 
@@ -55,6 +82,14 @@ public:
 		const UEldenItemDefinition* Def = GetSelectedDefinition();
 		return Def ? Def->UseMontage : nullptr;
 	}
+
+	bool AddItem(UEldenItemDefinition* Definition, int32 Amount);
+
+	bool RemoveItem(UEldenItemDefinition* Definition, int32 Amount);
+
+	int32 GetItemCount(const UEldenItemDefinition* Definition) const;
+
+	bool HasItem(const UEldenItemDefinition* Definition) const;
 
 	// 아이템 사용 가능한지 확인하는 함수
 	bool CanUseItem() const;
@@ -72,6 +107,11 @@ public:
 	UTexture2D* GetCurrentItemIcon() const;
 
 	FLinearColor GetCurrentDrinkGlowColor() const;
+
+	// ItemOrder를 읽기 전용으로 가져올 Getter 함수
+	const TArray <TObjectPtr<UEldenItemDefinition>>& GetItemOrder() const;
+
+	int32 GetMaxEquippedSlots() const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnSelectedItemChangedDelegate OnSelectedItemChanged;
@@ -93,15 +133,18 @@ public:
 	}
 	
 	void SelectNextItem();
+
+	const TArray<TObjectPtr<UEldenItemDefinition>>& GetEquippedConsumables() const;
 	
 private:
 	void BroadcastPotionCount();
-	void SetSelectedIndex(int32 NewIndex);
+	void SetSelectedConsumable(UEldenItemDefinition* Selected);
 
-	// 선택된 슬롯을 안전하게 꺼내는 함수. 빈 배열이거나 인덱스 범위 밖이면 nullptr
 	const FEldenItemSlot* GetSelectedSlot() const;
 
 	FEldenItemSlot* GetSelectedSlot();
 
 	const UEldenItemDefinition* GetSelectedDefinition() const;
+
+	TArray<UEldenItemDefinition*> BuildCycleOrder() const;
 };

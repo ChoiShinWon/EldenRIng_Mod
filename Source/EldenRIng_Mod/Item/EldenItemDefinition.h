@@ -1,5 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+﻿
 #pragma once
 
 #include "CoreMinimal.h"
@@ -15,7 +14,18 @@ enum class EItemType : uint8
 {
 	None UMETA(DisplayName = "None"),
 	HP_Potion UMETA(DisplayName = "HPPotion"),
-	Mana_Potion UMETA(DisplayName = "ManaPotion")
+	Mana_Potion UMETA(DisplayName = "ManaPotion"),
+	GoldenRune UMETA(DisplayName = "GodlenRune")
+};
+
+UENUM(BlueprintType)
+enum class EItemCategory : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Usable UMETA(DisplayName = "Usable"),
+	Weapon UMETA(DisplayName = "Weapon"),
+	Armor UMETA(DisplayName = "Armor"),
+	Key UMETA(DisplayName = "Key")
 };
 
 
@@ -25,6 +35,12 @@ class ELDENRING_MOD_API UEldenItemDefinition : public UDataAsset
 	GENERATED_BODY()
 	
 public:
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TSubclassOf<class AEldenWeapon> WeaponClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	TSubclassOf<class AEldenShield> ShieldClass;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	EItemType ItemType = EItemType::None;
 
@@ -40,9 +56,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	int32 MaxCount = 3;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Potion")
 	float HealAmount = 30.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Potion")
 	FLinearColor DrinkGlowColor = FLinearColor::Red;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rune")
+	int32 RuneAmount = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	EItemCategory Category = EItemCategory::None;
 };

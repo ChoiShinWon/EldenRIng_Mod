@@ -4,6 +4,7 @@
 #include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "GameFramework/Character.h" 
 #include "Containers/Array.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
@@ -59,9 +60,9 @@ void UEldenCombatComponent::OnAttackMontageEnded(UAnimMontage* Montage, bool bIn
         {
             PlayerCharacter->SetState(ECharacterState::Idle);
         }
-        if (PlayerCharacter->bDodgeQueued)
+        if (bDodgeQueued)
         {
-            PlayerCharacter->bDodgeQueued = false;
+            bDodgeQueued = false;
             PlayerCharacter->Dodge();
         }
     }
@@ -74,7 +75,7 @@ void UEldenCombatComponent::ExecuteAttack()
 {
     if (!PlayerCharacter || !CachedAnimInstance) return;
 
-    if (PlayerCharacter->bDodgeQueued)
+    if (bDodgeQueued)
     {
         return;
     }
@@ -118,7 +119,7 @@ void UEldenCombatComponent::CheckComboQueue()
 {
     if (!PlayerCharacter || !PlayerCharacter->GetMesh()) return;
 
-    if (PlayerCharacter->bDodgeQueued) return;
+    if (bDodgeQueued) return;
 
 	const TArray<UAnimMontage*>* ComboMontagesPtr = GetCurrentComboMontages();
 	if (!ComboMontagesPtr) return;
@@ -151,11 +152,11 @@ void UEldenCombatComponent::ExecuteBlock()
 
 	// 무기 미장착 상태에서 가드 로직을 태우면 이후 GetWeaponStance() 호출에서
 	// 널 포인터 역참조가 나므로, 가드 조건 검사 전에 반드시 먼저 걸러야 함.
-	if (PlayerCharacter->GetEquippedWeapon() == nullptr) return;
+	if (PlayerCharacter->EquipmentComponent->GetEquippedWeapon() == nullptr) return;
 
 	// 대검은 양손이 무기를 쥐고 있어서 방패를 들 손이 없다는 설정.
 	// 두손 무기 장착 중엔 가드 자체를 시작하지 못하게 여기서 조기 리턴
-	if (PlayerCharacter->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
+	if (PlayerCharacter->EquipmentComponent->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
 
     // 공격 중이거나 구르는 중이 아니면 가드 자세 진입 허용
     if (PlayerCharacter->GetState() == ECharacterState::Idle)
@@ -164,7 +165,7 @@ void UEldenCombatComponent::ExecuteBlock()
         PlayerCharacter->SetState(ECharacterState::Blocking);
 
         // 필요하다면 방패 방어 히트박스 켜기
-        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
+        if (AEldenShield* Shield = PlayerCharacter->EquipmentComponent->GetEquippedShield())
         {
             Shield->EnableShieldBlock();
         }
@@ -181,7 +182,7 @@ void UEldenCombatComponent::EndBlock()
     {
         PlayerCharacter->SetState(ECharacterState::Idle);
 
-        if (AEldenShield* Shield = PlayerCharacter->GetEquippedShield())
+        if (AEldenShield* Shield = PlayerCharacter->EquipmentComponent->GetEquippedShield())
         {
             Shield->DisableShieldBlock();
         }
@@ -193,9 +194,9 @@ void UEldenCombatComponent::ExecuteParry()
 {
 	// null 체크들
     if (!PlayerCharacter || !CachedAnimInstance) return;
-	if (PlayerCharacter->GetEquippedWeapon() == nullptr) return;
+	if (PlayerCharacter->EquipmentComponent->GetEquippedWeapon() == nullptr) return;
 	// 패리도 방패로 받아치는 액션이므로 동일한 이유로 두손 무기일 땐 비활성화
-	if (PlayerCharacter->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
+	if (PlayerCharacter->EquipmentComponent->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
 
 	// 죽었거나 구르거나 가드중이라면 패리 실행 불가
     if (PlayerCharacter->GetState() == ECharacterState::Dead ||
@@ -225,8 +226,8 @@ void UEldenCombatComponent::ExecuteParry()
 void UEldenCombatComponent::ExecuteWeaponSkill()
 {
 	if (!PlayerCharacter || !CachedAnimInstance) return;
-	if (PlayerCharacter->GetEquippedWeapon() == nullptr) return;
-	if (PlayerCharacter->GetEquippedShield() && !PlayerCharacter->GetEquippedShield()->IsHidden()) return;
+	if (PlayerCharacter->EquipmentComponent->GetEquippedWeapon() == nullptr) return;
+	if (PlayerCharacter->EquipmentComponent->GetEquippedShield() && !PlayerCharacter->EquipmentComponent->GetEquippedShield()->IsHidden()) return;
 
 	// 죽었거나 구르거나 가드중이라면 스킬 실행 불가
 	if (PlayerCharacter->GetState() == ECharacterState::Dead ||
@@ -236,7 +237,7 @@ void UEldenCombatComponent::ExecuteWeaponSkill()
 	{
 		return;
 	}
-	AEldenWeapon* Weapon = PlayerCharacter->GetEquippedWeapon();
+	AEldenWeapon* Weapon = PlayerCharacter->EquipmentComponent->GetEquippedWeapon();
 
 	const float ManaCost = Weapon->GetSkillManaCost();
 	if (!PlayerCharacter->StatComponent->HasEnoughMana(ManaCost)) return;
@@ -266,7 +267,7 @@ void UEldenCombatComponent::OnSkillMontageEnded(UAnimMontage* Montage, bool bInt
 void UEldenCombatComponent::PerformSkillStrike()
 {
 	if (!PlayerCharacter) return;
-	AEldenWeapon* Weapon = PlayerCharacter->GetEquippedWeapon();
+	AEldenWeapon* Weapon = PlayerCharacter->EquipmentComponent->GetEquippedWeapon();
 	if (!Weapon) return;
 	
 
@@ -384,7 +385,7 @@ void UEldenCombatComponent::ResetTimeDilation()
 const TArray<UAnimMontage*>* UEldenCombatComponent::GetCurrentComboMontages() const
 {
 	if (!PlayerCharacter) return nullptr;
-	AEldenWeapon* CurrentWeapon = PlayerCharacter->GetEquippedWeapon();
+	AEldenWeapon* CurrentWeapon = PlayerCharacter->EquipmentComponent->GetEquippedWeapon();
 	if (!CurrentWeapon) return nullptr;
 
 	return &CurrentWeapon->GetComboMontages();

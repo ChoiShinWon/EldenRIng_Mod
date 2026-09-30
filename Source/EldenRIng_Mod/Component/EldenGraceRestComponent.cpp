@@ -3,6 +3,8 @@
 #include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
+
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -26,7 +28,7 @@ void UEldenGraceRestComponent::EnterRest()
 {
 	if (!OwnerCharacter) return;
 	OwnerCharacter->SetHUDVisible(false);
-	OwnerCharacter->SetEquippedItemsHidden(true);
+	OwnerCharacter->EquipmentComponent->SetEquippedItemsHidden(true);
 
 	OwnerCharacter->GetCharacterMovement()->StopMovementImmediately();
 	OwnerCharacter->SetState(ECharacterState::Interacting);
@@ -58,7 +60,7 @@ void UEldenGraceRestComponent::ExitRest()
 	OwnerCharacter->InventoryComponent->RefillPotions();
 	OwnerCharacter->StatComponent->FullRestore();
 	OwnerCharacter->SetHUDVisible(true);
-	OwnerCharacter->SetEquippedItemsHidden(false);
+	OwnerCharacter->EquipmentComponent->SetEquippedItemsHidden(false);
 
 }
 
