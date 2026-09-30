@@ -1,6 +1,7 @@
 ﻿#include "EldenRing_Mod/Actor/EldenItemPickUp.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 
@@ -24,7 +25,7 @@ void AEldenItemPickUp::Interact(AEldenCharacter* Player)
 
 	Player->InventoryComponent->AddItem(ItemDef, PickAmount);
 
-	Player->SetInteractableTarget(nullptr);
+	Player->InteractionComponent->SetInteractableTarget(nullptr);
 
 	Destroy();
 }
@@ -44,7 +45,7 @@ void AEldenItemPickUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActo
 {
 	if (AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor))
 	{
-		Player->SetInteractableTarget(this);
+		Player->InteractionComponent->SetInteractableTarget(this);
 	}
 }
 
@@ -53,6 +54,6 @@ void AEldenItemPickUp::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor*
 {
 	if (AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor))
 	{
-		Player->SetInteractableTarget(nullptr);
+		Player->InteractionComponent->SetInteractableTarget(nullptr);
 	}
 }

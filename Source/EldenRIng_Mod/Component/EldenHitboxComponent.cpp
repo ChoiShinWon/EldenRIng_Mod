@@ -1,4 +1,5 @@
 ﻿#include "EldenRing_Mod/Component/EldenHitboxComponent.h"
+#include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
@@ -92,24 +93,24 @@ void UEldenHitboxComponent::OnHitboxOverlap(UPrimitiveComponent* OverlapComponen
 	// 가드만 여기서 직접 Impact 이펙트(깡 소리)를 재생.
 	if (AEldenCharacter* TargetPlayer = Cast<AEldenCharacter>(OtherActor))
 	{
-		if (TargetPlayer->bParrySucceeded)
+		if (TargetPlayer->CombatComponent->bParrySucceeded)
 		{
 			// 패리 성공후 false로 즉시 전환
-			TargetPlayer->bParrySucceeded = false;
+			TargetPlayer->CombatComponent->bParrySucceeded = false;
 			return;
 		}
 
-		if (TargetPlayer->bDodgeInvincibleHit)
+		if (TargetPlayer->CombatComponent->bDodgeInvincibleHit)
 		{
 			// 구르기 무적 이후 즉시 false로 전환
-			TargetPlayer->bDodgeInvincibleHit = false;
+			TargetPlayer->CombatComponent->bDodgeInvincibleHit = false;
 			return;
 		}
 
-		if (TargetPlayer->bShieldBlockedAttack)
+		if (TargetPlayer->CombatComponent->bShieldBlockedAttack)
 		{
 			// 가드 성공후 false로 즉시 전환
-			TargetPlayer->bShieldBlockedAttack = false; // 신호 초기화
+			TargetPlayer->CombatComponent->bShieldBlockedAttack = false; // 신호 초기화
 
 			// 방어 성공 이펙트 및 깡! 소리 재생
 			PlayImpactEffects(GuardVFX, GuardSound, SpawnLocation);

@@ -130,13 +130,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputAction* InteractAction;
 
+	void InteractButtonPressed();
 	
 	// 키보드/마우스에서 신호가 들어왔을 때 실행될 함수들
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	
-	void InteractButtonPressed();
-
 	// Shift 키를 누를때와 뗄 때 실행될 함수
 	void StartSprint();
 	void StopSprint();
@@ -146,29 +145,6 @@ protected:
 	
 	FVector2D LastMoveInput;
 	
-	/*=============================================================================
-	 * Weapon & Shield
-	 *=============================================================================*/
-    // 에디터에서 장착할 무기 클래스
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TArray<TSubclassOf<class AEldenWeapon>> WeaponSlots;
-	
-	// 실제로 월드에 스폰되어 내 손에 들려있는 무기를 가리키는 포인터
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-	class AEldenWeapon* EquippedWeapon;
-
-	// 스폰된 무기 액터를 전부를 보관할 배열
-	UPROPERTY()
-	TArray<class AEldenWeapon*> SpawnedWeapons;
-
-	// 현재 인덱스
-	int32 CurrentWeaponIndex = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shield")
-	TSubclassOf<class AEldenShield> ShieldClass;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Shield")
-	class AEldenShield* EquippedShield;
 
 	
 	
@@ -209,28 +185,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Stamina")
 	float SprintStaminaCost = 10.0f; 
 	
-	// 달리고 있는지 확인
-	bool bIsSprinting = false;
-
-	bool bIsLunging = false;
-	float CurrentLungeSpeed = 0.0f;
-
-	float SavedWalkSpeedBeforeLunge = 0.0f;
-
-	/*=============================================================================
-	 * 락온 시스템 (Lock - On)
-	 *=============================================================================*/
-
-
-
-	/*=============================================================================
-	 * 방어 및 회피 (Defense & Dodge)
-	 *=============================================================================*/
-
-	// 캐릭터가 현재 무적 상태인지 확인하는 변수
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|State")
-	bool bIsInvincible = false;
-
+	
 
 	/*=============================================================================
 	 * 아이템 사용 (Item Usage)
@@ -241,7 +196,7 @@ protected:
 
 	void SwitchItem();
 
-	void SwitchWeapon();
+	
 
 	void SetDrinkingVisuals(bool bDrinking);
 
@@ -275,25 +230,21 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UEldenGraceRestComponent* GraceRestComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenEquipmentComponent* EquipmentComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenInteractionComponent* InteractionComponent;
+
 	void Revive(const FTransform&);
-	
-	// 캐릭터가 장착 중인 무기를 반환하는 함수
-	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon ;}
-	
+		
 	void Dodge();
-	bool bDodgeQueued = false;
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	FORCEINLINE class AEldenShield* GetEquippedShield() const { return EquippedShield ;}
 	
 	FORCEINLINE bool GetIsDead() const { return GetState() == ECharacterState::Dead; }
 
-	bool bShieldBlockedAttack = false;
-	bool bParrySucceeded = false;
-
-	// 무적 상태에서 피격을 판정을 씹었는지 신호
-	bool bDodgeInvincibleHit = false;
 
 	void StartAttackLunge(float Speed);
 	void StopAttackLunge();
@@ -316,29 +267,26 @@ public:
 	// HUD 보이기/ 감싸기
 	void SetHUDVisible(bool bVisible);
 
-	// 장착 무기 방패 숨기기
-	void SetEquippedItemsHidden(bool bHidden);
-
+#if WITH_EDITOR
 	void DebugLevelUpVigor();
 	void DebugLevelUpEndurance();
 	void DebugLevelUpStrength();
+#endif
 
 	// 노티파이에서 호출할 진짜 회복 함수
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void ApplyItemEffect();
 
+	FORCEINLINE class UEldenHUDWidget* GetCurrentHUD() const { return CurrentHUD; }
+
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnPlayerDiedDelegate OnPlayerDied;
 
-	void SetInteractableTarget(TScriptInterface<class IInteractable> NewTarget);
-
-private:
-	// CurrentInteractableTarget을 여기로 옮기기
-	TScriptInterface<class IInteractable> CurrentInteractableTarget;
-
 	// HUD 장비 아이콘 갱신 헬퍼
 	void RefreshEquipmentUI();
+
+private:
 
 	void StartDrinkingPotion();
 

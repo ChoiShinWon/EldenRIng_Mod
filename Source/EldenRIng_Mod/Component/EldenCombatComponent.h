@@ -20,8 +20,29 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-public:	
+public:
 
+	// 캐릭터가 현재 무적 상태인지 확인하는 변수
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|State")
+	bool bIsInvincible = false;
+
+	// 달리고 있는지 확인
+	bool bIsSprinting = false;
+
+	bool bDodgeQueued = false;
+
+	bool bShieldBlockedAttack = false;
+
+	bool bParrySucceeded = false;
+
+	// 무적 상태에서 피격을 판정을 씹었는지 신호
+	bool bDodgeInvincibleHit = false;
+
+	bool bIsLunging = false;
+
+	float CurrentLungeSpeed = 0.0f;
+
+	float SavedWalkSpeedBeforeLunge = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	class UAnimMontage* ParryMontage;
