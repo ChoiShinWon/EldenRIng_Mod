@@ -10,6 +10,7 @@ class UEldenEquipmentTabWidget;
 class UEldenInventoryComponent;
 class UEldenItemDefinition;
 class UEldenStatComponent;
+class UEldenEquipmentComponent;
 
 UCLASS()
 class ELDENRING_MOD_API UEldenMenuWidget : public UUserWidget
@@ -31,6 +32,9 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	class UEldenStatComponent* CachedStatComponent;
 
+	UPROPERTY(VisibleAnywhere)
+	class UEldenEquipmentComponent* CachedEquipmentComponent;
+
 
 	UFUNCTION()
 	void OnEquipmentSlotClicked(UEldenItemDefinition* ClickedItem, int32 SlotIndex);
@@ -51,7 +55,7 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UButton* PopupCatcherButton;
 public:
-	void InitMenu(UEldenInventoryComponent* Inventory, UEldenStatComponent* Stat);
+	void InitMenu(UEldenInventoryComponent* Inventory, UEldenStatComponent* Stat, UEldenEquipmentComponent* Equipment);
 
 	void OpenItemActionPopup(UEldenItemDefinition* Item, EItemActionType ActionType);
 

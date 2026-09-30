@@ -9,6 +9,7 @@
 
 class UEldenHitboxComponent;
 class USceneComponent;
+class UEldenItemDefinition;
 
 UENUM(BlueprintType)
 enum class EWeaponStance : uint8
@@ -37,6 +38,9 @@ public:
 protected:
 
 	virtual void BeginPlay() override;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	class UEldenItemDefinition* ItemDefinition;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	USceneComponent* WeaponRoot;
@@ -112,4 +116,5 @@ public:
 	FORCEINLINE FVector GetSkillTraceBoxExtent() const { return SkillTraceBoxExtent; }
 	FORCEINLINE float GetSkillTraceLength() const { return SkillTraceLength; }
 	FORCEINLINE float GetSkillManaCost() const { return SkillManaCost; }
+	FORCEINLINE class UEldenItemDefinition* GetItemDefinition() const { return ItemDefinition; }
 };

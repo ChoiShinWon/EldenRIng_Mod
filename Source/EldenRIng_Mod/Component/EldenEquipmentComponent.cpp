@@ -1,5 +1,7 @@
 ﻿#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
+#include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Item/EldenItemDefinition.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 
@@ -15,59 +17,167 @@ void UEldenEquipmentComponent::BeginPlay()
 	Super::BeginPlay();
 
 	PlayerCharacter = Cast<AEldenCharacter>(GetOwner());
-
-
-	for (TSubclassOf<AEldenWeapon> SlotClass : WeaponSlots)
-	{
-		// 이 슬롯만 건너뛰고 나머지 무기는 계속 스폰 (return하면 BeginPlay 전체가 끊김)
-		if (!SlotClass) continue;
-
-		// 월드에 무기 액터 생성
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = PlayerCharacter;
-		SpawnParams.Instigator = PlayerCharacter->GetInstigator();
-
-		AEldenWeapon* NewWeapon = GetWorld()->SpawnActor<AEldenWeapon>(SlotClass, PlayerCharacter->GetActorLocation(),
-			PlayerCharacter->GetActorRotation(), SpawnParams);
-		FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-
-		if (NewWeapon)
-		{
-			NewWeapon->AttachToComponent(PlayerCharacter->GetMesh(), AttachmentRules, FName("RightHandSocket"));
-
-			// .Add()의 리턴값 = 방금 이 무기가 배열에서 몇번째로 들어갔는지
-			// 이 인덱스가 0이 아니면 (첫 무기가 아니면) 겹쳐 보이지 않게 숨겨둔다.
-			int32 NewIndex = SpawnedWeapons.Add(NewWeapon);
-
-			if (NewIndex != 0)
-			{
-				NewWeapon->SetActorHiddenInGame(true);
-			}
-		}
-	}
+	if (!PlayerCharacter) return;
+	EquipWeapon(DefaultWeaponDef);
+	EquipShield(DefaultShieldDef);
 
 	EquippedWeapon = SpawnedWeapons.IsValidIndex(0) ? SpawnedWeapons[0] : nullptr;
+	if (EquippedWeapon) EquippedWeapon->SetActorHiddenInGame(false);
+	EquippedShield = SpawnedShields.IsValidIndex(0) ? SpawnedShields[0] : nullptr;
+	if (EquippedShield) EquippedShield->SetActorHiddenInGame(false);
+}
 
-	if (ShieldClass != nullptr)
+
+bool UEldenEquipmentComponent::EquipWeapon(UEldenItemDefinition* Item)
+{
+	if (!Item || !Item->WeaponClass) return false;
+
+	// 다섯개가 꽉 차있다면 반환
+	if (SpawnedWeapons.Num() >= 5) return false;
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = PlayerCharacter;
+	SpawnParams.Instigator = PlayerCharacter->GetInstigator();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	AEldenWeapon* NewWeapon = GetWorld()->SpawnActor<AEldenWeapon>(Item->WeaponClass,
+		PlayerCharacter->GetActorLocation(), PlayerCharacter->GetActorRotation(), SpawnParams);
+	if (!NewWeapon) return false;
+
+	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	NewWeapon->AttachToComponent(PlayerCharacter->GetMesh(), AttachmentRules, FName("RightHandSocket"));
+
+	NewWeapon->SetActorHiddenInGame(true);
+	SpawnedWeapons.Add(NewWeapon);
+
+	PlayerCharacter->InventoryComponent->RemoveItem(Item, 1);
+
+
+	return true;
+}
+
+bool UEldenEquipmentComponent::UnequipWeapon(AEldenWeapon* Weapon)
+{
+	if (!Weapon || !SpawnedWeapons.Contains(Weapon)) return false;
+
+	// 만약 무기가 한종류라면 장착 해제 불가
+	if (SpawnedWeapons.Num() <= 1) return false;
+
+	// 장착중인 무기가 해제할 무기인가
+	bool bWasActiveWeapon = (EquippedWeapon == Weapon) ;
+
+	SpawnedWeapons.Remove(Weapon);
+	PlayerCharacter->InventoryComponent->AddItem(Weapon->GetItemDefinition(), 1);
+	Weapon->Destroy();
+
+	if (bWasActiveWeapon)
 	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = PlayerCharacter;
-		SpawnParams.Instigator = PlayerCharacter->GetInstigator();
-
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-		EquippedShield = GetWorld()->SpawnActor<AEldenShield>(ShieldClass,
-			PlayerCharacter->GetActorLocation(), PlayerCharacter->GetActorRotation(), SpawnParams);
-
-		if (EquippedShield != nullptr)
+		EquippedWeapon = SpawnedWeapons[0];
+		EquippedWeapon->SetActorHiddenInGame(false);
+		if (EquippedShield)
 		{
-			FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+			if (EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded)
+			{
+				EquippedShield->SetActorHiddenInGame(true);
+			}
+			else if (EquippedWeapon->GetWeaponStance() == EWeaponStance::OneHanded)
+			{
+				EquippedShield->SetActorHiddenInGame(false);
+			}
+		}
 
-			EquippedShield->AttachToComponent(PlayerCharacter->GetMesh(), AttachmentRules, FName("LeftHandSocket"));
+		PlayerCharacter->RefreshEquipmentUI();
+	}
+
+	// 해제된 무기가 배열에서 앞쪽에 있었다면 뒤 원소들 인덱스가 한 칸씩 당겨지므로
+	// 활성 무기가 아닌 걸 해제한 경우에도 CurrentWeaponIndex가 어긋날 수 있음 -> 매번 재동기화
+	CurrentWeaponIndex = SpawnedWeapons.IndexOfByKey(EquippedWeapon);
+
+
+	return true;
+}
+
+bool UEldenEquipmentComponent::EquipShield(UEldenItemDefinition* Item)
+{
+	if (!Item || !Item->ShieldClass) return false;
+	if (SpawnedShields.Num() >= 5) return false;
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = PlayerCharacter;
+	SpawnParams.Instigator = PlayerCharacter->GetInstigator();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	AEldenShield* NewShield = GetWorld()->SpawnActor<AEldenShield>(Item->ShieldClass,
+		PlayerCharacter->GetActorLocation(), PlayerCharacter->GetActorRotation(), SpawnParams);
+
+	if (!NewShield) return false;
+
+	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	NewShield->AttachToComponent(PlayerCharacter->GetMesh(), AttachmentRules, FName("LeftHandSocket"));
+
+	NewShield->SetActorHiddenInGame(true);
+	SpawnedShields.Add(NewShield);
+
+	PlayerCharacter->InventoryComponent->RemoveItem(Item, 1);
+
+	return true;
+}
+
+bool UEldenEquipmentComponent::UnequipShield(AEldenShield* Shield)
+{
+	if (!Shield || !SpawnedShields.Contains(Shield)) return false;
+
+	// 만약 방패가 한종류라면 장착 해제 불가
+	if (SpawnedShields.Num() <= 1) return false;
+
+	// 장착중인 방패인가 해제할 방패인가
+	bool bWasActiveShield = (EquippedShield == Shield);
+
+	SpawnedShields.Remove(Shield);
+	PlayerCharacter->InventoryComponent->AddItem(Shield->GetItemDefinition(), 1);
+	Shield->Destroy();
+
+	if (bWasActiveShield)
+	{
+		EquippedShield = SpawnedShields[0];
+		EquippedShield->SetActorHiddenInGame(false);
+		PlayerCharacter->RefreshEquipmentUI();
+	}
+	// 해제된 방패가 배열에서 앞쪽에 있었다면 뒤 원소들 인덱스가 한 칸씩 당겨지므로
+	// 활성 방패가 아닌 걸 해제한 경우에도 CurrentShieldIndex가 어긋날 수 있음 -> 매번 재동기화
+	CurrentShieldIndex = SpawnedShields.IndexOfByKey(EquippedShield);
+
+	return true;
+}
+
+bool UEldenEquipmentComponent::UnequipWeaponByItem(UEldenItemDefinition* Item)
+{
+	if (!Item) return false;
+
+	for (const auto& Weapon : SpawnedWeapons)
+	{
+		if (Weapon->GetItemDefinition() == Item)
+		{
+			return UnequipWeapon(Weapon);
 		}
 	}
-	
+	return false;
 }
+
+bool UEldenEquipmentComponent::UnequipShieldByItem(UEldenItemDefinition* Item)
+{
+	if (!Item) return false;
+
+	for (const auto& Shield : SpawnedShields)
+	{
+		if (Shield->GetItemDefinition() == Item)
+		{
+			return UnequipShield(Shield);
+		}
+	}
+	return false;
+}
+
 
 
 void UEldenEquipmentComponent::SwitchWeapon()
@@ -103,6 +213,33 @@ void UEldenEquipmentComponent::SwitchWeapon()
 			EquippedShield->SetActorHiddenInGame(false);
 		}
 	}
+	PlayerCharacter->RefreshEquipmentUI();
+}
+
+void UEldenEquipmentComponent::SwitchShield()
+{
+	// 공격 구르기 가드 등 다른 행동 중엔 방패 교체 금지
+	if (PlayerCharacter->GetState() != ECharacterState::Idle) return;
+
+	if (SpawnedShields.Num() < 2) return;
+
+	// 지금 장착 중인 방패 숨기고
+	SpawnedShields[CurrentShieldIndex]->SetActorHiddenInGame(true);
+
+	// 인덱스를 다음 슬롯으로 순환 (배열 끝에서 다시 0으로 돌아오는 원형 순회)
+	CurrentShieldIndex = (CurrentShieldIndex + 1) % SpawnedShields.Num();
+
+	EquippedShield = SpawnedShields[CurrentShieldIndex];
+
+	if (EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded)
+	{
+		EquippedShield->SetActorHiddenInGame(true);
+	}
+	else if (EquippedWeapon->GetWeaponStance() == EWeaponStance::OneHanded)
+	{
+		EquippedShield->SetActorHiddenInGame(false);
+	}
+
 	PlayerCharacter->RefreshEquipmentUI();
 }
 

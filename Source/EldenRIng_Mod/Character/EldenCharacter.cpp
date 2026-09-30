@@ -239,6 +239,12 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 			EnhancedInputComponent->BindAction(ToggleMenuAction, ETriggerEvent::Started, this, &AEldenCharacter::ToggleInventoryMenu);
 		}
 
+		if (SwitchShieldAction)
+		{
+			EnhancedInputComponent->BindAction(SwitchShieldAction, ETriggerEvent::Started, EquipmentComponent, &UEldenEquipmentComponent::SwitchShield);
+
+		}
+
 #if WITH_EDITOR
 		PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &AEldenCharacter::DebugLevelUpVigor);
 		PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AEldenCharacter::DebugLevelUpEndurance);
@@ -375,7 +381,7 @@ void AEldenCharacter::ToggleInventoryMenu()
 	else
 	{
 		UEldenMenuWidget* MenuWidget = CreateWidget<UEldenMenuWidget>(GetWorld(), InventoryMenuWidgetClass);
-		MenuWidget->InitMenu(InventoryComponent, StatComponent);
+		MenuWidget->InitMenu(InventoryComponent, StatComponent, EquipmentComponent);
 		InventoryMenuWidget = MenuWidget;
 		InventoryMenuWidget->AddToViewport();
 		if (PC)

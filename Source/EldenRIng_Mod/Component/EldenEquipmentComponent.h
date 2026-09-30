@@ -22,9 +22,11 @@ protected:
 	/*=============================================================================
 	* Weapon & Shield
 	*=============================================================================*/
-	// 에디터에서 장착할 무기 클래스
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TArray<TSubclassOf<class AEldenWeapon>> WeaponSlots;
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	class UEldenItemDefinition* DefaultWeaponDef;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	class UEldenItemDefinition* DefaultShieldDef;
 
 	// 실제로 월드에 스폰되어 내 손에 들려있는 무기를 가리키는 포인터
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -34,17 +36,29 @@ protected:
 	UPROPERTY()
 	TArray<class AEldenWeapon*> SpawnedWeapons;
 
+	UPROPERTY()
+	TArray<class AEldenShield*> SpawnedShields;
+
 	// 현재 인덱스
 	int32 CurrentWeaponIndex = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shield")
-	TSubclassOf<class AEldenShield> ShieldClass;
+	int32 CurrentShieldIndex = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Shield")
 	class AEldenShield* EquippedShield;
 
-public:	
+public:
+	bool EquipWeapon(class UEldenItemDefinition* Item);
+	bool UnequipWeapon(class AEldenWeapon* Weapon);
+
+	bool EquipShield(class UEldenItemDefinition* Item);
+	bool UnequipShield(class AEldenShield* Shield);
+
+	bool UnequipWeaponByItem(class UEldenItemDefinition* Item);
+	bool UnequipShieldByItem(class UEldenItemDefinition* Item);
+
 	void SwitchWeapon();
+	void SwitchShield();
+
 
 	// 장착 무기 방패 숨기기
 	void SetEquippedItemsHidden(bool bInHidden);
@@ -52,7 +66,8 @@ public:
 	// 캐릭터가 장착 중인 무기, 방패를 반환하는 함수
 	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon; }
 	FORCEINLINE class AEldenShield* GetEquippedShield() const { return EquippedShield; }
-
+	FORCEINLINE const TArray<class AEldenWeapon*>& GetSpawnedWeapons() const { return SpawnedWeapons; }
+	FORCEINLINE const TArray<class AEldenShield*>& GetSpawnedShields() const { return SpawnedShields; }
 private:
 	// 플레이어 캐릭터 캐싱
 	UPROPERTY()

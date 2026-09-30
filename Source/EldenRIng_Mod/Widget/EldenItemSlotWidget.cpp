@@ -27,7 +27,15 @@ void UEldenItemSlotWidget::SetItemData(UEldenItemDefinition* Def, int32 Count, i
 	{
 		ItemImage->SetBrushFromTexture(Def->Icon);
 		ItemImage->SetColorAndOpacity(FLinearColor(1, 1, 1, 1));
-		ItemCountText->SetText(FText::AsNumber(Count));
+		if (Count > 0)
+		{
+			ItemCountText->SetText(FText::AsNumber(Count));
+		}
+		else
+		{
+			ItemCountText->SetText(FText::GetEmpty());
+		}
+
 		ItemNameText->SetText(Def->DisplayName);
 	}
 	

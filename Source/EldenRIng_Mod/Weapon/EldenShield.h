@@ -1,4 +1,4 @@
-
+﻿
 #pragma once
 
 #include "CoreMinimal.h"
@@ -6,6 +6,7 @@
 #include "EldenShield.generated.h"
 
 class UEldenHitboxComponent;
+class UEldenItemDefinition;
 
 UCLASS()
 class ELDENRING_MOD_API AEldenShield : public AActor
@@ -20,8 +21,10 @@ public:
 	void DisableShieldBlock();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	class UEldenItemDefinition* ItemDefinition;
 
 	UPROPERTY(EditAnywhere, Category = "UI")
 	class UTexture2D* ItemIcon;
@@ -39,5 +42,5 @@ protected:
 public:
 	FORCEINLINE class UTexture2D* GetIcon() const { return ItemIcon; }
 	FORCEINLINE const FString& GetSkillName() const { return SkillName; }
-
+	FORCEINLINE class UEldenItemDefinition* GetItemDefinition() const { return ItemDefinition; }
 };

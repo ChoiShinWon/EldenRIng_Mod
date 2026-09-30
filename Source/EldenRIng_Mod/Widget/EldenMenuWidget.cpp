@@ -1,9 +1,12 @@
 ﻿#include "EldenRing_Mod/Widget/EldenMenuWidget.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Widget/EldenInventoryTabWidget.h"
 #include "EldenRing_Mod/Widget/EldenEquipmentTabWidget.h"
 #include "EldenRing_Mod/Item/EldenItemDefinition.h"
+#include "EldenRing_Mod/Weapon/EldenShield.h"
+#include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
@@ -37,23 +40,49 @@ void UEldenMenuWidget::OnInventoryItemClicked(UEldenItemDefinition* ClickedItem,
 	OpenItemActionPopup(ClickedItem, EItemActionType::Equip);
 }
 
-void UEldenMenuWidget::InitMenu(UEldenInventoryComponent* Inventory, UEldenStatComponent* Stat)
+void UEldenMenuWidget::InitMenu(UEldenInventoryComponent* Inventory, UEldenStatComponent* Stat, UEldenEquipmentComponent* Equipment)
 {
 	CachedInventoryComponent = Inventory;
 	CachedStatComponent = Stat;
+	CachedEquipmentComponent = Equipment;
 	InventoryTab->RefreshInventory(Inventory);
-	EquipmentTab->RefreshEquipment(Inventory);
+	EquipmentTab->RefreshEquipment(Inventory, Equipment);
 }
 
 void UEldenMenuWidget::OnItemActionConfirmed(UEldenItemDefinition* Item, EItemActionType ActionType)
 {
 	if (ActionType == EItemActionType::Equip)
 	{
-		CachedInventoryComponent->EquipConsumable(Item);
+		if (Item->WeaponClass)
+		{
+			CachedEquipmentComponent->EquipWeapon(Item);
+		}
+		else if (Item->ShieldClass)
+		{
+			CachedEquipmentComponent->EquipShield(Item);
+		}
+		else
+		{
+			CachedInventoryComponent->EquipConsumable(Item);
+
+		}
 	}
 	else if (ActionType == EItemActionType::UnEquip)
 	{
-		CachedInventoryComponent->UnequipConsumable(Item);
+
+		if (Item->WeaponClass)
+		{
+			CachedEquipmentComponent->UnequipWeaponByItem(Item);
+		}
+		else if (Item->ShieldClass)
+		{
+			CachedEquipmentComponent->UnequipShieldByItem(Item);
+		}
+		else
+		{
+			CachedInventoryComponent->UnequipConsumable(Item);
+
+		}
 	}
 	else if (ActionType == EItemActionType::Use)
 	{
@@ -61,7 +90,7 @@ void UEldenMenuWidget::OnItemActionConfirmed(UEldenItemDefinition* Item, EItemAc
 		CachedInventoryComponent->RemoveItem(Item, 1);
 	}
 	InventoryTab->RefreshInventory(CachedInventoryComponent);
-	EquipmentTab->RefreshEquipment(CachedInventoryComponent);
+	EquipmentTab->RefreshEquipment(CachedInventoryComponent, CachedEquipmentComponent);
 	CloseItemActionPopup();
 }
 

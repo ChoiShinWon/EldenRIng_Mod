@@ -35,6 +35,12 @@ class ELDENRING_MOD_API UEldenItemDefinition : public UDataAsset
 	GENERATED_BODY()
 	
 public:
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TSubclassOf<class AEldenWeapon> WeaponClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	TSubclassOf<class AEldenShield> ShieldClass;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	EItemType ItemType = EItemType::None;
 
