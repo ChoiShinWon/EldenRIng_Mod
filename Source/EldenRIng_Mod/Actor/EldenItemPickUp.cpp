@@ -25,6 +25,7 @@ void AEldenItemPickUp::Interact(AEldenCharacter* Player)
 
 	Player->InventoryComponent->AddItem(ItemDef, PickAmount);
 
+	// 곧 Destroy될 액터이므로, 상호작용 대상 참조를 먼저 비워서 댕글링 방지
 	Player->InteractionComponent->SetInteractableTarget(nullptr);
 
 	Destroy();
@@ -34,6 +35,7 @@ FText AEldenItemPickUp::GetInteractionPrompt() const
 {
 	if (!ItemDef) return FText::FromString(TEXT("???"));
 
+	// 이름을 따로 저장 안하고 ItemDef->DisplayName 재사용 (데이터 에셋에서 설정)
 	FText InteractPrompt = FText::Format(FText::FromString(TEXT("{0} 줍기")), ItemDef->DisplayName);
 	return InteractPrompt;
 }

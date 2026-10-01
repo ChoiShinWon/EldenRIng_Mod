@@ -32,7 +32,7 @@ void UEldenMenuWidget::OnEquipmentSlotClicked(UEldenItemDefinition* ClickedItem,
 void UEldenMenuWidget::OnInventoryItemClicked(UEldenItemDefinition* ClickedItem, int32 SlotIndex)
 {
 	if (!ClickedItem) return;
-	if (ClickedItem->ItemType == EItemType::GoldenRune)
+	if (ClickedItem->ItemType == EConsumableType::GoldenRune)
 	{
 		OpenItemActionPopup(ClickedItem, EItemActionType::Use);
 		return;

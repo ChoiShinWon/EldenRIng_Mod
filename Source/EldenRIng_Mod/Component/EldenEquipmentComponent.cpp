@@ -18,9 +18,11 @@ void UEldenEquipmentComponent::BeginPlay()
 
 	PlayerCharacter = Cast<AEldenCharacter>(GetOwner());
 	if (!PlayerCharacter) return;
+	// 기본/무기 방패를 로테이션에 추가 (자동 활성화는 안 되므로 아래에서 직접 활성화)
 	EquipWeapon(DefaultWeaponDef);
 	EquipShield(DefaultShieldDef);
 
+	// 방금 추가한 인덱스 0을 명시적으로 활성화 (nullptr 방어 후 역참조)
 	EquippedWeapon = SpawnedWeapons.IsValidIndex(0) ? SpawnedWeapons[0] : nullptr;
 	if (EquippedWeapon) EquippedWeapon->SetActorHiddenInGame(false);
 	EquippedShield = SpawnedShields.IsValidIndex(0) ? SpawnedShields[0] : nullptr;
@@ -30,16 +32,19 @@ void UEldenEquipmentComponent::BeginPlay()
 
 bool UEldenEquipmentComponent::EquipWeapon(UEldenItemDefinition* Item)
 {
+	// 무기 아이템이 아니면 (WeaponClass가 없다면) 리턴
 	if (!Item || !Item->WeaponClass) return false;
 
 	// 다섯개가 꽉 차있다면 반환
 	if (SpawnedWeapons.Num() >= 5) return false;
+
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = PlayerCharacter;
 	SpawnParams.Instigator = PlayerCharacter->GetInstigator();
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
+	// 인벤토리(데이터)에 있던 아이템을 실제 월드 액터로 스폰 - 장착 시에만 액터 생성
 	AEldenWeapon* NewWeapon = GetWorld()->SpawnActor<AEldenWeapon>(Item->WeaponClass,
 		PlayerCharacter->GetActorLocation(), PlayerCharacter->GetActorRotation(), SpawnParams);
 	if (!NewWeapon) return false;
@@ -47,9 +52,11 @@ bool UEldenEquipmentComponent::EquipWeapon(UEldenItemDefinition* Item)
 	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
 	NewWeapon->AttachToComponent(PlayerCharacter->GetMesh(), AttachmentRules, FName("RightHandSocket"));
 
+	// 새로 장착해도 자동으로 활상화 하진 않음, 로테이션에 추가해놓고 Visible은 꺼둠
 	NewWeapon->SetActorHiddenInGame(true);
 	SpawnedWeapons.Add(NewWeapon);
 
+	// 장비창으로 옮겼으니 인벤토리에서는 빠짐
 	PlayerCharacter->InventoryComponent->RemoveItem(Item, 1);
 
 
@@ -60,18 +67,20 @@ bool UEldenEquipmentComponent::UnequipWeapon(AEldenWeapon* Weapon)
 {
 	if (!Weapon || !SpawnedWeapons.Contains(Weapon)) return false;
 
-	// 만약 무기가 한종류라면 장착 해제 불가
+	// 만약 무기가 한종류라면 장착 해제 불가 (맨손 상태 허용 불가)
 	if (SpawnedWeapons.Num() <= 1) return false;
 
-	// 장착중인 무기가 해제할 무기인가
+	// 장착중인 무기가 해제할 무기인가 (들고 있는 무기를 해제하는 경우엔 다음 무기로 자동 승계)
 	bool bWasActiveWeapon = (EquippedWeapon == Weapon) ;
 
 	SpawnedWeapons.Remove(Weapon);
+	// 액터를 다시 인벤토리로 반환
 	PlayerCharacter->InventoryComponent->AddItem(Weapon->GetItemDefinition(), 1);
 	Weapon->Destroy();
 
 	if (bWasActiveWeapon)
 	{
+		// 해제 직전 검사 Num<=1로 최소 1개는 남아있음이 보장되므로 인덱스 0은 항상 유효
 		EquippedWeapon = SpawnedWeapons[0];
 		EquippedWeapon->SetActorHiddenInGame(false);
 		if (EquippedShield)
@@ -86,6 +95,7 @@ bool UEldenEquipmentComponent::UnequipWeapon(AEldenWeapon* Weapon)
 			}
 		}
 
+		// 쥐고 있는 장비가 바뀌었으니 HUD 갱신
 		PlayerCharacter->RefreshEquipmentUI();
 	}
 
@@ -154,6 +164,7 @@ bool UEldenEquipmentComponent::UnequipWeaponByItem(UEldenItemDefinition* Item)
 {
 	if (!Item) return false;
 
+	// 장비창 UI는 아이템 데이터만 들고 있으므로, 그에 대응하는 스폰된 액터를 찾아서 위임
 	for (const auto& Weapon : SpawnedWeapons)
 	{
 		if (Weapon->GetItemDefinition() == Item)
@@ -257,8 +268,10 @@ void UEldenEquipmentComponent::SetEquippedItemsHidden(bool bInHidden)
 		{
 			EquippedShield->SetActorHiddenInGame(true);
 		}
-		else if (!(EquippedWeapon && EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded))
+		else if (!(EquippedWeapon &&
+			EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded))
 		{
+			// 숨김 해제할 때는 두손 무기 상태가 아닐 때만 다시 방패를 보이게 함.
 			EquippedShield->SetActorHiddenInGame(false);
 		}
 	}

@@ -236,7 +236,7 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 		if (ToggleMenuAction)
 		{
-			EnhancedInputComponent->BindAction(ToggleMenuAction, ETriggerEvent::Started, this, &AEldenCharacter::ToggleInventoryMenu);
+			EnhancedInputComponent->BindAction(ToggleMenuAction, ETriggerEvent::Started, this, &AEldenCharacter::ToggleMenu);
 		}
 
 		if (SwitchShieldAction)
@@ -314,6 +314,8 @@ void AEldenCharacter::Move(const FInputActionValue& Value)
 
 void AEldenCharacter::Look(const FInputActionValue& Value)
 {
+	if (GetState() != ECharacterState::Idle) return;
+
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
 	if (Controller != nullptr)
@@ -360,13 +362,14 @@ void AEldenCharacter::OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass
 	}
 }
 
-void AEldenCharacter::ToggleInventoryMenu()
+void AEldenCharacter::ToggleMenu()
 {
 	APlayerController* PC = Cast<APlayerController>(GetController());
-	if (InventoryMenuWidget)
+	// 메뉴창이 켜져있을 때
+	if (MenuWidget)
 	{
-		InventoryMenuWidget->RemoveFromParent();
-		InventoryMenuWidget = nullptr;
+		MenuWidget->RemoveFromParent();
+		MenuWidget = nullptr;
 
 		if (PC)
 		{
@@ -376,23 +379,27 @@ void AEldenCharacter::ToggleInventoryMenu()
 		}
 
 		SetState(ECharacterState::Idle);
-		
+		// 메뉴 창 닫을 때 게임 재개
+		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 	}
 	else
 	{
-		UEldenMenuWidget* MenuWidget = CreateWidget<UEldenMenuWidget>(GetWorld(), InventoryMenuWidgetClass);
-		MenuWidget->InitMenu(InventoryComponent, StatComponent, EquipmentComponent);
-		InventoryMenuWidget = MenuWidget;
-		InventoryMenuWidget->AddToViewport();
+		UEldenMenuWidget* NewMenuWidget = CreateWidget<UEldenMenuWidget>(GetWorld(), MenuWidgetClass);
+		NewMenuWidget->InitMenu(InventoryComponent, StatComponent, EquipmentComponent);
+		MenuWidget = NewMenuWidget;
+		MenuWidget->AddToViewport();
 		if (PC)
 		{
 			PC->bShowMouseCursor = true;
 			FInputModeGameAndUI InputMode;
-			InputMode.SetWidgetToFocus(MenuWidget->TakeWidget());
+			InputMode.SetWidgetToFocus(NewMenuWidget->TakeWidget());
+			InputMode.SetHideCursorDuringCapture(false);
 			PC->SetInputMode(InputMode);
 		}
 		GetCharacterMovement()->StopMovementImmediately();
 		SetState(ECharacterState::Interacting);
+		// 메뉴 창 열 때 게임 정지
+		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.0001f);
 	}
 }
 
@@ -768,28 +775,28 @@ void AEldenCharacter::UseItem()
 	if (GetState() != ECharacterState::Idle) return;
 
 	// 2. 인벤토리에게 현재 장착된 아이템이 뭔지 물어봄
-	EItemType CurrentItem = InventoryComponent->GetCurrentSelectedItem();
+	EConsumableType CurrentItem = InventoryComponent->GetCurrentSelectedItem();
 
 	// 3. 아이템 종류에 따라 다른 행동(로직) 실행
 	switch (CurrentItem)
 	{
-	case EItemType::HP_Potion:
+	case EConsumableType::HP_Potion:
 	{
-		// 
+		//
 		if (StatComponent->IsHealthFull()) return;
 		StartDrinkingPotion();
 
 		break;
 	}
 
-	case EItemType::Mana_Potion:
+	case EConsumableType::Mana_Potion:
 	{
 		if (StatComponent->IsManaFull()) return;
 		StartDrinkingPotion();
 		break;
 	}
 
-	case EItemType::None:
+	case EConsumableType::None:
 	default:
 		// 아이템이 없을 때는 아무것도 안 함 (혹은 빈 슬롯을 만지는 애니메이션 재생)
 		UE_LOG(LogTemp, Warning, TEXT("빈 슬롯입니다!"));
@@ -822,18 +829,18 @@ void AEldenCharacter::ApplyItemEffect()
 	if (!InventoryComponent || !StatComponent) return;
 
 	// 노티파이 실행 시점에도 현재 아이템이 뭔지 확인하고 해당 효과를 적용
-	EItemType CurrentItem = InventoryComponent->GetCurrentSelectedItem();
+	EConsumableType CurrentItem = InventoryComponent->GetCurrentSelectedItem();
 
 	switch (CurrentItem)
 	{
-	case EItemType::HP_Potion:
+	case EConsumableType::HP_Potion:
 	{
 		InventoryComponent->ConsumeItem();
 		float RestoreAmount = InventoryComponent->GetPotionRestoreAmount();
 		StatComponent->Heal(RestoreAmount);
 		break;
 	}
-	case EItemType::Mana_Potion:
+	case EConsumableType::Mana_Potion:
 	{
 		InventoryComponent->ConsumeItem();
 		float RestoreAmount = InventoryComponent->GetPotionRestoreAmount();

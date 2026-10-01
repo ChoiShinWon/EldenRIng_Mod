@@ -33,7 +33,7 @@ void UEldenHUDWidget::NativeConstruct()
         PlayerRef->InventoryComponent->OnPotionCountChanged.AddDynamic(this, &UEldenHUDWidget::OnPotionCountUpdated);
 
 		OnSelectedItemChanged();
-        OnPotionCountUpdated(PlayerRef->InventoryComponent->GetCurrentPotionCount(), PlayerRef->InventoryComponent->GetMaxPotionCount());
+        OnPotionCountUpdated(PlayerRef->InventoryComponent->GetCurrentItemCount(), PlayerRef->InventoryComponent->GetMaxItemCount());
     }
 
 }

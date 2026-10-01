@@ -65,8 +65,6 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* PotionCountText;
 
-	UPROPERTY(meta = (BindWidget))
-	class UImage* InteractIcon;
 
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* InteractPromptText;

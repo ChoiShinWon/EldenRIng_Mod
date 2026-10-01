@@ -14,31 +14,39 @@ void UEldenInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-
+	// HP/마나 포션은 줍는 아이템이 아니라 시작하자마자 무조건 최대치로 지급되는 고정 슬롯
+	// 이미 갖고 있다면 또 지급하지 않게 HasItem으로 방어
 	if (HPPotionDef && !HasItem(HPPotionDef)) AddItem(HPPotionDef, HPPotionDef->MaxCount);
 	if (ManaPotionDef && !HasItem(ManaPotionDef)) AddItem(ManaPotionDef, ManaPotionDef->MaxCount);
 	
 	
 	TArray<UEldenItemDefinition*> CycleOrder = BuildCycleOrder();
-	
+
+	// 저장된 SelectedConsumable이 여전히 유효환 순환 목록 안에 있다면 유지
 	if (SelectedConsumable && CycleOrder.Contains(SelectedConsumable))
 	{
 
 	}
 	else
 	{
+		// 유효하지 않다면 순환 목록의 첫 번째로, 그마저 없으면 선택 없음.
 		if (CycleOrder.Num() >= 1) SelectedConsumable = CycleOrder[0];
 		else SelectedConsumable = nullptr;
 	}
-		
+
+	// 시작시 HP/마나 포션을 항상 최대치로 채움
 	RefillPotions();
 }
 
 TArray<UEldenItemDefinition*> UEldenInventoryComponent::BuildCycleOrder() const
 {
+	// HP 포션-> 마나 포션-> 장착된 소모품들, 이 순서 고정
 	TArray<UEldenItemDefinition*> CycleOrder;
+	// HP 포션 먼저
 	if (HPPotionDef) CycleOrder.Add(HPPotionDef);
+	// 다음 마나 포션
 	if (ManaPotionDef) CycleOrder.Add(ManaPotionDef);
+	// 그 외 소모품들 Append로 연결
 	CycleOrder.Append(EquippedConsumables);
 
 	return CycleOrder;
@@ -46,6 +54,7 @@ TArray<UEldenItemDefinition*> UEldenInventoryComponent::BuildCycleOrder() const
 
 bool UEldenInventoryComponent::EquipConsumable(UEldenItemDefinition* Definition)
 {
+	// HP, 마나 포션은 이미 고정이라 장착/해제라는 개념 자체가 없음
 	if (Definition == HPPotionDef || Definition == ManaPotionDef) return false;
 	if (!Definition) return false;
 
@@ -73,13 +82,14 @@ bool UEldenInventoryComponent::EquipConsumable(UEldenItemDefinition* Definition)
 
 bool UEldenInventoryComponent::UnequipConsumable(UEldenItemDefinition* Definition)
 {
+	// HP/마나 포션은 해제 대상이 아님
 	if (Definition == HPPotionDef || Definition == ManaPotionDef) return false;
 
 	if (!Definition) return false;
 	if (Definition->Category == EItemCategory::Usable)
 	{
 		int32 RemovedCount = EquippedConsumables.Remove(Definition);
-		// 앞에서 Contains 체크로 중을 막아놨으니 값은 0 아니면 1이 return된다
+		// 앞에서 Contains 체크로 중복을 막아놨으니 값은 0 아니면 1이 return된다
 		// Remove값은 이 값과 같은 원소를 배열에서 찾아 지우고, 몇 개 지웠는지 리턴한다
 		return RemovedCount > 0; // 하나라도 지웠으면 성공
 	}
@@ -94,6 +104,7 @@ bool UEldenInventoryComponent::AddItem(UEldenItemDefinition* Definition, int32 A
 
 	if (FoundSlot) // 이미 그 아이템을 갖고 있는 슬롯이 있다면 -> 개수만 늘린다.
 	{
+		// MaxCount를 넘지 않도록 클램프
 		FoundSlot->Count = FMath::Clamp(FoundSlot->Count + Amount, 0, FoundSlot->Definition->MaxCount);
 	}
 	else // 인벤토리 슬롯에 없다 -> 새 슬롯 만든다
@@ -116,6 +127,7 @@ bool UEldenInventoryComponent::RemoveItem(UEldenItemDefinition* Definition, int3
 	FoundSlot->Count = FMath::Clamp(FoundSlot->Count - Amount, 0, FoundSlot->Definition->MaxCount);
 	if (FoundSlot->Count == 0)
 	{
+		// 0개가 되면 슬롯 자체를 제거 - ItmeMap/ItemOrder를 둘 다 지워야 일관됨
 		ItemMap.Remove(Definition);
 		ItemOrder.Remove(Definition);
 	}
@@ -157,13 +169,14 @@ float UEldenInventoryComponent::GetPotionRestoreAmount() const
 
 void UEldenInventoryComponent::RefillPotions()
 {
-	for (auto& Pair : ItemMap)
+	// 이미 알고 있는 키 (HPPotionDef/ManaPotionDef)로 직접 조회 O(1)
+	if (FEldenItemSlot* HPSlot = ItemMap.Find(HPPotionDef))
 	{
-		if (Pair.Value.Definition->ItemType == EItemType::HP_Potion ||
-			Pair.Value.Definition->ItemType == EItemType::Mana_Potion)
-		{
-			Pair.Value.Count = Pair.Value.Definition->MaxCount;
-		}
+		HPSlot->Count = HPPotionDef->MaxCount;
+	}
+	if (FEldenItemSlot* ManaSlot = ItemMap.Find(ManaPotionDef))
+	{
+		ManaSlot->Count = ManaPotionDef->MaxCount;
 	}
 	
 	BroadcastPotionCount();
@@ -194,6 +207,7 @@ int32 UEldenInventoryComponent::GetMaxEquippedSlots() const
 void UEldenInventoryComponent::SetSelectedConsumable(UEldenItemDefinition* Selected)
 {
 	SelectedConsumable = Selected;
+	// 선택이 바뀌었다는 것과, 그로 인해 포션 개수 표시도 바뀌었다는 것을 둘 다 알림
 	OnSelectedItemChanged.Broadcast();
 	BroadcastPotionCount();
 }
@@ -204,15 +218,17 @@ void UEldenInventoryComponent::SelectNextItem()
 	
 	// 아이템 슬롯이 0개나 1개면 바꿀 게 없음 -> 그냥 return
 	if (CycleOrder.Num() <= 1) return;
-	int32 NextIndex;
+	int32 NextIndex = 0;
 
 	int32 CurrentIndex = CycleOrder.Find(SelectedConsumable);
 	if (CurrentIndex == INDEX_NONE)
 	{
+		// 현재 선택한 게 순환 목록에 없다면 첫 번째로 리셋
 		NextIndex = 0;
 	}
 	else
 	{
+		// 마지막 다음은 다시 처음으로
 		NextIndex = (CurrentIndex + 1) % CycleOrder.Num();
 	}
 
@@ -227,7 +243,7 @@ const TArray<TObjectPtr<UEldenItemDefinition>>& UEldenInventoryComponent::GetEqu
 
 void UEldenInventoryComponent::BroadcastPotionCount()
 {
-	OnPotionCountChanged.Broadcast(GetCurrentPotionCount(), GetMaxPotionCount());
+	OnPotionCountChanged.Broadcast(GetCurrentItemCount(), GetMaxItemCount());
 }
 
 const FEldenItemSlot* UEldenInventoryComponent::GetSelectedSlot() const
