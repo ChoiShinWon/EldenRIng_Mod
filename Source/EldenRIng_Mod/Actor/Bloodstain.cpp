@@ -4,6 +4,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 
@@ -48,10 +49,15 @@ void ABloodstain::Interact(AEldenCharacter* Player)
 
 
 	// 플레이어가 이 액터를 가리키던 포인터 끊기
-	Player->CurrentInteractableTarget = nullptr;
+	Player->InteractionComponent->SetInteractableTarget(nullptr);
 
 	
 	Destroy();
+}
+
+FText ABloodstain::GetInteractionPrompt() const
+{
+	return FText::FromString(TEXT("룬 회수"));
 }
 
 
@@ -62,7 +68,7 @@ void ABloodstain::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Ot
 {
 	if (AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor))
 	{
-		Player->CurrentInteractableTarget = this;
+		Player->InteractionComponent->SetInteractableTarget(this);
 	}
 }
 
@@ -72,6 +78,6 @@ void ABloodstain::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	if (AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor))
 	{
 		// 오버랩 끝나면 가리키던 포인터 끊기
-		Player->CurrentInteractableTarget = nullptr;
+		Player->InteractionComponent->SetInteractableTarget(nullptr);
 	}
 }

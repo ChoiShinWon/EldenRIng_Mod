@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -10,6 +10,7 @@ public class EldenRIng_Mod : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
 			"UMG","Slate", "SlateCore", "AnimGraphRuntime",
-        "AIModule", "GameplayTasks"});
+        "AIModule", "GameplayTasks", "AnimationModifiers", "AnimationDataController",
+		"AnimationBlueprintLibrary"});
 	}
 }

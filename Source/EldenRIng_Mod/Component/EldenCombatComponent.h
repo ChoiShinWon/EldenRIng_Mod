@@ -20,12 +20,29 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-public:	
+public:
 
+	// 캐릭터가 현재 무적 상태인지 확인하는 변수
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|State")
+	bool bIsInvincible = false;
 
-	// 콤보 공격용 몽타주 섹션이 3개로 나뉘어 있어야함
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
-	TArray<UAnimMontage*> ComboMontages;
+	// 달리고 있는지 확인
+	bool bIsSprinting = false;
+
+	bool bDodgeQueued = false;
+
+	bool bShieldBlockedAttack = false;
+
+	bool bParrySucceeded = false;
+
+	// 무적 상태에서 피격을 판정을 씹었는지 신호
+	bool bDodgeInvincibleHit = false;
+
+	bool bIsLunging = false;
+
+	float CurrentLungeSpeed = 0.0f;
+
+	float SavedWalkSpeedBeforeLunge = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	class UAnimMontage* ParryMontage;
@@ -35,9 +52,6 @@ public:
 	// 다음 콤보가 예약되었는지 확인하는 플래그
 	bool bComboQueued = false;
 
-	//// 공격 중인지 판별하는 변수
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	//bool bIsAttacking;
 
 	void ExecuteAttack();
 
@@ -52,20 +66,23 @@ public:
 
 	void ExecuteParry();
 
-	/*UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Combat|Parry")
-	float ParryRange = 200.f;
+	// ExecuteParry랑 거의 동일한 구조
+	void ExecuteWeaponSkill();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Parry")
-	float ParryRadius = 80.f;*/
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void OnSkillMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	// AN_WeaponSkillHit이 임팩트 프레임에 호출할 함수
+	void PerformSkillStrike();
+
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Combat|Parry")
 	float ParryFacingDot = 0.0f;
 
-	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Parry")
-	bool bDrawParryDebug = false;*/
 
 	UPROPERTY(EditAnywhere, Category = "Combat|Parry")
     class UParticleSystem* ParryVFX;
+
     UPROPERTY(EditAnywhere, Category = "Combat|Parry")
     class USoundBase* ParrySound;
 
@@ -96,4 +113,8 @@ private:
 	// 플레이어 캐릭터 캐싱
 	UPROPERTY()
 	class AEldenCharacter* PlayerCharacter;
+
+	// 포인터로 리턴해야 nullptr 가능
+	const TArray<UAnimMontage*>* GetCurrentComboMontages() const;
+
 };

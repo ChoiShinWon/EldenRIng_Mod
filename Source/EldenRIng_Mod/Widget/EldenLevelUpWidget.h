@@ -29,9 +29,21 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* Txt_VigorValue;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget)) 
 	class UTextBlock* Txt_OriginalVigor;
-		
+
+	UPROPERTY(meta = (BindWidget))
+	class UButton* Btn_MindMinus;
+
+	UPROPERTY(meta = (BindWidget))
+	class UButton* Btn_MindPlus;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* Txt_MindValue;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* Txt_OriginalMind;
+
 
 	// 지구력 버튼 및 텍스트
 	UPROPERTY(meta = (BindWidget))
@@ -77,6 +89,7 @@ protected:
 
 	// 임시 데이터 및 참조 변수 선언
 	int32 PendingVigor;
+	int32 PendingMind;
 	int32 PendingEndurance;
 	int32 PendingStrength;
 	int32 TotalPendingRuneCost;
@@ -92,6 +105,12 @@ protected:
 	
 	UFUNCTION()
 	void OnVigorMinusClicked();
+
+	UFUNCTION()
+	void OnMindPlusClicked();
+
+	UFUNCTION()
+	void OnMindMinusClicked();
 
 	UFUNCTION()
 	void OnEndurancePlusClicked();

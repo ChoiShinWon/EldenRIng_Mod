@@ -28,6 +28,7 @@ enum class ECharacterState : uint8
 	Rolling UMETA(DisplayName = "Rolling"),
 	Blocking UMETA(DisplayName = "Blocking"),
 	Parrying UMETA(DisplayName = "Parrying"),
+	UsingSkill UMETA(DisplayName = "UsingSkill"),
 	Dead UMETA(DisplayName = "Dead"),
 	Interacting UMETA(DisplayName = "Interact"),
 	Damaged UMETA(DisplayName = "Damaged"),
@@ -67,6 +68,13 @@ protected:
 	// 생성된 위젯을 저장할 포인터
 	UPROPERTY()
 	class UEldenHUDWidget* CurrentHUD;
+
+	// 에디터에서 EldenMenuWidget BP 지정
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<class UUserWidget> MenuWidgetClass;
+
+	UPROPERTY()
+	class UEldenMenuWidget* MenuWidget;
 	
 	/*=============================================================================
 	 * Enhanced Input 
@@ -96,19 +104,28 @@ protected:
 	UInputAction* SwitchItemAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* SwitchWeaponAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* SwitchShieldAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* AttackAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* BlockAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	UInputAction* ParryAction;
+	UInputAction* FKeyAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* ToggleMenuAction;
 
 	
 
 	void StartBlock();
 	void StopBlock(); // 가드를 뗄 때 처리용
-	void StartParry(); // 패리 시도용
+	void StartParryOrSkill(); // 패리, 스킬 시도용
 	
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LockOn")
@@ -117,13 +134,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputAction* InteractAction;
 
+	void InteractButtonPressed();
 	
 	// 키보드/마우스에서 신호가 들어왔을 때 실행될 함수들
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	
-	void InteractButtonPressed();
-
 	// Shift 키를 누를때와 뗄 때 실행될 함수
 	void StartSprint();
 	void StopSprint();
@@ -133,22 +149,6 @@ protected:
 	
 	FVector2D LastMoveInput;
 	
-	/*=============================================================================
-	 * Weapon & Shield
-	 *=============================================================================*/
-    // 에디터에서 장착할 무기 클래스
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<class AEldenWeapon> WeaponClass;
-	
-	// 실제로 월드에 스폰되어 내 손에 들려있는 무기를 가리키는 포인터
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-	class AEldenWeapon* EquippedWeapon;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shield")
-	TSubclassOf<class AEldenShield> ShieldClass;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Shield")
-	class AEldenShield* EquippedShield;
 
 	
 	
@@ -164,6 +164,8 @@ protected:
 	
 	UFUNCTION()
 	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+
 
 	UFUNCTION()
 	void OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -187,23 +189,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Stamina")
 	float SprintStaminaCost = 10.0f; 
 	
-	// 달리고 있는지 확인
-	bool bIsSprinting = false;
-
-	/*=============================================================================
-	 * 락온 시스템 (Lock - On)
-	 *=============================================================================*/
-
-
-
-	/*=============================================================================
-	 * 방어 및 회피 (Defense & Dodge)
-	 *=============================================================================*/
-
-	// 캐릭터가 현재 무적 상태인지 확인하는 변수
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|State")
-	bool bIsInvincible = false;
-
+	
 
 	/*=============================================================================
 	 * 아이템 사용 (Item Usage)
@@ -213,6 +199,8 @@ protected:
 	void UseItem();
 
 	void SwitchItem();
+
+	
 
 	void SetDrinkingVisuals(bool bDrinking);
 
@@ -224,8 +212,6 @@ public:
 	void SetState(ECharacterState NewState);
 	ECharacterState GetState() const;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TScriptInterface<class IInteractable> CurrentInteractableTarget;
 
 	/*=============================================================================
 	 * Components (컴포넌트)
@@ -245,25 +231,28 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	class UPointLightComponent* DrinkLight;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenGraceRestComponent* GraceRestComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenEquipmentComponent* EquipmentComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenInteractionComponent* InteractionComponent;
+
 	void Revive(const FTransform&);
-	
-	// 캐릭터가 장착 중인 무기를 반환하는 함수
-	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon ;}
-	
+		
 	void Dodge();
-	bool bDodgeQueued = false;
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	FORCEINLINE class AEldenShield* GetEquippedShield() const { return EquippedShield ;}
 	
 	FORCEINLINE bool GetIsDead() const { return GetState() == ECharacterState::Dead; }
 
-	bool bShieldBlockedAttack = false;
-	bool bParrySucceeded = false;
 
-	// 무적 상태에서 피격을 판정을 씹었는지 신호
-	bool bDodgeInvincibleHit = false;
+	void StartAttackLunge(float Speed);
+	void StopAttackLunge();
+
 
 	bool GetIsLockedOn() const;
 	// 기본 데미지 처리 함수 오버라이드
@@ -273,19 +262,36 @@ public:
 	// 은총에서 레벨업 UI를 여는 함수
 	void OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass);
 
+	// 인벤토리 메뉴 여는 함수
+	void ToggleMenu();
+
 	// 외부에서 무적 상태를 켜고 끌 수 있는 함수
 	void SetInvincible(bool bState);
 
+	// HUD 보이기/ 감싸기
+	void SetHUDVisible(bool bVisible);
+
+#if WITH_EDITOR
 	void DebugLevelUpVigor();
 	void DebugLevelUpEndurance();
 	void DebugLevelUpStrength();
+#endif
 
 	// 노티파이에서 호출할 진짜 회복 함수
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void ApplyItemEffect();
 
+	FORCEINLINE class UEldenHUDWidget* GetCurrentHUD() const { return CurrentHUD; }
+
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnPlayerDiedDelegate OnPlayerDied;
+
+	// HUD 장비 아이콘 갱신 헬퍼
+	void RefreshEquipmentUI();
+
+private:
+
+	void StartDrinkingPotion();
 
 };
