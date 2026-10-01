@@ -76,6 +76,7 @@ AEldenCharacter::AEldenCharacter()
 
 void AEldenCharacter::SetState(ECharacterState NewState)
 {
+	if (GetState() == ECharacterState::Dead) return;
 	CharacterState = NewState;
 }
 
@@ -419,7 +420,7 @@ void AEldenCharacter::Revive(const FTransform& SpawnTransform)
 		false, nullptr, ETeleportType::TeleportPhysics);
 	// 무브먼트, 상태
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-	SetState(ECharacterState::Idle);
+	CharacterState = ECharacterState::Idle;
 	SetInvincible(false); // 빠뜨리면 부활 후 영구 무적
 
 	// 리소스 풀 회복

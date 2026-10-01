@@ -47,6 +47,8 @@ AEldenEnemy::AEldenEnemy()
 void AEldenEnemy::BeginPlay()
 {
 	Super::BeginPlay();
+
+	HomeLocation = GetActorLocation();
 	
 	// 게임이 시작되면 현재 체력을 최대 체력으로 꽉 채워줌.
 	CurrentHealth = MaxHealth;
@@ -82,6 +84,11 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 	if (Pawn)
 	{
 		bHasAggro = true;
+		if (EnemyController)
+		{
+			EnemyController->SetAlerted(true);
+			EnemyController->StopMovement();
+		}
 		CombatTarget = Pawn;
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
@@ -232,6 +239,7 @@ void AEldenEnemy::ResetAggro()
 	if (EnemyController) 
 	{
 		EnemyController->ClearAggroTarget();
+		EnemyController->SetAlerted(false);
 
 		// 멈추기
 		EnemyController->StopMovement();

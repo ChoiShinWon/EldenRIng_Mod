@@ -33,3 +33,11 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 	}
 }
 
+void AEnemyAIController::SetAlerted(bool bAlerted)
+{
+	if (UBlackboardComponent* BBComp = GetBlackboardComponent())
+	{
+		BBComp->SetValueAsBool(FName("bAggroed"), bAlerted);
+	}
+}
+

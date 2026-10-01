@@ -21,4 +21,5 @@ public:
 
 	virtual void OnPossess(APawn* InPawn) override;
 
+	void SetAlerted(bool bAlerted);
 };
