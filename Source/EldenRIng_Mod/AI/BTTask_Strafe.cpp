@@ -1,8 +1,9 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Eldenring_Mod/AI/BTTask_Strafe.h"
+#include "EldenRing_Mod/AI/BTTask_Strafe.h"
 #include "AIController.h"
+#include "EldenRing_Mod/AI/EnemyAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/Character.h"	
 #include "NavigationSystem.h"
@@ -19,7 +20,7 @@ EBTNodeResult::Type UBTTask_Strafe::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 	if (!AIC || !BB) return EBTNodeResult::Failed;
 	APawn* Pawn = AIC->GetPawn(); // 이 Task를 실행 중인 AI(몬스터) 자신
 	
-	AActor* TargetActor = Cast<AActor>(BB->GetValueAsObject(FName("TargetActor")));
+	AActor* TargetActor = Cast<AActor>(BB->GetValueAsObject(AEnemyAIController::BBKey_Target));
 	if (!TargetActor || !Pawn) return EBTNodeResult::Failed;
 
 	// 플레이어와 몬스터의 위치를 가져옴

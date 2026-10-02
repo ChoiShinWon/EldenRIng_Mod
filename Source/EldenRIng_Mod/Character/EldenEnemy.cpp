@@ -354,11 +354,11 @@ void AEldenEnemy::ApplyStun()
 	if (EnemyController)
 	{
 		EnemyController->StopMovement();
-		EnemyController->ClearFocus(2);
-		EnemyController->ClearFocus(0);
+		EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
+		EnemyController->ClearFocus(EAIFocusPriority::Default);
 		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
 		{
-			BB->SetValueAsBool(FName("Stunned"), true);
+			BB->SetValueAsBool(AEnemyAIController::BBKey_Stunned, true);
 		}
 	}
 }
@@ -372,7 +372,7 @@ void AEldenEnemy::OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	{
 		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
 		{
-			BB->SetValueAsBool(FName("Stunned"), false);
+			BB->SetValueAsBool(AEnemyAIController::BBKey_Stunned, false);
 		}
 	}
 }
