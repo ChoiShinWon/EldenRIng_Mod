@@ -2,6 +2,7 @@
 #include "EldenRing_Mod/AI/EnemyAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
+#include "Navigation/PathFollowingComponent.h"
 
 const FName AEnemyAIController::BBKey_Target(TEXT("TargetActor"));
 const FName AEnemyAIController::BBKey_Aggroed(TEXT("bAggroed"));
@@ -36,6 +37,12 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 	{
 		RunBehaviorTree(Enemy->EnemyBT);
 	}
+}
+
+void AEnemyAIController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result)
+{
+	Super::OnMoveCompleted(RequestID, Result);
+	ClearFocus(EAIFocusPriority::Gameplay);
 }
 
 void AEnemyAIController::SetAlerted(bool bAlerted)

@@ -1,13 +1,11 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "EldenRing_Mod/AI/BTTask_Attack.h"
+癤�#include "EldenRing_Mod/AI/BTTask_Attack.h"
 #include "AIController.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 
 UBTTask_Attack::UBTTask_Attack()
 {
 	NodeName = TEXT("Attack");
+	bNotifyTick = true;
 }
 
 EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -19,12 +17,38 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 		if (Enemy)
 		{
 			Enemy->PlayAttackMontage();
-			// 몽타주가 끝날 때까지 기다리지 않고 즉시 성공을 반환하면
-			// 몬스터가 공격 모션 도중에 딴짓을 할 수 있음.
-			// 나중에 델리게이트로 보완하기
-			return EBTNodeResult::Succeeded;
+			if (Enemy->bIsAttacking)
+			{
+				return EBTNodeResult::InProgress;
+			}
+			else
+			{
+				return EBTNodeResult::Failed;
+			}
 		}
 	}
 	return EBTNodeResult::Failed;
+}
+
+void UBTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+{
+	AAIController* AIC = OwnerComp.GetAIOwner();
+	if (!AIC)
+	{
+		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+		return;
+	}
+	AEldenEnemy* Enemy = Cast<AEldenEnemy>(AIC->GetPawn());
+	if (!Enemy)
+	{
+		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+		return;
+	}
+
+
+	if (!Enemy->bIsAttacking)
+	{
+		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+	}
 }
 

@@ -138,13 +138,12 @@ void AEldenEnemy::PlayAttackMontage()
 {
 	// 공격 애니메이션 재생 함수. 공격 중이거나 죽은 상태라면 재생하지 않음.
 	if (bIsAttacking || bIsDead || bIsStunned) return;
-	
-	if (CombatTarget)
+
+	if (EnemyController)
 	{
-		FVector ToTarget = CombatTarget->GetActorLocation() - GetActorLocation();
-		ToTarget.Z = 0.f;
-		FRotator Face = ToTarget.Rotation();
-		SetActorRotation(FRotator(0.f, Face.Yaw, 0.f)); // 스냅
+		EnemyController->StopMovement();
+		EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
+		EnemyController->ClearFocus(EAIFocusPriority::Default);
 	}
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();

@@ -95,6 +95,11 @@ EBTNodeResult::Type UBTTask_TurnToFace::ExecuteTask(UBehaviorTreeComponent& Owne
 	Mem->ElapsedTime = 0.f;
 	Mem->Duration = Length;
 	Mem->PlayingMontage = Best->Montage;
+	
+	AIC->StopMovement();
+
+	AIC->ClearFocus(EAIFocusPriority::Gameplay);
+	AIC->ClearFocus(EAIFocusPriority::Default);
 
 	// 여기서 Succeeded를 반환하면 BT가 바로 다음 노드(MoveTo)로 가버려서 회전할 시간이 없다.
 	// InProgress를 반환하면 TickTask가 호출되고, 거기서 FinishLatentTask를 불러야 다음으로 넘어간다.
@@ -106,19 +111,25 @@ void UBTTask_TurnToFace::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* Node
 	FTurnToFaceMemory* Mem = CastInstanceNodeMemory<FTurnToFaceMemory>(NodeMemory);
 	AAIController* AIC = OwnerComp.GetAIOwner();
 	APawn* Pawn = AIC ? AIC->GetPawn() : nullptr;
+
 	if (!Pawn)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
 	Mem->ElapsedTime += DeltaSeconds;
+
+	// Alpha = 경과시간 / 전체 시간 (회전이 몇 퍼센트 진행됐는지 0~1사이 숫자로 표현)
 	const float Alpha = FMath::Clamp(Mem->ElapsedTime / Mem->Duration, 0.f, 1.f);
 
 	// 이번 프레임의 Yaw
 	const float NewYaw = Mem->StartYaw + Mem->DeltaYaw * Alpha;
 	Pawn->SetActorRotation(FRotator(0.f, NewYaw, 0.f));
 
-	if (Alpha >= 1.f) FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+	if (Alpha >= 1.f)
+	{
+		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+	}
 }
 
 EBTNodeResult::Type UBTTask_TurnToFace::AbortTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

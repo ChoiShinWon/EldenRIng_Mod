@@ -17,6 +17,8 @@ public:
 
 	virtual void OnPossess(APawn* InPawn) override;
 
+	virtual void OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result) override;
+
 	void SetAlerted(bool bAlerted);
 
 	static const FName BBKey_Target;
