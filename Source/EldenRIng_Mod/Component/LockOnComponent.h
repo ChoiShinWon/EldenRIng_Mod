@@ -19,12 +19,18 @@ protected:
 	virtual void BeginPlay() override;
 
 	// 읽기 전용 참조
-	TWeakObjectPtr<class AEldenEnemy> CurrentTarget;
+	TWeakObjectPtr<class AActor> CurrentTarget;
 
+	UPROPERTY()
 	class AEldenCharacter* OwnerCharacter;
 
 	void FindBestTarget();
 
 	UPROPERTY(EditAnywhere, Category = "LockOn")
-	float MaxLockOnDistance = 2000.0f;
+	float MaxLockOnDistance = 2500.0f;
+
+	UPROPERTY(EditAnywhere, Category = "LockOn")
+	float LockOnAcquireDistance = 1500.0f;
+
+	IITargetable* GetTargetInterface() const;
 };
