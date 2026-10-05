@@ -49,7 +49,8 @@ void AEldenEnemy::BeginPlay()
 	Super::BeginPlay();
 
 	HomeLocation = GetActorLocation();
-	
+	SetMoveSpeed(WanderSpeed);
+
 	// 게임이 시작되면 현재 체력을 최대 체력으로 꽉 채워줌.
 	CurrentHealth = MaxHealth;
 
@@ -100,6 +101,7 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 			bHasRoared = true;
 			if (AnimInstance && AggroMontage)
 			{
+				GetCharacterMovement()->StopMovementImmediately();
 				AnimInstance->Montage_Play(AggroMontage);
 
 				// 몽타주가 끝났을 때 호출될 델리게이트 설정
@@ -114,6 +116,7 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 		}
 		else
 		{
+			SetMoveSpeed(CombatSpeed);
 			// 이미 한번 포효했다면 연출 없이 즉시 전투 AI에게 타겟 넘기기
 			if (EnemyController)
 			{
@@ -126,8 +129,15 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 	}
 }
 
+void AEldenEnemy::SetMoveSpeed(float NewSpeed)
+{
+	GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
+}
+
 void AEldenEnemy::OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	if (!bHasAggro) return;
+	SetMoveSpeed(CombatSpeed);
 	if (EnemyController && CombatTarget)
 	{
 		EnemyController->SetAggroTarget(CombatTarget);
@@ -233,8 +243,8 @@ void AEldenEnemy::ResetAggro()
 {
 	bHasAggro = false;
 	CombatTarget = nullptr;
-	// bHasAggro는 여기서 의도적으로 리셋하지 않는다
 
+	SetMoveSpeed(WanderSpeed);
 	if (EnemyController) 
 	{
 		EnemyController->ClearAggroTarget();

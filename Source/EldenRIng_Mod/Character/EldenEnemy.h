@@ -60,7 +60,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float CurrentHealth;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float WanderSpeed = 450.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float CombatSpeed = 600.f;
+
+	void SetMoveSpeed(float NewSpeed);
 	
 	// 몬스터의 애니메이션 몽타주들
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
