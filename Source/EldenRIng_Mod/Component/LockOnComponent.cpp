@@ -6,7 +6,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-ULockOnComponent::ULockOnComponent() { PrimaryComponentTick.bCanEverTick = true; }
+ULockOnComponent::ULockOnComponent() { PrimaryComponentTick.bCanEverTick = false; }
 
 void ULockOnComponent::BeginPlay()
 {

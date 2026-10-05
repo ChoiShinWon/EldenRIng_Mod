@@ -17,7 +17,7 @@
 AEldenGrace::AEldenGrace()
 {
  	
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	// 컴포넌트 생성 및 계층 구조
 	InteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractSphere"));
 	RootComponent = InteractionSphere;

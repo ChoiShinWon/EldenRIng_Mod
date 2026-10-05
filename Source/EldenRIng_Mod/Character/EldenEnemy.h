@@ -13,6 +13,16 @@ class UEldenPoiseComponent;
 class UParticleSystem;
 class UBehaviorTree;
 
+UENUM(BlueprintType)
+enum class EEnemyState : uint8
+{
+	Idle UMETA(DisplayName = "Idle"),
+	Roaring UMETA(DisplayName = "Roaring"),
+	Attacking UMETA(DisplayName = "Attacking"),
+	Stunned UMETA(DisplayName = "Stunned"),
+	Dead UMETA(DisplayName = "Dead")
+};
+
 USTRUCT(BlueprintType)
 struct FTurnMontageEntry
 {
@@ -24,6 +34,8 @@ struct FTurnMontageEntry
 	UPROPERTY(EditAnywhere)
 	UAnimMontage* Montage = nullptr;
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyDied, int32, RuneReward, APawn*, Killer);
 
 UCLASS()
 class ELDENRING_MOD_API AEldenEnemy : public ACharacter, public IITargetable
@@ -41,7 +53,6 @@ protected:
 	class AEnemyAIController* EnemyController;
 	
 
-
 	// 몬스터의 시야(눈) 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category = "AI")
 	class UPawnSensingComponent* PawnSensingComp;
@@ -58,7 +69,7 @@ protected:
 	float MaxHealth = 100.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float CurrentHealth;
+	float CurrentHealth = 0.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	float WanderSpeed = 450.f;
@@ -87,7 +98,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* AggroMontage;
 
-	
+	void StartAggro(APawn* Target);
 
 	// 현재 타겟으로 삼고 있는 플레이어 폰
 	UPROPERTY()
@@ -99,9 +110,12 @@ protected:
 	// 죽음 애니메이션이 끝났을 때 호출되는 함수 (델리게이트로 연결)
 	void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	// 죽음 상태 여부
+	void SetState(EEnemyState NewState);
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
-	bool bIsDead = false;
+	EEnemyState EnemyState = EEnemyState::Idle;
+
+
 
 	// 타겟 마크 위젯 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
@@ -127,6 +141,9 @@ protected:
 public:
 	FVector HomeLocation;
 
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnEnemyDied OnEnemyDied;
+
 	// Enemy마다 할당할 Behavior Tree
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
 	class UBehaviorTree* EnemyBT;
@@ -136,6 +153,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Turn")
 	TArray<FTurnMontageEntry> TurnRightEntries;
+
+	FORCEINLINE EEnemyState GetState() const { return EnemyState; }
+
 
 	// AI가 몬스터에 빙의할 때 엔진이 자동으로 호출해 주는 함수
 	virtual void PossessedBy(AController* NewController) override;
@@ -148,11 +168,13 @@ public:
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
 		class AController* EventInstigator, class AActor* DamageCauser) override;
 
-	// 현재 체력, 최대 체력, 죽음 여부를 반환하는 함수들
+	// 현재 체력, 최대 체력, 죽음 여부등을 반환하는 함수들
 	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
-	FORCEINLINE bool GetIsDead() const { return bIsDead; }
-
+	FORCEINLINE bool GetIsDead() const { return GetState() == EEnemyState::Dead; }
+	FORCEINLINE bool GetIsStunned() const { return GetState() == EEnemyState::Stunned; }
+	FORCEINLINE bool GetIsAttacking() const { return GetState() == EEnemyState::Attacking; }
+	FORCEINLINE bool GetIsRoaring() const { return GetState() == EEnemyState::Roaring; }
 	// 어그로 종료 함수
 	void ResetAggro();
 
@@ -175,13 +197,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	UEldenPoiseComponent* PoiseComp;
 
-	// 공격 중인지 여부 (콤보 시스템 구현 시 활용)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	bool bIsAttacking = false;
-
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	bool bIsStunned = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* StunMontage;

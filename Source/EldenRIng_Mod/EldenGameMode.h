@@ -52,6 +52,10 @@ protected:
 	UFUNCTION()
 	void HandlePlayerDeath(AEldenCharacter* DeadPlayer);
 
+	UFUNCTION()
+	void HandleEnemyDied(int32 RuneReward, APawn* Killer);
+
+	void BindEnemy(AEldenEnemy* Enemy);
 
 	void RespawnPlayer();
 

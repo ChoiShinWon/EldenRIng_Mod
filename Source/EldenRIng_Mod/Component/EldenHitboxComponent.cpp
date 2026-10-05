@@ -78,7 +78,7 @@ void UEldenHitboxComponent::OnHitboxOverlap(UPrimitiveComponent* OverlapComponen
 
 	if (AEldenEnemy* HitEnemy = Cast<AEldenEnemy>(OtherActor))
 	{
-		if (HitEnemy->PoiseComp && !HitEnemy->bIsStunned && !HitEnemy->GetIsDead())
+		if (HitEnemy->PoiseComp && !HitEnemy->GetIsStunned() && !HitEnemy->GetIsDead())
 		{
 			HitEnemy->PoiseComp->ApplyPoiseDamage(PoiseDamage);
 		}

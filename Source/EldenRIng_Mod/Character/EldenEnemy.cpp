@@ -1,9 +1,7 @@
 ﻿
 
 #include "EldenRing_Mod/Character/EldenEnemy.h"
-#include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Component/EldenHitboxComponent.h"
-#include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "EldenRing_Mod/AI/EnemyAIController.h"
 #include "EldenRing_Mod/StatUtils.h"
@@ -19,7 +17,7 @@
 
 AEldenEnemy::AEldenEnemy()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	// 타겟 마크 위젯 컴포넌트 생성 및 설정
 	TargetMarkWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("TargetMarkWidget"));
@@ -78,55 +76,7 @@ void AEldenEnemy::PossessedBy(AController* NewController)
 
 void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 {
-	// 플레이어를 감지했을 때의 로직 (예: 공격 시작, 애니메이션 재생 등)
-	if (bHasAggro || bIsDead) return; // 이미 어그로가 있거나 죽은 상태라면 무시
-
-	// 나를 본게 플레이어가 맞는지 체크
-	if (Pawn)
-	{
-		bHasAggro = true;
-		if (EnemyController)
-		{
-			EnemyController->SetAlerted(true);
-			EnemyController->StopMovement();
-		}
-		CombatTarget = Pawn;
-		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-
-		// bHasRoared는 ResetAggro()에서 리섿되지 않는, 이 적의 생에 전체에 걸친 1회성 플래그다.
-		// 포효 몽타주는 이 적을 처음 어그로 걸 때 딱 한 번만 재생된다.
-		// 시야 밖으로 나갔다가 다시 감지되어도 포효 없이 즉시 전투에 들어감.
-		if (!bHasRoared)
-		{
-			bHasRoared = true;
-			if (AnimInstance && AggroMontage)
-			{
-				GetCharacterMovement()->StopMovementImmediately();
-				AnimInstance->Montage_Play(AggroMontage);
-
-				// 몽타주가 끝났을 때 호출될 델리게이트 설정
-				// 포효 몽타주 재생중에는 아직 SetAggroTarget 호출을 안하므로
-				// AI는 몽타주가 끝나는 순간까지 실제 전투 행동을 시작하지 않는다.
-				// 포효하는 동안은 가만히 서서 연출만 재생하기 위한 의도적 지연
-				FOnMontageEnded EndDelegate;
-				EndDelegate.BindUObject(this, &AEldenEnemy::OnAggroMontageEnded);
-				AnimInstance->Montage_SetEndDelegate(EndDelegate, AggroMontage);
-			}
-
-		}
-		else
-		{
-			SetMoveSpeed(CombatSpeed);
-			// 이미 한번 포효했다면 연출 없이 즉시 전투 AI에게 타겟 넘기기
-			if (EnemyController)
-			{
-				EnemyController->SetAggroTarget(CombatTarget);
-			}
-		}
-
-		
-
-	}
+	StartAggro(Pawn);
 }
 
 void AEldenEnemy::SetMoveSpeed(float NewSpeed)
@@ -136,7 +86,11 @@ void AEldenEnemy::SetMoveSpeed(float NewSpeed)
 
 void AEldenEnemy::OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	if (!bHasAggro) return;
+	if (GetIsRoaring())
+	{
+		SetState(EEnemyState::Idle);
+	}
+	if (!bHasAggro || GetIsDead()) return;
 	SetMoveSpeed(CombatSpeed);
 	if (EnemyController && CombatTarget)
 	{
@@ -147,7 +101,7 @@ void AEldenEnemy::OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 void AEldenEnemy::PlayAttackMontage()
 {
 	// 공격 애니메이션 재생 함수. 공격 중이거나 죽은 상태라면 재생하지 않음.
-	if (bIsAttacking || bIsDead || bIsStunned) return;
+	if (GetIsAttacking() || GetIsDead() || GetIsStunned()) return;
 
 	if (EnemyController)
 	{
@@ -161,7 +115,7 @@ void AEldenEnemy::PlayAttackMontage()
 	// 공격 애니메이션이 유효하다면 재생하고, 몽타주가 끝났을 때 호출될 델리게이트 설정
 	if (AnimInstance && AttackMontage)
 	{
-		bIsAttacking = true;
+		SetState(EEnemyState::Attacking);
 
 		// 공격 애니메이션이 재생되는 동안에는 이동을 못하게 설정
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None); // 공격 중에는 이동 불가능하게 설정
@@ -185,14 +139,15 @@ void AEldenEnemy::PlaySpecificMontage(UAnimMontage* MontageToPlay)
 
 void AEldenEnemy::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	if (!GetIsAttacking()) return;
+
 	if (Montage == AttackMontage && !bInterrupted && SlamMontage != nullptr && FMath::FRand() < SlamAttackChance)
 	{
 		PlaySpecificMontage(SlamMontage);
 		return;
 	}
 
-	// 공격 애니메이션이 끝났을 때 호출되는 함수. 공격 상태를 false로 되돌려줌.
-	bIsAttacking = false;
+	SetState(EEnemyState::Idle);
 
 	// 공격이 끝나면 다시 이동 가능하게 설정
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking); // 공격이 끝나면 다시 이동 가능하게 설정
@@ -206,7 +161,7 @@ void AEldenEnemy::OnPoiseBroken()
 float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator,
 	class AActor* DamageCauser)
 {
-	if (bIsDead) return 0.0f;
+	if (GetIsDead()) return 0.0f;
 
 	// 공격을 받아 피가 깎인 순간, 나를 때린 녀석이 누구인지 CombatTarget에 저장
 	if (EventInstigator && EventInstigator->GetPawn())
@@ -220,20 +175,26 @@ float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 	// 스탯 처리 템플릿 적용 (FStatUtils)
 	FStatUtils::UpdateStat(CurrentHealth, MaxHealth, -ActualDamage);
 
-	
+	// 사망 분기
 	if (CurrentHealth <= 0.0f)
 	{
 		Die();
 
 	}
-	else if (HitReactMontage && !bIsAttacking && !bIsStunned)
+	// 생존 분기
+	else 
 	{
-		// 맞는 모션 재생
-		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-		if (AnimInstance)
+		StartAggro(CombatTarget);
+		if (HitReactMontage && !GetIsAttacking() && !GetIsStunned() && !GetIsRoaring())
 		{
-			AnimInstance->Montage_Play(HitReactMontage);
+			// 맞는 모션 재생
+			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+			if (AnimInstance)
+			{
+				AnimInstance->Montage_Play(HitReactMontage);
+			}
 		}
+		
 	}
 	return ActualDamage;
 }
@@ -256,10 +217,60 @@ void AEldenEnemy::ResetAggro()
 
 }
 
+void AEldenEnemy::StartAggro(APawn* Target)
+{
+	if (bHasAggro || GetIsDead() || !Target) return;
+
+	// 나를 본게 플레이어가 맞는지 체크
+	
+	bHasAggro = true;
+
+	if (EnemyController)
+	{
+		EnemyController->SetAlerted(true);
+		EnemyController->StopMovement();
+	}
+	CombatTarget = Target;
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	// bHasRoared는 ResetAggro()에서 리섿되지 않는, 이 적의 생에 전체에 걸친 1회성 플래그다.
+	// 포효 몽타주는 이 적을 처음 어그로 걸 때 딱 한 번만 재생된다.
+	// 시야 밖으로 나갔다가 다시 감지되어도 포효 없이 즉시 전투에 들어감.
+	if (!bHasRoared && AnimInstance && AggroMontage && GetState()==EEnemyState::Idle)
+	{
+		bHasRoared = true;
+
+		GetCharacterMovement()->StopMovementImmediately();
+		SetState(EEnemyState::Roaring);
+		AnimInstance->Montage_Play(AggroMontage);
+
+		// 몽타주가 끝났을 때 호출될 델리게이트 설정
+		// 포효 몽타주 재생중에는 아직 SetAggroTarget 호출을 안하므로
+		// AI는 몽타주가 끝나는 순간까지 실제 전투 행동을 시작하지 않는다.
+		// 포효하는 동안은 가만히 서서 연출만 재생하기 위한 의도적 지연
+		FOnMontageEnded EndDelegate;
+		EndDelegate.BindUObject(this, &AEldenEnemy::OnAggroMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(EndDelegate, AggroMontage);
+
+
+	}
+	else
+	{
+		SetMoveSpeed(CombatSpeed);
+		if (EnemyController)
+		{
+			EnemyController->SetAggroTarget(CombatTarget);
+		}
+	}
+	
+}
+
 void AEldenEnemy::Die()
 {
-	if (bIsDead) return; 
-	bIsDead = true;
+	if (GetIsDead()) return; 
+	SetState(EEnemyState::Dead);
+	OnEnemyDied.Broadcast(RuneReward, CombatTarget);
+
 
 	DisableRightAttackCollision();
 	DisableLeftAttackCollision();
@@ -270,21 +281,6 @@ void AEldenEnemy::Die()
 		EnemyController->UnPossess();
 	}
 
-	AEldenCharacter* Player = Cast<AEldenCharacter>(CombatTarget);
-	if (Player)
-	{
-		UEldenStatComponent* PlayerStat = Player->StatComponent;
-		if (PlayerStat)
-		{
-			PlayerStat->AddRunes(RuneReward);
-
-			if (GEngine)
-			{
-				FString Msg = FString::Printf(TEXT("룬 %d 개 획득!"), RuneReward);
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, Msg);
-			}
-		} 
-	}
 
 	// 죽음 몽타주 재생
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -297,7 +293,6 @@ void AEldenEnemy::Die()
 		EndDelegate.BindUObject(this, &AEldenEnemy::OnDeathMontageEnded);
 		AnimInstance->Montage_SetEndDelegate(EndDelegate, DeathMontage);
 	}
-
 	else
 	{
 		// 몽타주가 없다면 즉시 래그돌 (안전장치)
@@ -333,13 +328,18 @@ void AEldenEnemy::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	SetLifeSpan(5.0f);
 }
 
+void AEldenEnemy::SetState(EEnemyState NewState)
+{
+	if (GetIsDead()) return;
+	EnemyState = NewState;
+}
+
 
 void AEldenEnemy::ApplyStun()
 {
-	if (bIsDead || bIsStunned) return;
+	if (GetIsDead() || GetIsStunned()) return;
 
-	bIsStunned = true;
-	bIsAttacking = false;
+	SetState(EEnemyState::Stunned);
 	/*bIsParryable = false;*/
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -374,7 +374,8 @@ void AEldenEnemy::ApplyStun()
 
 void AEldenEnemy::OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	bIsStunned = false;
+	if (!GetIsStunned()) return;
+	SetState(EEnemyState::Idle);
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 
 	if (EnemyController)
@@ -388,7 +389,7 @@ void AEldenEnemy::OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 
 bool AEldenEnemy::IsTargetable() const
 {
-	return !bIsDead;
+	return !GetIsDead();
 }
 
 void AEldenEnemy::ShowTargetMark(bool bShow)

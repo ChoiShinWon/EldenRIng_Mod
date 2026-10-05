@@ -144,11 +144,6 @@ void AEldenCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	// 회복 가능 상태이고 최대치가 아니면 매 프레임 회복시킴
-	if (StatComponent->bCanRegen && StatComponent->CurrentStamina < StatComponent->MaxStamina)
-	{
-		StatComponent->CurrentStamina = FMath::Clamp(StatComponent->CurrentStamina + (StatComponent->StaminaRegenRate * DeltaTime), 0.0f, StatComponent->MaxStamina);
-	}
 
 	// 락온 기능
 	if (LockOnComponent)

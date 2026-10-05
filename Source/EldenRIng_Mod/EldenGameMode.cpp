@@ -35,6 +35,7 @@ void AEldenGameMode::BeginPlay()
 		EnemyInfo.EnemyClass = It->GetClass();
 		EnemyInfo.SpawnTransform = It->GetActorTransform();
 		EnemySpawnSnapshot.Add(EnemyInfo);
+		BindEnemy(*It);
 	}
 
 }
@@ -80,6 +81,23 @@ void AEldenGameMode::HandlePlayerDeath(AEldenCharacter* DeadPlayer)
 	}
 }
 
+void AEldenGameMode::HandleEnemyDied(int32 RuneReward, APawn* Killer)
+{
+	AEldenCharacter* Player = Cast<AEldenCharacter>(Killer);
+	if (!Player) return;
+
+	if (Player->StatComponent)
+	{
+		Player->StatComponent->AddRunes(RuneReward);
+	}
+}
+
+void AEldenGameMode::BindEnemy(AEldenEnemy* Enemy)
+{
+	if (!Enemy) return;
+	Enemy->OnEnemyDied.AddDynamic(this, &AEldenGameMode::HandleEnemyDied);
+}
+
 void AEldenGameMode::RespawnPlayer()
 {
 	if (!CachedPlayer) return;
@@ -119,15 +137,15 @@ void AEldenGameMode::DropBloodstain(AEldenCharacter* DeadPlayer)
 
 	// 광선이 플레이어 자신의 캡슐 메시에 먼저 맞으면 ImpactPoint가 시체 몸통이 되어버리기때문에
 	// 이 액터는 무시 등록
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(DeadPlayer);
+	FCollisionQueryParams TraceParams;
+	TraceParams.AddIgnoredActor(DeadPlayer);
 
 	// 트레이스 실행
 	const bool bHit = GetWorld()->LineTraceSingleByChannel(
 		Hit,
 		StartLoc, EndLoc,
 		ECC_Visibility,
-		Params);
+		TraceParams);
 
 	// 스폰 위치
 	FVector SpawnLoc = bHit ? Hit.ImpactPoint : StartLoc;
@@ -140,12 +158,12 @@ void AEldenGameMode::DropBloodstain(AEldenCharacter* DeadPlayer)
 	if (Lost <= 0) return;
 
 	// 스폰
-	FActorSpawnParameters Params2;
-	Params2.SpawnCollisionHandlingOverride =
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride =
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	ABloodstain* Spawned = GetWorld()->SpawnActor<ABloodstain>(
-		BloodstainClass, SpawnLoc, FRotator::ZeroRotator, Params2);
+		BloodstainClass, SpawnLoc, FRotator::ZeroRotator, SpawnParams);
 
 	if (!Spawned) return;
 	// 손실 룬을 Bloodstain에 전달
@@ -174,14 +192,15 @@ void AEldenGameMode::ResetAllEnemies()
 	// 스폰 패스
 	for (const FEnemySpawnInfo& Info : EnemySpawnSnapshot)
 	{
-		FActorSpawnParameters SpawnPar;
-		SpawnPar.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 		FVector Loc = Info.SpawnTransform.GetLocation();
 		FQuat Q = Info.SpawnTransform.GetRotation();
 		FRotator Rot = Q.Rotator();
 
-		GetWorld()->SpawnActor<AEldenEnemy>(Info.EnemyClass, Loc, Rot, SpawnPar);
+		AEldenEnemy* SpawnedEnemy = GetWorld()->SpawnActor<AEldenEnemy>(Info.EnemyClass, Loc, Rot, SpawnParams);
+		BindEnemy(SpawnedEnemy);
 	}
 }
 

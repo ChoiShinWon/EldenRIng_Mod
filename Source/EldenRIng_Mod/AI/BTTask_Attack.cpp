@@ -17,7 +17,7 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 		if (Enemy)
 		{
 			Enemy->PlayAttackMontage();
-			if (Enemy->bIsAttacking)
+			if (Enemy->GetIsAttacking())
 			{
 				return EBTNodeResult::InProgress;
 			}
@@ -46,7 +46,7 @@ void UBTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemo
 	}
 
 
-	if (!Enemy->bIsAttacking)
+	if (!Enemy->GetIsAttacking())
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 	}
