@@ -78,10 +78,7 @@ void UEldenHitboxComponent::OnHitboxOverlap(UPrimitiveComponent* OverlapComponen
 
 	if (AEldenEnemy* HitEnemy = Cast<AEldenEnemy>(OtherActor))
 	{
-		if (HitEnemy->PoiseComp && !HitEnemy->GetIsStunned() && !HitEnemy->GetIsDead())
-		{
-			HitEnemy->PoiseComp->ApplyPoiseDamage(PoiseDamage);
-		}
+		HitEnemy->TakePoiseDamage(PoiseDamage);
 	}
 
 	//  3. ApplyDamage -> TargetPlayer::TakeDamage가 이미 동기적으로 실행된 뒤이므로,

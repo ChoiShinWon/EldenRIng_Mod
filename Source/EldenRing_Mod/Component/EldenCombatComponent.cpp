@@ -311,10 +311,7 @@ void UEldenCombatComponent::PerformSkillStrike()
 
 		if (AEldenEnemy* Enemy = Cast<AEldenEnemy>(HitActor))
 		{
-			if (Enemy->PoiseComp)
-			{
-				Enemy->PoiseComp->ApplyPoiseDamage(Weapon->GetSkillPoiseDamage());
-			}
+			Enemy->TakePoiseDamage(Weapon->GetSkillPoiseDamage());
 		}
 	}
 	// Start~End 구간에 파티클을 N개(SkillVFXSpawnCount) 나눠 스폰해서

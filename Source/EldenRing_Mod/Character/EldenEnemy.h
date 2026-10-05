@@ -49,6 +49,8 @@ protected:
 
 	virtual void BeginPlay() override;
 
+	FVector HomeLocation = FVector::ZeroVector;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
 	class AEnemyAIController* EnemyController;
 	
@@ -56,6 +58,9 @@ protected:
 	// 몬스터의 시야(눈) 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category = "AI")
 	class UPawnSensingComponent* PawnSensingComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	UEldenPoiseComponent* PoiseComp;
 
 	// 플레이어를 감지했는지 여부
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
@@ -100,6 +105,9 @@ protected:
 
 	void StartAggro(APawn* Target);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	class UAnimMontage* StunMontage;
+
 	// 현재 타겟으로 삼고 있는 플레이어 폰
 	UPROPERTY()
 	class APawn* CombatTarget;
@@ -139,7 +147,6 @@ protected:
 
 
 public:
-	FVector HomeLocation;
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnEnemyDied OnEnemyDied;
@@ -175,6 +182,8 @@ public:
 	FORCEINLINE bool GetIsStunned() const { return GetState() == EEnemyState::Stunned; }
 	FORCEINLINE bool GetIsAttacking() const { return GetState() == EEnemyState::Attacking; }
 	FORCEINLINE bool GetIsRoaring() const { return GetState() == EEnemyState::Roaring; }
+	FORCEINLINE FVector GetHomeLocation() const { return HomeLocation; }
+
 	// 어그로 종료 함수
 	void ResetAggro();
 
@@ -194,15 +203,10 @@ public:
 	UFUNCTION()
 	void OnPoiseBroken();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	UEldenPoiseComponent* PoiseComp;
-
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	class UAnimMontage* StunMontage;
-
 	// 패링 성공 시 외부(플레이어)에서 호출할 함수
 	void ApplyStun();
+
+	void TakePoiseDamage(float Amount);
 
 	UFUNCTION()
 	void OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted);

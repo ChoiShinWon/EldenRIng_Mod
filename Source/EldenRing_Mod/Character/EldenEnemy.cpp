@@ -372,6 +372,12 @@ void AEldenEnemy::ApplyStun()
 	}
 }
 
+void AEldenEnemy::TakePoiseDamage(float Amount)
+{
+	if (!PoiseComp || GetIsStunned() || GetIsDead()) return;
+	PoiseComp->ApplyPoiseDamage(Amount);
+}
+
 void AEldenEnemy::OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (!GetIsStunned()) return;

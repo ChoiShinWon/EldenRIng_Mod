@@ -41,6 +41,7 @@ public:
 	void ApplyPoiseDamage(float PoiseDmg);
 
 
+
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnPoiseBrokenDelegate OnPoiseBroken;
 

@@ -27,7 +27,7 @@ EBTNodeResult::Type UBTTask_FindWanderLocation::ExecuteTask(UBehaviorTreeCompone
 	if (!NavSys) return EBTNodeResult::Failed;
 
 	FNavLocation Result;
-	bool bFound = NavSys->GetRandomReachablePointInRadius(Enemy->HomeLocation, WanderRadius, Result);
+	bool bFound = NavSys->GetRandomReachablePointInRadius(Enemy->GetHomeLocation(), WanderRadius, Result);
 	if (!bFound) return EBTNodeResult::Failed;
 
 	BB->SetValueAsVector(WanderLocationKey.SelectedKeyName, Result.Location);
