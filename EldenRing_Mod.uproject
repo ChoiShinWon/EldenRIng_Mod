@@ -5,7 +5,7 @@
 	"Description": "",
 	"Modules": [
 		{
-			"Name": "EldenRIng_Mod",
+			"Name": "EldenRing_Mod",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [

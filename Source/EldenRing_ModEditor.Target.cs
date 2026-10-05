@@ -3,13 +3,13 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class EldenRIng_ModTarget : TargetRules
+public class EldenRing_ModEditorTarget : TargetRules
 {
-	public EldenRIng_ModTarget(TargetInfo Target) : base(Target)
+	public EldenRing_ModEditorTarget(TargetInfo Target) : base(Target)
 	{
-		Type = TargetType.Game;
+		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_5;
-		ExtraModuleNames.Add("EldenRIng_Mod");
+		ExtraModuleNames.Add("EldenRing_Mod");
 	}
 }
