@@ -2,7 +2,6 @@
 
 #include "EldenRing_Mod/Character/EldenAnimInstance.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
-#include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "KismetAnimationLibrary.h"
@@ -28,7 +27,17 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	// 주인이 정상적으로 존재한다면, 매 프레임 상태를 훔쳐옴
 	if (EldenCharacter)
 	{
-		 
+		const ECharacterState State = EldenCharacter->GetState();
+		UEldenEquipmentComponent* Equipment = EldenCharacter->EquipmentComponent;
+		CurrentWeaponStance = EWeaponStance::OneHanded;
+		if (Equipment)
+		{
+			AEldenWeapon* Weapon = Equipment->GetEquippedWeapon();
+			if (Weapon)
+			{
+				CurrentWeaponStance = Weapon->GetWeaponStance();
+			}
+		}
 
 		// 속도 구하기
 		FVector Velocity = EldenCharacter->GetVelocity();
@@ -37,7 +46,11 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 		
 		// 공중 상태 구하기
 		// 캐릭터 무브먼트 컴포넌트에 너 지금 바닥 안 밟고 있어? 하고 물어보기
-		bIsFalling = EldenCharacter->GetCharacterMovement()->IsFalling();
+		UCharacterMovementComponent* Movement = EldenCharacter->GetCharacterMovement();
+		if (Movement)
+		{
+			bIsFalling = Movement->IsFalling();
+		}
 
 		// 락온 상태 가져오기
 		bIsLockedOn = EldenCharacter->GetIsLockedOn();
@@ -47,26 +60,15 @@ void UEldenAnimInstance::NativeUpdateAnimation(float DeltaTime)
 		Direction = UKismetAnimationLibrary::CalculateDirection(EldenCharacter->GetVelocity(), BaseRoation);
 	
 
-		if (EldenCharacter->CombatComponent)
-		{
-			bIsAttacking = EldenCharacter->GetState() == ECharacterState::Attacking;
-			
-		}
-
-		// GetState()는 CombatComponent가 있든 말든 항상 안전하게 호출 가능하므로
-		// 아래 오버레이 조건 계산 전에 이번 프레임의 최신 무기 스탠스를 먼저 갱신한다.
-		// 이 줄이 아래보다 늦게 오면 CurrentWeaponStance가 한 프레임 지연된 값으로 쓰이는 버그가 생김
-		if (EldenCharacter->EquipmentComponent->GetEquippedWeapon())
-		{
-			CurrentWeaponStance = EldenCharacter->EquipmentComponent->GetEquippedWeapon()->GetWeaponStance();
-		}
+		bIsAttacking = State == ECharacterState::Attacking;
+	
 
 		// 상체 IDLE 오버레이를 언제 꺼야 하는지가 아니라 언제 켜도 되는지를 화이트리스트로 정의
 		// Attacking/Rolling/Damaged 등 풀바디 몽타주 상태를 하나씩 배제하는 대신
 		// Idle(대검일 때만)이거나, Blocking일 때만 허용 -> 새 상태가 추가돼도 기본값이 안전하게 유지됨
 		bShouldShowWeaponIdleOverlay =
-			EldenCharacter->GetState() == ECharacterState::Idle &&
-			CurrentWeaponStance == EWeaponStance::TwoHanded ||
-			EldenCharacter->GetState() == ECharacterState::Blocking;
+			((State == ECharacterState::Idle &&
+				CurrentWeaponStance == EWeaponStance::TwoHanded) ||
+				State == ECharacterState::Blocking);
 	}
 }
