@@ -64,6 +64,18 @@ void UEldenPoiseComponent::ApplyPoiseDamage(float PoiseDmg)
 	SetComponentTickEnabled(true);
 }
 
+void UEldenPoiseComponent::ResetPoise()
+{
+	CurrentPoise = MaxPoise;
+
+	bCanRegen = true;
+	if (UWorld* World = GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(RegenDelayTimerHandle);
+	}
+	SetComponentTickEnabled(false);
+}
+
 void UEldenPoiseComponent::StartRegenDelay()
 {
 	bCanRegen = false;

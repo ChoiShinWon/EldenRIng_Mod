@@ -34,6 +34,7 @@ void AEldenGameMode::BeginPlay()
 		FEnemySpawnInfo EnemyInfo;
 		EnemyInfo.EnemyClass = It->GetClass();
 		EnemyInfo.SpawnTransform = It->GetActorTransform();
+		EnemyInfo.Instance = *It;
 		EnemySpawnSnapshot.Add(EnemyInfo);
 		BindEnemy(*It);
 	}
@@ -176,22 +177,19 @@ void AEldenGameMode::DropBloodstain(AEldenCharacter* DeadPlayer)
 
 void AEldenGameMode::ResetAllEnemies()
 {
-	// 파괴 패스
-	// TActorIterator 순회 도중 Destroy() 하면 이터레이터가 불안정해질 수 있어
-	// 먼저 전부 배열에 모아두고, 순회가 끝난 뒤 따로 파괴
-	TArray<AEldenEnemy*> TempArray;
-	for (TActorIterator<AEldenEnemy> It(GetWorld()); It; ++It)
+	for (FEnemySpawnInfo& Info : EnemySpawnSnapshot)
 	{
-		TempArray.Add(*It);
-	}
-	for (AEldenEnemy* E : TempArray)
-	{
-		if (IsValid(E)) E->Destroy(); // 살아있든 래그돌이든 무조건 제거
-	}
+		if (Info.Instance.IsValid() && !Info.Instance->GetIsDead())
+		{
+			Info.Instance->ResetToSpawn(Info.SpawnTransform);
+			continue;
+		}
 
-	// 스폰 패스
-	for (const FEnemySpawnInfo& Info : EnemySpawnSnapshot)
-	{
+		if (Info.Instance.IsValid())
+		{
+			Info.Instance->Destroy();
+		}
+
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
@@ -201,7 +199,11 @@ void AEldenGameMode::ResetAllEnemies()
 
 		AEldenEnemy* SpawnedEnemy = GetWorld()->SpawnActor<AEldenEnemy>(Info.EnemyClass, Loc, Rot, SpawnParams);
 		BindEnemy(SpawnedEnemy);
+		Info.Instance = SpawnedEnemy;
+
 	}
+
+	
 }
 
 void AEldenGameMode::HandleGraceRest(AEldenGrace* Grace, AEldenCharacter* Player)

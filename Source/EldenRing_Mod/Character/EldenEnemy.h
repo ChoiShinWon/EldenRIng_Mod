@@ -194,6 +194,9 @@ public:
 	// 어그로 종료 함수
 	void ResetAggro();
 
+	// 원래 위치로 되돌리는 함수
+	void ResetToSpawn(const FTransform& SpawnTransform);
+
 	// 어그로 애니메이션이 끝났을 때 호출되는 함수 
 	UFUNCTION()
 	void OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted);

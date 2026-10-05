@@ -21,6 +21,9 @@ struct FEnemySpawnInfo
 	UPROPERTY()
 	FTransform SpawnTransform;
 
+	UPROPERTY()
+	TWeakObjectPtr<AEldenEnemy> Instance;
+
 };
 
 UCLASS()

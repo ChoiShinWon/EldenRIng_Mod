@@ -100,8 +100,7 @@ void AEldenEnemy::OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 
 void AEldenEnemy::PlayAttackMontage()
 {
-	// 공격 애니메이션 재생 함수. 공격 중이거나 죽은 상태라면 재생하지 않음.
-	if (GetIsAttacking() || GetIsDead() || GetIsStunned()) return;
+	if (GetState() != EEnemyState::Idle) return;
 
 	if (EnemyController)
 	{
@@ -185,7 +184,7 @@ float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 	else 
 	{
 		StartAggro(CombatTarget);
-		if (HitReactMontage && !GetIsAttacking() && !GetIsStunned() && !GetIsRoaring())
+		if (HitReactMontage && GetState() == EEnemyState::Idle)
 		{
 			// 맞는 모션 재생
 			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -215,6 +214,55 @@ void AEldenEnemy::ResetAggro()
 		EnemyController->StopMovement();
 	}
 
+}
+
+void AEldenEnemy::ResetToSpawn(const FTransform& SpawnTransform)
+{
+	if (GetIsDead()) return;
+	GetWorldTimerManager().ClearTimer(StunTimerHandle);
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance)
+	{
+		AnimInstance->StopAllMontages(0.f);
+	}
+	
+
+	if (EnemyController)
+	{
+		EnemyController->StopMovement();
+		EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
+		EnemyController->ClearFocus(EAIFocusPriority::Default);
+
+		// BB 키 초기화
+		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
+		{
+			BB->SetValueAsBool(AEnemyAIController::BBKey_Stunned, false);
+		}
+	}
+
+	// 공격/스턴으로 켜진 히트박스 끄기
+	DisableLeftAttackCollision();
+	DisableRightAttackCollision();
+
+	// 상태 초기화
+	SetState(EEnemyState::Idle);
+	CurrentHealth = MaxHealth;
+	bHasRoared = false;
+	ResetAggro();
+
+	// 이동/물리 복구
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	GetCharacterMovement()->StopMovementImmediately();
+
+	// 위치 복귀
+	SetActorLocationAndRotation(SpawnTransform.GetLocation(), SpawnTransform.GetRotation().Rotator(), false, nullptr, ETeleportType::TeleportPhysics);
+
+	// 포이즈 처리
+	if (PoiseComp)
+	{
+		PoiseComp->ResetPoise();
+	}
 }
 
 void AEldenEnemy::StartAggro(APawn* Target)

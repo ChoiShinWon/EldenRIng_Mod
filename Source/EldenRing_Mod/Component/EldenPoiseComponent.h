@@ -40,6 +40,7 @@ public:
 
 	void ApplyPoiseDamage(float PoiseDmg);
 
+	void ResetPoise();
 
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
