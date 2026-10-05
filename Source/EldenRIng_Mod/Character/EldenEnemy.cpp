@@ -47,7 +47,10 @@ AEldenEnemy::AEldenEnemy()
 void AEldenEnemy::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	HomeLocation = GetActorLocation();
+	SetMoveSpeed(WanderSpeed);
+
 	// 게임이 시작되면 현재 체력을 최대 체력으로 꽉 채워줌.
 	CurrentHealth = MaxHealth;
 
@@ -82,6 +85,11 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 	if (Pawn)
 	{
 		bHasAggro = true;
+		if (EnemyController)
+		{
+			EnemyController->SetAlerted(true);
+			EnemyController->StopMovement();
+		}
 		CombatTarget = Pawn;
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
@@ -93,6 +101,7 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 			bHasRoared = true;
 			if (AnimInstance && AggroMontage)
 			{
+				GetCharacterMovement()->StopMovementImmediately();
 				AnimInstance->Montage_Play(AggroMontage);
 
 				// 몽타주가 끝났을 때 호출될 델리게이트 설정
@@ -107,6 +116,7 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 		}
 		else
 		{
+			SetMoveSpeed(CombatSpeed);
 			// 이미 한번 포효했다면 연출 없이 즉시 전투 AI에게 타겟 넘기기
 			if (EnemyController)
 			{
@@ -119,8 +129,15 @@ void AEldenEnemy::OnSeePlayer(APawn* Pawn)
 	}
 }
 
+void AEldenEnemy::SetMoveSpeed(float NewSpeed)
+{
+	GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
+}
+
 void AEldenEnemy::OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	if (!bHasAggro) return;
+	SetMoveSpeed(CombatSpeed);
 	if (EnemyController && CombatTarget)
 	{
 		EnemyController->SetAggroTarget(CombatTarget);
@@ -131,13 +148,12 @@ void AEldenEnemy::PlayAttackMontage()
 {
 	// 공격 애니메이션 재생 함수. 공격 중이거나 죽은 상태라면 재생하지 않음.
 	if (bIsAttacking || bIsDead || bIsStunned) return;
-	
-	if (CombatTarget)
+
+	if (EnemyController)
 	{
-		FVector ToTarget = CombatTarget->GetActorLocation() - GetActorLocation();
-		ToTarget.Z = 0.f;
-		FRotator Face = ToTarget.Rotation();
-		SetActorRotation(FRotator(0.f, Face.Yaw, 0.f)); // 스냅
+		EnemyController->StopMovement();
+		EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
+		EnemyController->ClearFocus(EAIFocusPriority::Default);
 	}
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -227,11 +243,12 @@ void AEldenEnemy::ResetAggro()
 {
 	bHasAggro = false;
 	CombatTarget = nullptr;
-	// bHasAggro는 여기서 의도적으로 리셋하지 않는다
 
+	SetMoveSpeed(WanderSpeed);
 	if (EnemyController) 
 	{
 		EnemyController->ClearAggroTarget();
+		EnemyController->SetAlerted(false);
 
 		// 멈추기
 		EnemyController->StopMovement();
@@ -346,11 +363,11 @@ void AEldenEnemy::ApplyStun()
 	if (EnemyController)
 	{
 		EnemyController->StopMovement();
-		EnemyController->ClearFocus(2);
-		EnemyController->ClearFocus(0);
+		EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
+		EnemyController->ClearFocus(EAIFocusPriority::Default);
 		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
 		{
-			BB->SetValueAsBool(FName("Stunned"), true);
+			BB->SetValueAsBool(AEnemyAIController::BBKey_Stunned, true);
 		}
 	}
 }
@@ -364,7 +381,7 @@ void AEldenEnemy::OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	{
 		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
 		{
-			BB->SetValueAsBool(FName("Stunned"), false);
+			BB->SetValueAsBool(AEnemyAIController::BBKey_Stunned, false);
 		}
 	}
 }

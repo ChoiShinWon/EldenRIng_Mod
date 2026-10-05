@@ -386,7 +386,6 @@ void AEldenCharacter::ToggleMenu()
 	else
 	{
 		UEldenMenuWidget* NewMenuWidget = CreateWidget<UEldenMenuWidget>(GetWorld(), MenuWidgetClass);
-		if (!NewMenuWidget) return;
 		NewMenuWidget->InitMenu(InventoryComponent, StatComponent, EquipmentComponent);
 		MenuWidget = NewMenuWidget;
 		MenuWidget->AddToViewport();

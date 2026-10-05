@@ -42,8 +42,6 @@ void UEldenMenuWidget::OnInventoryItemClicked(UEldenItemDefinition* ClickedItem,
 
 void UEldenMenuWidget::InitMenu(UEldenInventoryComponent* Inventory, UEldenStatComponent* Stat, UEldenEquipmentComponent* Equipment)
 {
-	if (!ensure(Inventory && Stat && Equipment)) return;
-
 	CachedInventoryComponent = Inventory;
 	CachedStatComponent = Stat;
 	CachedEquipmentComponent = Equipment;

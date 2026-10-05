@@ -13,6 +13,18 @@ class UEldenPoiseComponent;
 class UParticleSystem;
 class UBehaviorTree;
 
+USTRUCT(BlueprintType)
+struct FTurnMontageEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere)
+	float Angle = 0.0f;
+
+	UPROPERTY(EditAnywhere)
+	UAnimMontage* Montage = nullptr;
+};
+
 UCLASS()
 class ELDENRING_MOD_API AEldenEnemy : public ACharacter, public IITargetable
 {
@@ -48,7 +60,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float CurrentHealth;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float WanderSpeed = 450.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float CombatSpeed = 600.f;
+
+	void SetMoveSpeed(float NewSpeed);
 	
 	// 몬스터의 애니메이션 몽타주들
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
@@ -107,9 +125,17 @@ protected:
 
 
 public:
+	FVector HomeLocation;
+
 	// Enemy마다 할당할 Behavior Tree
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
 	class UBehaviorTree* EnemyBT;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Turn")
+	TArray<FTurnMontageEntry> TurnLeftEntries;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Turn")
+	TArray<FTurnMontageEntry> TurnRightEntries;
 
 	// AI가 몬스터에 빙의할 때 엔진이 자동으로 호출해 주는 함수
 	virtual void PossessedBy(AController* NewController) override;

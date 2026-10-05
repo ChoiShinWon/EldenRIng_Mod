@@ -1,7 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+Ôªø// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "EldenRing_Mod/AI/BTService_CheckDistance.h"
+#include "EldenRing_Mod/AI/EnemyAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "AIController.h"
@@ -22,21 +23,21 @@ void UBTService_CheckDistance::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 	
 	if (BlackBoardComp)
 	{
-		AActor* TargetActor = Cast<AActor>(BlackBoardComp->GetValueAsObject(FName("TargetActor")));
+		AActor* TargetActor = Cast<AActor>(BlackBoardComp->GetValueAsObject(AEnemyAIController::BBKey_Target));
 
 		if (ControlledPawn && TargetActor)
 		{
-			// ƒ≥∏Ø≈ÕøÕ ∏ÛΩ∫≈Õ ªÁ¿Ã ∞≈∏Æ
+			// Ï∫êÎ¶≠ÌÑ∞ÏôÄ Î™¨Ïä§ÌÑ∞ ÏÇ¨Ïù¥ Í±∞Î¶¨
 			float Distance = FVector::Dist(ControlledPawn->GetActorLocation(), TargetActor->GetActorLocation());
-			// µ—¿« ∞≈∏Æ∞° √÷¥Î æÓ±◊∑Œ ºˆƒ°∫∏¥Ÿ ∏÷æÓ¡¯¥Ÿ∏È
+			// ÎëòÏùò Í±∞Î¶¨Í∞Ä ÏµúÎåÄ Ïñ¥Í∑∏Î°ú ÏàòÏπòÎ≥¥Îã§ Î©ÄÏñ¥ÏßÑÎã§Î©¥
 			if (Distance > MaxAggroDistance)
 			{
-				// ControlledPawn EldenEnemy ƒ≥Ω∫∆√
+				// ControlledPawn EldenEnemy Ï∫êÏä§ÌåÖ
 				AEldenEnemy* Enemy = Cast<AEldenEnemy>(ControlledPawn);
 
 				if (Enemy)
 				{
-					// æÓ±◊∑Œ √Îº“
+					// Ïñ¥Í∑∏Î°ú Ï∑®ÏÜå
 					Enemy->ResetAggro();
 				}
 		

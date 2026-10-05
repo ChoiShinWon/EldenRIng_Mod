@@ -56,6 +56,7 @@ void AEldenGameMode::RegisterGrace(AEldenGrace* Grace)
 
 void AEldenGameMode::HandlePlayerDeath(AEldenCharacter* DeadPlayer)
 {
+	if (GetWorldTimerManager().IsTimerActive(RespawnTimerHandle)) return;
 	DropBloodstain(DeadPlayer);
 
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("플레이어 사망 감지 - 리스폰 대기"));
