@@ -108,6 +108,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* StunMontage;
 
+	// StunMontage가 NULL일때를 대비해서 정해둔 수치
+	// StunMontage가 있다면 몽타주 길이만큼 스턴
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	float StunDuration = 1.5f;
+
+	FTimerHandle StunTimerHandle;
+
 	// 현재 타겟으로 삼고 있는 플레이어 폰
 	UPROPERTY()
 	class APawn* CombatTarget;
@@ -208,8 +215,7 @@ public:
 
 	void TakePoiseDamage(float Amount);
 
-	UFUNCTION()
-	void OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void EndStun();
 
 	virtual bool IsTargetable() const override;
 	virtual void ShowTargetMark(bool bShow) override;

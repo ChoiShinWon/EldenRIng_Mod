@@ -269,6 +269,8 @@ void AEldenEnemy::Die()
 {
 	if (GetIsDead()) return; 
 	SetState(EEnemyState::Dead);
+	// 스턴 타이머 초기화
+	GetWorldTimerManager().ClearTimer(StunTimerHandle);
 	OnEnemyDied.Broadcast(RuneReward, CombatTarget);
 
 
@@ -341,21 +343,17 @@ void AEldenEnemy::ApplyStun()
 
 	SetState(EEnemyState::Stunned);
 	/*bIsParryable = false;*/
+	float Duration = StunDuration;
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance)
 	{
 		AnimInstance->StopAllMontages(0.1f);
-
 		if (StunMontage)
 		{
+			Duration = StunMontage->GetPlayLength();
 			AnimInstance->Montage_Play(StunMontage);
-
-			FOnMontageEnded EndDelegate;
-			EndDelegate.BindUObject(this, &AEldenEnemy::OnStunMontageEnded);
-			AnimInstance->Montage_SetEndDelegate(EndDelegate, StunMontage);
-		}
-		
+		}		
 	}
 
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
@@ -370,17 +368,14 @@ void AEldenEnemy::ApplyStun()
 			BB->SetValueAsBool(AEnemyAIController::BBKey_Stunned, true);
 		}
 	}
+	GetWorldTimerManager().SetTimer(StunTimerHandle, this, &AEldenEnemy::EndStun, Duration, false);
 }
 
-void AEldenEnemy::TakePoiseDamage(float Amount)
-{
-	if (!PoiseComp || GetIsStunned() || GetIsDead()) return;
-	PoiseComp->ApplyPoiseDamage(Amount);
-}
-
-void AEldenEnemy::OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+void AEldenEnemy::EndStun()
 {
 	if (!GetIsStunned()) return;
+	GetWorldTimerManager().ClearTimer(StunTimerHandle);
+
 	SetState(EEnemyState::Idle);
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 
@@ -392,6 +387,14 @@ void AEldenEnemy::OnStunMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 		}
 	}
 }
+
+void AEldenEnemy::TakePoiseDamage(float Amount)
+{
+	if (!PoiseComp || GetIsStunned() || GetIsDead()) return;
+	PoiseComp->ApplyPoiseDamage(Amount);
+}
+
+
 
 bool AEldenEnemy::IsTargetable() const
 {
