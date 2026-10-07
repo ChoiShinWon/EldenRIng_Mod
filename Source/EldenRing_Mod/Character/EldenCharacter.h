@@ -12,7 +12,6 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
-class UEldenStatComponent;
 class UEldenCombatComponent;
 class ULockOnComponent;
 class UPointLightComponent;
@@ -137,25 +136,12 @@ protected:
 	void Look(const FInputActionValue& Value);
 	
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	class UAnimMontage* RollMontage;
-	
-	FVector2D LastMoveInput;
-	
-
-	
-	
 	/*=============================================================================
 	 * 공격 시스템 (Combat)
 	 *=============================================================================*/
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* HitReactMontage;
-	
-	
-	UFUNCTION()
-	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
-
 
 
 	UFUNCTION()
@@ -171,15 +157,9 @@ protected:
 	/*=============================================================================
 	 * 스태미너 비용 설정 (Stamina Cost)
 	 *=============================================================================*/
-	UPROPERTY(EditAnywhere, Category = "Stamina")
-	float DodgeStaminaCost = 25.0f;
 	
 	UPROPERTY(EditAnywhere, Category = "Stamina")
 	float AttackStaminaCost = 15.0f;
-	
-	UPROPERTY(EditAnywhere, Category = "Stamina")
-	float SprintStaminaCost = 10.0f; 
-	
 	
 
 	/*=============================================================================
@@ -223,23 +203,17 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UEldenItemUseComponent* ItemUseComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenLocomotionComponent* LocomotionComponent;
 
 	void Revive(const FTransform&);
-		
-	void Dodge();
+
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	
 	FORCEINLINE bool GetIsDead() const { return GetState() == ECharacterState::Dead; }
 
-
-	void StartAttackLunge(float Speed);
-	void StopAttackLunge();
-
-	// Shift 키를 누를때와 뗄 때 실행될 함수
-	void StartSprint();
-	void StopSprint();
 
 
 	bool GetIsLockedOn() const;

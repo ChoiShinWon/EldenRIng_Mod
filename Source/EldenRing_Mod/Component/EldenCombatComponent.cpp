@@ -5,6 +5,7 @@
 #include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
+#include "EldenRing_Mod/Component/EldenLocomotionComponent.h"
 #include "GameFramework/Character.h" 
 #include "Containers/Array.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
@@ -63,12 +64,18 @@ void UEldenCombatComponent::OnAttackMontageEnded(UAnimMontage* Montage, bool bIn
         if (bDodgeQueued)
         {
             bDodgeQueued = false;
-            PlayerCharacter->Dodge();
+            PlayerCharacter->LocomotionComponent->Dodge();
         }
     }
 
 }
 
+void UEldenCombatComponent::QueueDodge()
+{
+	bDodgeQueued = true;
+	bComboQueued = false;
+	ComboCount = 0;
+}
 
 
 void UEldenCombatComponent::ExecuteAttack()

@@ -9,7 +9,7 @@
 #include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "EldenRing_Mod/Component/EldenItemUseComponent.h"
-#include "EldenRing_Mod/Interface/Interactable.h"
+#include "EldenRing_Mod/Component/EldenLocomotionComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h"
@@ -19,10 +19,8 @@
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Widget/EldenHUDWidget.h"
 #include "EldenRing_Mod/Widget/EldenMenuWidget.h"
-#include "EldenRing_Mod/StatUtils.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
 #include "Components/PointLightComponent.h"
 #include "Components/CapsuleComponent.h"
 
@@ -75,6 +73,8 @@ AEldenCharacter::AEldenCharacter()
 	InteractionComponent = CreateDefaultSubobject<UEldenInteractionComponent>(TEXT("InteractionComponent"));
 
 	ItemUseComponent = CreateDefaultSubobject<UEldenItemUseComponent>(TEXT("ItemUseComponent"));
+
+	LocomotionComponent = CreateDefaultSubobject<UEldenLocomotionComponent>(TEXT("LocomotionComponent"));
 }
 
 void AEldenCharacter::SetState(ECharacterState NewState)
@@ -136,32 +136,12 @@ void AEldenCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (CombatComponent->bIsSprinting && GetVelocity().Size() > 0.0f)
-	{
-		StatComponent->ConsumeStamina(SprintStaminaCost * DeltaTime);
-
-		// 달리다가 스태미너 떨어지면 멈춤
-		if (StatComponent->CurrentStamina <= 0.0f)
-		{
-			StopSprint();
-		}
-	}
-
-
 	// 락온 기능
 	if (LockOnComponent)
 	{
 		LockOnComponent->UpdateLockOn(DeltaTime);
 	}
 
-	
-	if (CombatComponent->bIsLunging)
-	{
-		// 애니메이션 에셋 Root Motion 오류로, 이동은 코드가 매 프레임 밀어준다.
-		// AddMovementInput은 "방향 + 세기"만 제출
-		// 실제 속도는 CharacterMovementComponent의 MaxWalkSpeed, MaxAcceleration이 결정
-		AddMovementInput(GetActorForwardVector(), 1.0f);
-	}
 
 }
 
@@ -196,8 +176,8 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		}
 		if (SprintAction)
 		{
-			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AEldenCharacter::StartSprint);
-			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AEldenCharacter::StopSprint);
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, LocomotionComponent, &UEldenLocomotionComponent::StartSprint);
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, LocomotionComponent, &UEldenLocomotionComponent::StopSprint);
 		}
 		if (JumpAction)
 		{
@@ -205,7 +185,7 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		}
 		if (DodgeAction)
 		{
-			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &AEldenCharacter::Dodge);
+			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, LocomotionComponent, &UEldenLocomotionComponent::Dodge);
 		}
 
 		if (LockOnAction)
@@ -273,7 +253,7 @@ void AEldenCharacter::Move(const FInputActionValue& Value)
 {
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-	LastMoveInput = MovementVector;
+	LocomotionComponent->LastMoveInput = MovementVector;
 
 	if (GetState() != ECharacterState::Idle && GetState() != ECharacterState::Blocking
 		&& GetState() != ECharacterState::Drinking) return;
@@ -402,93 +382,6 @@ void AEldenCharacter::Revive(const FTransform& SpawnTransform)
 	if (CurrentHUD) CurrentHUD->SetVisibility(ESlateVisibility::Visible);
 }
 
-void AEldenCharacter::Dodge()
-{
-	// 스태미너가 부족거나 이미 구르는 중이라면 무시
-	if (StatComponent->CurrentStamina < DodgeStaminaCost || GetState() == ECharacterState::Rolling) return;
-
-	if (GetState() == ECharacterState::Attacking)
-	{
-		CombatComponent->bDodgeQueued = true;
-		CombatComponent->bComboQueued = false;
-		CombatComponent->ComboCount = 0;
-		
-		return;
-	}
-
-	// Idle일 때 즉시 구르기 실행
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (AnimInstance && RollMontage)
-	{
-		//스태미너 소모 함수 호출
-		StatComponent->ConsumeStamina(DodgeStaminaCost);
-		SetState(ECharacterState::Rolling);
-
-
-		// 구르기 시작할 때, 캐릭터가 이동 방향을 바라보도록 강제로 설정
-		GetCharacterMovement()->bOrientRotationToMovement = false;
-		GetCharacterMovement()->bUseControllerDesiredRotation = false;
-		bUseControllerRotationYaw = false;
-
-
-		// 현재 캐릭터가 이동 중이던 방향(속도)을 가져옵니다. (WASD를 누르고 있으면 그 방향이 됨)
-		FVector DodgeDir = GetVelocity().GetSafeNormal();
-
-
-		//만약 제자리에 서서 구르기만 눌렀다면?
-		if (DodgeDir.IsNearlyZero() && !LastMoveInput.IsNearlyZero())
-		{
-			if (Controller != nullptr)
-			{
-				const FRotator Rotation = Controller->GetControlRotation();
-				const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-				const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-				const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-				DodgeDir = (ForwardDirection * LastMoveInput.Y + RightDirection * LastMoveInput.X).GetSafeNormal();
-			}
-		}
-		else if (DodgeDir.IsNearlyZero() && LastMoveInput.IsNearlyZero())
-		{
-			DodgeDir = GetActorForwardVector();
-		}
-
-		// 구를 방향으로 회전값 계산
-		FRotator DodgeRotation = DodgeDir.Rotation();
-		DodgeRotation.Pitch = 0.0f; // 바닥으로 처박히는 것 방지
-		DodgeRotation.Roll = 0.0f;
-
-		// 캐릭터 몸통을 즉시 강제로 돌려버림!
-		SetActorRotation(DodgeRotation, ETeleportType::TeleportPhysics);
-
-		// 몽타주 재생
-		AnimInstance->Montage_Play(RollMontage);
-
-		// --- 구르기 종료 감지 예약 ---
-		FOnMontageEnded RollEndDelegate;
-		RollEndDelegate.BindUObject(this, &AEldenCharacter::OnRollMontageEnded);
-		AnimInstance->Montage_SetEndDelegate(RollEndDelegate, RollMontage);
-	}
-}
-
-// 구르기가 끝나면 호출되는 함수
-void AEldenCharacter::OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	SetState(ECharacterState::Idle);
-
-	if (LockOnComponent->HasTarget())
-	{
-		// 락온 중이었다면 다시 적을 노려보게 복구
-		GetCharacterMovement()->bUseControllerDesiredRotation = true;
-		GetCharacterMovement()->bOrientRotationToMovement = false;
-	}
-	else
-	{
-		// 평소 모드 복구
-		GetCharacterMovement()->bUseControllerDesiredRotation = false;
-		GetCharacterMovement()->bOrientRotationToMovement = true;
-	}
-}
 
 void AEldenCharacter::OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
@@ -623,49 +516,10 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 }
 
 
-void AEldenCharacter::StartSprint()
-{
-	if (GetState() == ECharacterState::Drinking) return;
-
-	if (StatComponent->CurrentStamina > 0.0f)
-	{
-		CombatComponent->bIsSprinting = true;
-		GetCharacterMovement()->MaxWalkSpeed = 800.0f;
-	}
-}
-
-void AEldenCharacter::StopSprint()
-{
-	CombatComponent->bIsSprinting = false;
-	GetCharacterMovement()->MaxWalkSpeed = 500.0f;
-}
-
-
-void AEldenCharacter::StartAttackLunge(float Speed)
-{
-	// Lunging 갱신, CurrentLungeSpeed를 함수의 매개변수로 대입
-	CombatComponent->bIsLunging = true;
-	CombatComponent->CurrentLungeSpeed = Speed;
-
-	// 돌진이 끝난 뒤, 원래 걷기 속도로 복원해야 하므로 속도를 덮어쓰기 전에 기존 값을 저장해야 함
-	CombatComponent->SavedWalkSpeedBeforeLunge = GetCharacterMovement()->MaxWalkSpeed;
-	// 저장한 후에 스피드 값 갱신
-	GetCharacterMovement()->MaxWalkSpeed = Speed;
-}
-
-void AEldenCharacter::StopAttackLunge()
-{
-	CombatComponent->bIsLunging = false;
-
-	// 몽타주 재생 시 돌진이 끝난 뒤 원래 걷기 속도로 복구
-	GetCharacterMovement()->MaxWalkSpeed = CombatComponent->SavedWalkSpeedBeforeLunge;
-}
-
 bool AEldenCharacter::GetIsLockedOn() const
 {
 	return LockOnComponent && LockOnComponent->HasTarget();
 }
-
 
 
 void AEldenCharacter::SetInvincible(bool bState)
@@ -702,7 +556,6 @@ void AEldenCharacter::DebugLevelUpStrength()
 }
 #endif
 
-
 /*=============================================================================
  * 포션 로직 구현부
  *=============================================================================*/
@@ -718,8 +571,6 @@ void AEldenCharacter::SetDrinkingVisuals(bool bDrinking)
 	if (EquipmentComponent->GetEquippedWeapon() && EquipmentComponent->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
 	if (EquipmentComponent->GetEquippedShield()) EquipmentComponent->GetEquippedShield()->SetActorHiddenInGame(bDrinking);
 }
-
-
 
 void AEldenCharacter::RefreshEquipmentUI()
 {

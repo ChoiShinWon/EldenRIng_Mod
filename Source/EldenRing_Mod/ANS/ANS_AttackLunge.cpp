@@ -2,6 +2,7 @@
 
 #include "EldenRing_Mod/ANS/ANS_AttackLunge.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Component/EldenLocomotionComponent.h"
 
 void UANS_AttackLunge::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
@@ -13,7 +14,7 @@ void UANS_AttackLunge::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequen
 	if (!Player) return;
 
 	// 플레이어 함수에 에디터에서 지정한 LungeSpeed 값 전달
-	Player->StartAttackLunge(LungeSpeed);
+	Player->LocomotionComponent->StartAttackLunge(LungeSpeed);
 }
 
 
@@ -25,5 +26,5 @@ void UANS_AttackLunge::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequence
 	AEldenCharacter* Player = Cast<AEldenCharacter>(MeshComp->GetOwner());
 	if (!Player) return;
 
-	Player->StopAttackLunge();
+	Player->LocomotionComponent->StopAttackLunge();
 }

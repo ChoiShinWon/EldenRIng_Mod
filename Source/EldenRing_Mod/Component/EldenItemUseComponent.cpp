@@ -1,7 +1,7 @@
 ﻿#include "EldenRing_Mod/Component/EldenItemUseComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
-#include "EldenRing_Mod/Component/EldenCombatComponent.h"
+#include "EldenRing_Mod/Component/EldenLocomotionComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "Animation/AnimInstance.h"
 
@@ -84,7 +84,7 @@ void UEldenItemUseComponent::StartDrinkingPotion()
 
 	OwnerCharacter->SetState(ECharacterState::Drinking);
 
-	if (OwnerCharacter->CombatComponent->bIsSprinting) OwnerCharacter->StopSprint();
+	OwnerCharacter->LocomotionComponent->StopSprint();
 	OwnerCharacter->SetDrinkingVisuals(true);
 }
 
