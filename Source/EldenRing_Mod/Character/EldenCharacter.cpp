@@ -10,6 +10,7 @@
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "EldenRing_Mod/Component/EldenItemUseComponent.h"
 #include "EldenRing_Mod/Component/EldenLocomotionComponent.h"
+#include "EldenRing_Mod/EldenDamageEvent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h"
@@ -418,70 +419,24 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 	// 죽었다면 무시
 	if (GetState() == ECharacterState::Dead) return 0.0f;
 
-	// 회피 무적 프레임: 구르기 중 판정 타이밍이면 데미지 자체를 안 받고,
-	// 무적으로 씹었다는 신호만 세팅.
-	if (CombatComponent->bIsInvincible)
+	EDamageResult Result;
+	float FinalDamage = CombatComponent->ResolveIncomingDamage(DamageAmount, DamageCauser, Result);
+
+	// 결과를 공격자에게 돌려주기
+	if (DamageEvent.IsOfType(FEldenDamageEvent::ClassID))
 	{
-		CombatComponent->bDodgeInvincibleHit = true;
-		return 0.0f;
+		static_cast<const FEldenDamageEvent&>(DamageEvent).Result = Result;
 	}
 
-	// 패리 판정은 반드시 Super::TakeDamage보다 먼저 검사
-	// 여기서 성공하면 데미지를 아예 적용하지 않고 0으로 조기 반환
-	// 패리는 데미지를 0으로 줄이는게 아니라 데미지 계산 자체를 발생시키지 않는다는 설계
-	// 만약 이 블록이 Super::TakeDamage 뒤에 있다면, 이미 체력이 깎인 뒤에 뒤늦게 취소하는 꼴
-	// HP 변경 델리게이트가 그러면 불필요하게 한 번 더 발생하게 되는 부작용이 생길 수 있음
-	if (AEldenEnemy* Attacker = Cast<AEldenEnemy>(DamageCauser))
-	{
-		if (CombatComponent && CombatComponent->TryDeflect(Attacker->GetActorLocation(), Attacker))
-		{
-			CombatComponent->bParrySucceeded = true;
-			return 0.0f;
-		}
-	}
+	// 회피/패리면 데미지 처리 자체를 안한다
+	if (Result == EDamageResult::Parried || Result == EDamageResult::Dodged) return 0.0f;
 
-	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	CombatComponent->bShieldBlockedAttack = false;
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-
-	// 가드 상태이고 공격자가 있을 때만 각도 계산
-	if (GetState() == ECharacterState::Blocking && DamageCauser != nullptr)
-	{
-		// 적중 방향 계산 (적 -> 나)
-		FVector DamageDir = (DamageCauser->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-		// 캐릭터 정면 벡터와 내적 (180도 이내면 양수)
-		float DotToEnemy = FVector::DotProduct(GetActorForwardVector(), DamageDir);
-
-		// 내적의 값이 0보다 크므로
-		// 정면에서 날아온 공격만 방어 성공 (뒤통수 맞으면 가드 무효)
-		if (DotToEnemy > 0.0f)
-		{
-			// 방어 시 소모할 스태미나 양 (공격력의 50%로 설정)
-			float StaminaCost = DamageAmount * 0.5f;
-
-			if (StatComponent && StatComponent->CurrentStamina >= StaminaCost)
-			{
-				//  방어 성공: 스태미나만 깎이고 데미지는 0
-				StatComponent->ConsumeStamina(StaminaCost);
-				ActualDamage = 0.0f;
-				CombatComponent->bShieldBlockedAttack = true; // 무기에게 "방어 성공함" 신호를 보냄!
-
-				UE_LOG(LogTemp, Warning, TEXT("🛡 가드 성공! 데미지 0, 스태미나 소모: %f"), StaminaCost);
-			}
-			else if (StatComponent)
-			{
-				// 가드 붕괴(Guard Break): 스태미나가 0이 되며 가드가 강제로 풀림
-				StatComponent->CurrentStamina = 0.0f;
-				SetState(ECharacterState::Idle); // 가드 해제
-				if (EquipmentComponent->GetEquippedShield()) EquipmentComponent->GetEquippedShield()->DisableShieldBlock(); // 방패 박스도 끄기
-			}
-		}
-	}
-
-	// 계산된 데미지 적용 (방어에 성공했다면 ActualDamage가 0이므로 체력 안 깎임)
+	// 계산된 데미지 적용 (방어에 성공했다면 FinalDamage가 0이므로 체력 안 깎임)
 	if (StatComponent)
 	{
-		StatComponent->ApplyDamage(ActualDamage);
+		StatComponent->ApplyDamage(FinalDamage);
 		float LeftHealth = StatComponent->GetCurrentHealth();
 		UE_LOG(LogTemp, Warning, TEXT("데미지 적용됨! 남은 체력 : %f"), LeftHealth);
 
@@ -489,7 +444,7 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 		{
 			HandleDeath();
 		}
-		else if (ActualDamage > 0.0f)
+		else if (FinalDamage > 0.0f)
 		{
 			SetState(ECharacterState::Damaged);
 			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -512,7 +467,7 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 		}
 	}
 
-	return ActualDamage;
+	return FinalDamage;
 }
 
 

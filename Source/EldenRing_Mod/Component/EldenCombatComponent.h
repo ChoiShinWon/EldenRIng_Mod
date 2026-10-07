@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Animation/AnimMontage.h"
+#include "EldenRing_Mod/EldenDamageEvent.h"
 #include "EldenCombatComponent.generated.h"
 
 class AEldenEnemy;
@@ -22,21 +23,14 @@ protected:
 
 public:
 
+	float ResolveIncomingDamage(float Damage, AActor* DamageCauser, EDamageResult& OutResult);
+
 	// 캐릭터가 현재 무적 상태인지 확인하는 변수
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|State")
 	bool bIsInvincible = false;
 
 
 	bool bDodgeQueued = false;
-
-	bool bShieldBlockedAttack = false;
-
-	bool bParrySucceeded = false;
-
-	// 무적 상태에서 피격을 판정을 씹었는지 신호
-	bool bDodgeInvincibleHit = false;
-
-
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	class UAnimMontage* ParryMontage;
@@ -91,8 +85,6 @@ public:
 
 	void SetParryWindowActive(bool bActive) { bParryWindowActive = bActive; }
 
-	// 여기서 이 공격을 막을 수 있냐 질의
-	bool TryDeflect(const FVector& HitLocation, AEldenEnemy* Attacker);
 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void OnParryMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -100,6 +92,10 @@ public:
 private:
 
 	void ResetTimeDilation();
+
+	// 여기서 이 공격을 막을 수 있냐 질의
+	bool TryDeflect(const FVector& HitLocation, AEldenEnemy* Attacker);
+
 
 	// 소유주인 캐릭터의 애니메이션 인스턴스를 캐싱하기 위한 변수
 	UPROPERTY()

@@ -1,9 +1,8 @@
 ﻿#include "EldenRing_Mod/Component/EldenHitboxComponent.h"
-#include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
+#include "EldenRing_Mod/EldenDamageEvent.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
-#include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -74,50 +73,30 @@ void UEldenHitboxComponent::OnHitboxOverlap(UPrimitiveComponent* OverlapComponen
 	}
 
 	//  2. 즉시 데미지 전달 
-	UGameplayStatics::ApplyDamage(OtherActor, DamageAmount, GetOwner()->GetInstigatorController(), GetOwner(), UDamageType::StaticClass());
+	FEldenDamageEvent DamageEvent;
+	OtherActor->TakeDamage(DamageAmount, DamageEvent, GetOwner()->GetInstigatorController(), GetOwner());
 
 	if (AEldenEnemy* HitEnemy = Cast<AEldenEnemy>(OtherActor))
 	{
 		HitEnemy->TakePoiseDamage(PoiseDamage);
 	}
 
-	//  3. ApplyDamage -> TargetPlayer::TakeDamage가 이미 동기적으로 실행된 뒤이므로,
-	// 여기서는 방금 그 데미지 처리 중에 방어 이벤트가 발생했는지를 플래그로 물어봄
-	// 패리 성공 > 회피 무적 판정 > 가드 성공 순으로 검사
-	// 세 상태가 동시에 true일 수 있는 프레임에서
-	// 가장 강한 방어 판정이 우선해서 이펙트/사운드가 중복 재생되지 않게 하기 위함
-	// 패리/회피는 자체 이펙트를 별도로 재생하므로 여기선 조용히 return
-	// 가드만 여기서 직접 Impact 이펙트(깡 소리)를 재생.
-	if (AEldenCharacter* TargetPlayer = Cast<AEldenCharacter>(OtherActor))
+	switch (DamageEvent.Result)
 	{
-		if (TargetPlayer->CombatComponent->bParrySucceeded)
-		{
-			// 패리 성공후 false로 즉시 전환
-			TargetPlayer->CombatComponent->bParrySucceeded = false;
-			return;
-		}
+	case EDamageResult::Parried:
+	case EDamageResult::Dodged:
+		return;
 
-		if (TargetPlayer->CombatComponent->bDodgeInvincibleHit)
-		{
-			// 구르기 무적 이후 즉시 false로 전환
-			TargetPlayer->CombatComponent->bDodgeInvincibleHit = false;
-			return;
-		}
+	case EDamageResult::Blocked:
+		PlayImpactEffects(GuardVFX, GuardSound, SpawnLocation);
+		return;
 
-		if (TargetPlayer->CombatComponent->bShieldBlockedAttack)
-		{
-			// 가드 성공후 false로 즉시 전환
-			TargetPlayer->CombatComponent->bShieldBlockedAttack = false; // 신호 초기화
-
-			// 방어 성공 이펙트 및 깡! 소리 재생
-			PlayImpactEffects(GuardVFX, GuardSound, SpawnLocation);
-
-			return; //  피 튀기는 로직으로 넘어가지 않고 여기서 깔끔하게 종료
-		}
+	default:
+		break;
 	}
 
-	//  4. 위 방어 판정에 전부 걸리지 않았다면 일반 피격
 	PlayImpactEffects(HitVFX, HitSound, SpawnLocation);
+
 }
 
 void UEldenHitboxComponent::PlayImpactEffects(UParticleSystem* VFX, USoundBase* Sound, const FVector& Location) const

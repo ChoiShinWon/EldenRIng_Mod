@@ -18,6 +18,7 @@
 #include "DrawDebugHelpers.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/Engine.h"
+#include "EldenRing_Mod/EldenDamageEvent.h"
 
 
 UEldenCombatComponent::UEldenCombatComponent()
@@ -39,6 +40,62 @@ void UEldenCombatComponent::BeginPlay()
         CachedAnimInstance = PlayerCharacter->GetMesh()->GetAnimInstance();
     }
 	
+}
+
+float UEldenCombatComponent::ResolveIncomingDamage(float Damage, AActor* DamageCauser, EDamageResult& OutResult)
+{
+	OutResult = EDamageResult::Hit;
+	if (!PlayerCharacter) return Damage;
+
+	// 회피 무적
+	if (bIsInvincible)
+	{
+		OutResult = EDamageResult::Dodged;
+		return 0.0f;
+	}
+
+	// 패리
+	if (AEldenEnemy* Attacker = Cast<AEldenEnemy>(DamageCauser))
+	{
+		if (TryDeflect(Attacker->GetActorLocation(), Attacker))
+		{
+			OutResult = EDamageResult::Parried;
+			return 0.0f;
+		}
+	}
+
+	// 가드
+	if (PlayerCharacter->GetState() == ECharacterState::Blocking && DamageCauser != nullptr)
+	{
+		// 정면에서 온 공격만 막는다
+		FVector DamageDir = (DamageCauser->GetActorLocation() - PlayerCharacter->GetActorLocation()).GetSafeNormal();
+		float DotToEnemy = FVector::DotProduct(PlayerCharacter->GetActorForwardVector(), DamageDir);
+
+		if (DotToEnemy > 0.0f)
+		{
+			UEldenStatComponent* Stat = PlayerCharacter->StatComponent;
+			float StaminaCost = Damage * 0.5f;
+
+			if (Stat->GetCurrentStamina() >= StaminaCost)
+			{
+				// 가드 성공
+				Stat->ConsumeStamina(StaminaCost);
+				OutResult = EDamageResult::Blocked;
+				return 0.0f;
+			}
+			else
+			{
+				// 스태미너 부족하므로 가드 붕괴
+				Stat->CurrentStamina = 0.0f;
+				PlayerCharacter->SetState(ECharacterState::Idle);
+				if (AEldenShield* Shield = PlayerCharacter->EquipmentComponent->GetEquippedShield())
+				{
+					Shield->DisableShieldBlock();
+				}
+			}
+		}
+	}
+	return Damage;
 }
 
 
