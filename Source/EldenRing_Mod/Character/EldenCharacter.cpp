@@ -8,6 +8,7 @@
 #include "EldenRing_Mod/Component/LockOnComponent.h"
 #include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
+#include "EldenRing_Mod/Component/EldenItemUseComponent.h"
 #include "EldenRing_Mod/Interface/Interactable.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -72,6 +73,8 @@ AEldenCharacter::AEldenCharacter()
 	EquipmentComponent = CreateDefaultSubobject<UEldenEquipmentComponent>(TEXT("EquipmentComponent"));
 
 	InteractionComponent = CreateDefaultSubobject<UEldenInteractionComponent>(TEXT("InteractionComponent"));
+
+	ItemUseComponent = CreateDefaultSubobject<UEldenItemUseComponent>(TEXT("ItemUseComponent"));
 }
 
 void AEldenCharacter::SetState(ECharacterState NewState)
@@ -179,12 +182,12 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		}
 		if (AttackAction)
 		{
-			EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AEldenCharacter::Attack);
+			EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, CombatComponent, &UEldenCombatComponent::ExecuteAttack);
 		}
 		if (BlockAction)
 		{
-			EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Started, this, &AEldenCharacter::StartBlock);
-			EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Completed, this, &AEldenCharacter::StopBlock);
+			EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Started, CombatComponent, &UEldenCombatComponent::ExecuteBlock);
+			EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Completed, CombatComponent, &UEldenCombatComponent::EndBlock);
 		}
 		if (FKeyAction)
 		{
@@ -207,17 +210,17 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 		if (LockOnAction)
 		{
-			EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Started, this, &AEldenCharacter::ToggleLockOn);
+			EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Started, LockOnComponent, &ULockOnComponent::ToggleLockOn);
 		}
 
 		if (InteractAction)
 		{
-			EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AEldenCharacter::InteractButtonPressed);
+			EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, InteractionComponent, &UEldenInteractionComponent::ExecuteInteract);
 		}
 
 		if (SwitchItemAction)
 		{
-			EnhancedInputComponent->BindAction(SwitchItemAction, ETriggerEvent::Started, this, &AEldenCharacter::SwitchItem);
+			EnhancedInputComponent->BindAction(SwitchItemAction, ETriggerEvent::Started, ItemUseComponent, &UEldenItemUseComponent::SwitchItem);
 		}
 
 		if (SwitchWeaponAction)
@@ -227,7 +230,7 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 		if (UseItemAction)
 		{
-			EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Started, this, &AEldenCharacter::UseItem);
+			EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Started, ItemUseComponent, &UEldenItemUseComponent::UseItem);
 		}
 
 		if (ToggleMenuAction)
@@ -250,22 +253,6 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 }
 
-void AEldenCharacter::StartBlock()
-{
-
-	if (CombatComponent)
-	{
-		CombatComponent->ExecuteBlock();
-	}
-}
-
-void AEldenCharacter::StopBlock()
-{
-	if (CombatComponent)
-	{
-		CombatComponent->EndBlock(); // 가드 해제 함수
-	}
-}
 
 void AEldenCharacter::StartParryOrSkill()
 {
@@ -321,19 +308,7 @@ void AEldenCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void AEldenCharacter::InteractButtonPressed()
-{
-	InteractionComponent->ExecuteInteract();
-}
 
-void AEldenCharacter::ToggleLockOn()
-{
-	// 캐릭터는 입력을 받아서 컴포넌트에게 '전달(위임)'만 합니다.
-	if (LockOnComponent)
-	{
-		LockOnComponent->ToggleLockOn();
-	}
-}
 
 void AEldenCharacter::OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass)
 {
@@ -665,19 +640,6 @@ void AEldenCharacter::StopSprint()
 	GetCharacterMovement()->MaxWalkSpeed = 500.0f;
 }
 
-void AEldenCharacter::Attack()
-{
-
-	if (GetState() == ECharacterState::Rolling || GetState() == ECharacterState::Dead) return;
-
-
-	if (CombatComponent)
-	{
-
-		CombatComponent->ExecuteAttack();
-	}
-
-}
 
 void AEldenCharacter::StartAttackLunge(float Speed)
 {
@@ -745,70 +707,6 @@ void AEldenCharacter::DebugLevelUpStrength()
  * 포션 로직 구현부
  *=============================================================================*/
 
-void AEldenCharacter::StartDrinkingPotion()
-{
-	if (!InventoryComponent->CanUseItem()) return;
-
-
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	UAnimMontage* UseMontage = InventoryComponent->GetCurrentUseMontage();
-	if (!AnimInstance || !UseMontage) return;
-
-	AnimInstance->Montage_Play(UseMontage);
-	FOnMontageEnded PotionEndDelegate;
-	PotionEndDelegate.BindUObject(this, &AEldenCharacter::OnPotionMontageEnded);
-	AnimInstance->Montage_SetEndDelegate(PotionEndDelegate, UseMontage);
-
-	SetState(ECharacterState::Drinking);
-
-	if (CombatComponent->bIsSprinting) StopSprint();
-	SetDrinkingVisuals(true);
-}
-
-void AEldenCharacter::UseItem()
-{
-	// 1. 공통 예외 처리 (어떤 아이템이든 구르거나 죽어있을 땐 못 씀)
-	if (!StatComponent || !InventoryComponent) return;
-	if (GetState() != ECharacterState::Idle) return;
-
-	// 2. 인벤토리에게 현재 장착된 아이템이 뭔지 물어봄
-	EConsumableType CurrentItem = InventoryComponent->GetCurrentSelectedItem();
-
-	// 3. 아이템 종류에 따라 다른 행동(로직) 실행
-	switch (CurrentItem)
-	{
-	case EConsumableType::HP_Potion:
-	{
-		//
-		if (StatComponent->IsHealthFull()) return;
-		StartDrinkingPotion();
-
-		break;
-	}
-
-	case EConsumableType::Mana_Potion:
-	{
-		if (StatComponent->IsManaFull()) return;
-		StartDrinkingPotion();
-		break;
-	}
-
-	case EConsumableType::None:
-	default:
-		// 아이템이 없을 때는 아무것도 안 함 (혹은 빈 슬롯을 만지는 애니메이션 재생)
-		UE_LOG(LogTemp, Warning, TEXT("빈 슬롯입니다!"));
-		break;
-	}
-}
-
-void AEldenCharacter::SwitchItem()
-{
-	if (!InventoryComponent) return;
-	if (GetState() == ECharacterState::Drinking) return;
-	InventoryComponent->SelectNextItem();
-}
-
-
 void AEldenCharacter::SetDrinkingVisuals(bool bDrinking)
 {
 	if (bDrinking && DrinkLight && InventoryComponent)
@@ -819,32 +717,6 @@ void AEldenCharacter::SetDrinkingVisuals(bool bDrinking)
 	if (DrinkLight) DrinkLight->SetVisibility(bDrinking);
 	if (EquipmentComponent->GetEquippedWeapon() && EquipmentComponent->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
 	if (EquipmentComponent->GetEquippedShield()) EquipmentComponent->GetEquippedShield()->SetActorHiddenInGame(bDrinking);
-}
-
-void AEldenCharacter::ApplyItemEffect()
-{
-	if (!InventoryComponent || !StatComponent) return;
-
-	// 노티파이 실행 시점에도 현재 아이템이 뭔지 확인하고 해당 효과를 적용
-	EConsumableType CurrentItem = InventoryComponent->GetCurrentSelectedItem();
-
-	switch (CurrentItem)
-	{
-	case EConsumableType::HP_Potion:
-	{
-		InventoryComponent->ConsumeItem();
-		float RestoreAmount = InventoryComponent->GetPotionRestoreAmount();
-		StatComponent->Heal(RestoreAmount);
-		break;
-	}
-	case EConsumableType::Mana_Potion:
-	{
-		InventoryComponent->ConsumeItem();
-		float RestoreAmount = InventoryComponent->GetPotionRestoreAmount();
-		StatComponent->RestoreMana(RestoreAmount);
-		break;
-	}
-	}
 }
 
 
@@ -874,13 +746,3 @@ void AEldenCharacter::RefreshEquipmentUI()
 		InventoryComponent ? InventoryComponent->GetCurrentItemIcon() : nullptr, CurrentSkillName);
 }
 
-
-
-void AEldenCharacter::OnPotionMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	SetDrinkingVisuals(false);
-	if (GetState() == ECharacterState::Drinking)
-	{
-		SetState(ECharacterState::Idle);
-	}
-}

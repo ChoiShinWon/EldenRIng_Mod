@@ -2,6 +2,7 @@
 
 
 #include "EldenRing_Mod/AN/AN_ApplyItemEffect.h"
+#include "EldenRing_Mod/Component/EldenItemUseComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 
 void UAN_ApplyItemEffect::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
@@ -12,7 +13,7 @@ void UAN_ApplyItemEffect::Notify(USkeletalMeshComponent* MeshComp, UAnimSequence
 
 	if (AEldenCharacter* Player = Cast<AEldenCharacter>(MeshComp->GetOwner()))
 	{
-		Player->ApplyItemEffect();
+		Player->ItemUseComponent->ApplyItemEffect();
 	}
 
 	

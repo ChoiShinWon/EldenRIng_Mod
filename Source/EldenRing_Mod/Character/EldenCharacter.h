@@ -122,9 +122,6 @@ protected:
 	UInputAction* ToggleMenuAction;
 
 	
-
-	void StartBlock();
-	void StopBlock(); // 가드를 뗄 때 처리용
 	void StartParryOrSkill(); // 패리, 스킬 시도용
 	
 
@@ -134,15 +131,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputAction* InteractAction;
 
-	void InteractButtonPressed();
 	
 	// 키보드/마우스에서 신호가 들어왔을 때 실행될 함수들
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	
-	// Shift 키를 누를때와 뗄 때 실행될 함수
-	void StartSprint();
-	void StopSprint();
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* RollMontage;
@@ -159,8 +152,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* HitReactMontage;
 	
-	// 마우스 클릭시 실행할 함수
-	void Attack();
 	
 	UFUNCTION()
 	void OnRollMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -194,18 +185,7 @@ protected:
 	/*=============================================================================
 	 * 아이템 사용 (Item Usage)
 	 *=============================================================================*/
-	
-	// 키보드를 눌렀을 때 실행할 함수
-	void UseItem();
 
-	void SwitchItem();
-
-	
-
-	void SetDrinkingVisuals(bool bDrinking);
-
-
-	void OnPotionMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 public:
 	AEldenCharacter();
 
@@ -240,6 +220,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UEldenInteractionComponent* InteractionComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UEldenItemUseComponent* ItemUseComponent;
+
+
 	void Revive(const FTransform&);
 		
 	void Dodge();
@@ -253,11 +237,15 @@ public:
 	void StartAttackLunge(float Speed);
 	void StopAttackLunge();
 
+	// Shift 키를 누를때와 뗄 때 실행될 함수
+	void StartSprint();
+	void StopSprint();
+
 
 	bool GetIsLockedOn() const;
 	// 기본 데미지 처리 함수 오버라이드
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-	void ToggleLockOn();
+
 
 	// 은총에서 레벨업 UI를 여는 함수
 	void OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass);
@@ -277,9 +265,8 @@ public:
 	void DebugLevelUpStrength();
 #endif
 
-	// 노티파이에서 호출할 진짜 회복 함수
-	UFUNCTION(BlueprintCallable, Category = "Item")
-	void ApplyItemEffect();
+	void SetDrinkingVisuals(bool bDrinking);
+
 
 	FORCEINLINE class UEldenHUDWidget* GetCurrentHUD() const { return CurrentHUD; }
 
@@ -290,8 +277,5 @@ public:
 	// HUD 장비 아이콘 갱신 헬퍼
 	void RefreshEquipmentUI();
 
-private:
-
-	void StartDrinkingPotion();
 
 };
