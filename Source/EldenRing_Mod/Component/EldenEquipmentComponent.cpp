@@ -1,6 +1,5 @@
 ﻿#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
-#include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Item/EldenItemDefinition.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
@@ -97,7 +96,7 @@ bool UEldenEquipmentComponent::UnequipWeapon(AEldenWeapon* Weapon)
 		}
 
 		// 쥐고 있는 장비가 바뀌었으니 HUD 갱신
-		NotifyEquipmentChanged();
+		OnEquipmentChanged.Broadcast();
 	}
 
 	// 해제된 무기가 배열에서 앞쪽에 있었다면 뒤 원소들 인덱스가 한 칸씩 당겨지므로
@@ -152,7 +151,8 @@ bool UEldenEquipmentComponent::UnequipShield(AEldenShield* Shield)
 	{
 		EquippedShield = SpawnedShields[0];
 		EquippedShield->SetActorHiddenInGame(false);
-		NotifyEquipmentChanged();
+		OnEquipmentChanged.Broadcast();
+
 	}
 	// 해제된 방패가 배열에서 앞쪽에 있었다면 뒤 원소들 인덱스가 한 칸씩 당겨지므로
 	// 활성 방패가 아닌 걸 해제한 경우에도 CurrentShieldIndex가 어긋날 수 있음 -> 매번 재동기화
@@ -225,7 +225,8 @@ void UEldenEquipmentComponent::SwitchWeapon()
 			EquippedShield->SetActorHiddenInGame(false);
 		}
 	}
-	NotifyEquipmentChanged();
+	OnEquipmentChanged.Broadcast();
+
 }
 
 void UEldenEquipmentComponent::SwitchShield()
@@ -252,7 +253,8 @@ void UEldenEquipmentComponent::SwitchShield()
 		EquippedShield->SetActorHiddenInGame(false);
 	}
 
-	NotifyEquipmentChanged();
+	OnEquipmentChanged.Broadcast();
+
 }
 
 void UEldenEquipmentComponent::SetEquippedItemsHidden(bool bInHidden)
@@ -278,9 +280,3 @@ void UEldenEquipmentComponent::SetEquippedItemsHidden(bool bInHidden)
 	}
 }
 
-void UEldenEquipmentComponent::NotifyEquipmentChanged()
-{
-	AEldenPlayerController* PC = PlayerCharacter->GetEldenController();
-	if (!PC) return;
-	PC->RefreshEquipmentUI();
-}

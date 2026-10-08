@@ -8,6 +8,8 @@ class AEldenWeapon;
 class AEldenShield;
 class AEldenCharacter;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquipmentChangedDelegate);
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ELDENRING_MOD_API UEldenEquipmentComponent : public UActorComponent
 {
@@ -53,9 +55,13 @@ protected:
 	class AEldenShield* EquippedShield;
 
 public:
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnEquipmentChangedDelegate OnEquipmentChanged;
+
 	// 인벤토리의 아이템 데이터를 뽑아 무기(방패) 액터를 스폰해 로테이션에 추가
 	bool EquipWeapon(class UEldenItemDefinition* Item);
 	bool EquipShield(class UEldenItemDefinition* Item);
+
 
 	// 스폰된 무기(방패) 액터를 해제해서 인벤토리로 되돌림
 	bool UnequipWeapon(class AEldenWeapon* Weapon);
@@ -85,5 +91,4 @@ private:
 	UPROPERTY()
 	class AEldenCharacter* PlayerCharacter;
 
-	void NotifyEquipmentChanged();
 };

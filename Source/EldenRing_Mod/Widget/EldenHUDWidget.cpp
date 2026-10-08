@@ -2,9 +2,12 @@
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
+#include "EldenRing_Mod/Weapon/EldenWeapon.h"
+#include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h" 
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "EldenRing_Mod/StatUtils.h"
 
@@ -36,6 +39,13 @@ void UEldenHUDWidget::NativeConstruct()
         OnPotionCountUpdated(PlayerRef->InventoryComponent->GetCurrentItemCount(), PlayerRef->InventoryComponent->GetMaxItemCount());
     }
 
+	if (PlayerRef->EquipmentComponent)
+	{
+		PlayerRef->EquipmentComponent->OnEquipmentChanged.AddDynamic(this, &UEldenHUDWidget::OnEquipmentChanged);
+		OnEquipmentChanged();
+	}
+
+
 }
 
 void UEldenHUDWidget::NativeDestruct()
@@ -54,6 +64,11 @@ void UEldenHUDWidget::NativeDestruct()
         PlayerRef->InventoryComponent->OnPotionCountChanged.RemoveDynamic(this, &UEldenHUDWidget::OnPotionCountUpdated);
     
     }
+
+	if (PlayerRef && PlayerRef->EquipmentComponent)
+	{
+		PlayerRef->EquipmentComponent->OnEquipmentChanged.RemoveDynamic(this, &UEldenHUDWidget::OnEquipmentChanged);
+	}
     Super::NativeDestruct();
 }
 
@@ -107,6 +122,34 @@ void UEldenHUDWidget::OnPotionCountUpdated(int32 Current, int32 Max)
     }
 }
 
+void UEldenHUDWidget::OnEquipmentChanged()
+{
+	if (!PlayerRef) return;
+
+	AEldenWeapon* Weapon = PlayerRef->EquipmentComponent->GetEquippedWeapon();
+	AEldenShield* Shield = PlayerRef->EquipmentComponent->GetEquippedShield();
+
+	UTexture2D* WeaponTexture = nullptr;
+	UTexture2D* ShieldTexture = nullptr;
+	FString CurrentSkillName = TEXT("");
+
+	if (Weapon)
+	{
+		WeaponTexture = Weapon->GetIcon();
+		CurrentSkillName = Weapon->GetSkillName();
+	}
+	// 방패를 장착하고 있는가가 아니라, 지금 화면에 방패가 보이는가를 기준으로 UI 갱신
+	// EquippedShield 포인터 자체는 두손 무기 장착 중에도 계속 살아있음
+	// SetActorHiddenInGame만 했지 슬롯에서 빼거나 nullptr로 비운게 아니기 때문
+	// 포인터 유무만 따지면 두손 무기 장착 중에도 방패 UI가 보이기 때문에 IsHidden() 체크
+	if (Shield && !Shield->IsHidden())
+	{
+		ShieldTexture = Shield->GetIcon();
+		CurrentSkillName = Shield->GetSkillName();
+	}
+	UpdateEquipmentUI(WeaponTexture, ShieldTexture, CurrentSkillName);
+}
+
 
 void UEldenHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
@@ -136,7 +179,7 @@ void UEldenHUDWidget::TickGhostBar(UProgressBar* GhostBarWidget, float& GhostPer
 }
 
 
-void UEldenHUDWidget::UpdateEquipmentUI(UTexture2D* RTexture, UTexture2D* LTexture, UTexture2D* ItemTexture, const FString& SkillName)
+void UEldenHUDWidget::UpdateEquipmentUI(UTexture2D* RTexture, UTexture2D* LTexture, const FString& SkillName)
 {
     if (RightIcon)
     {
@@ -164,18 +207,7 @@ void UEldenHUDWidget::UpdateEquipmentUI(UTexture2D* RTexture, UTexture2D* LTextu
         }
     }
 
-    if (ItemIcon)
-    {
-        if (ItemTexture)
-        {
-            ItemIcon->SetBrushFromTexture(ItemTexture);
-            ItemIcon->SetVisibility(ESlateVisibility::Visible);
-        }
-        else
-        {
-            ItemIcon->SetVisibility(ESlateVisibility::Hidden);
-        }
-    }
+  
 
     if (MagicIcon)
     {

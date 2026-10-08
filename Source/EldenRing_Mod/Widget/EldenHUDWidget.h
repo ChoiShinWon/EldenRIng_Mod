@@ -15,7 +15,6 @@ class ELDENRING_MOD_API UEldenHUDWidget : public UUserWidget
 {
 	GENERATED_BODY()
 public:
-	void UpdateEquipmentUI(UTexture2D* RTexture, UTexture2D* LTexture, UTexture2D* ItemTexture, const FString& SkillName);
 
 	void ShowInteractPrompt(const FText& PromptText);
 	void HideInteractPrompt();
@@ -90,6 +89,9 @@ protected:
 	UFUNCTION()
 	void OnPotionCountUpdated(int32 Current, int32 Max);
 
+	UFUNCTION()
+	void OnEquipmentChanged();
+
 
 	// 보간용 변수
 	float GhostStaminaPercent = 1.0f;
@@ -107,6 +109,9 @@ private:
 	float TargetHPPercent = 1.0f;
 	float TargetStaminaPercent = 1.0f;
 	float TargetManaPercent = 1.0f;
+
+	void UpdateEquipmentUI(UTexture2D* RTexture, UTexture2D* LTexture, const FString& SkillName);
+
 
 	void UpdateStatBar(class UProgressBar* Bar, float& OutTargetPercent, float CurrentValue, float MaxValue);
 
