@@ -18,7 +18,6 @@
 #include "InputActionValue.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
-#include "EldenRing_Mod/Widget/EldenMenuWidget.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/PointLightComponent.h"
@@ -220,7 +219,11 @@ void AEldenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 		if (ToggleMenuAction)
 		{
-			EnhancedInputComponent->BindAction(ToggleMenuAction, ETriggerEvent::Started, this, &AEldenCharacter::ToggleMenu);
+			if (AEldenPlayerController* PC = GetEldenController())
+			{
+				EnhancedInputComponent->BindAction(ToggleMenuAction, ETriggerEvent::Started, PC, &AEldenPlayerController::ToggleMenu);
+
+			}
 		}
 
 		if (SwitchShieldAction)
@@ -295,70 +298,9 @@ void AEldenCharacter::Look(const FInputActionValue& Value)
 
 
 
-void AEldenCharacter::OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass)
-{
-	if (WidgetClass)
-	{
-		UUserWidget* LevelUpWidget = CreateWidget<UUserWidget>(GetWorld(), WidgetClass);
-		if (LevelUpWidget)
-		{
-			LevelUpWidget->AddToViewport();
 
-			if (APlayerController* PC = Cast < APlayerController>(GetController()))
-			{
-				PC->bShowMouseCursor = true;
-				FInputModeUIOnly InputMode;
-				InputMode.SetWidgetToFocus(LevelUpWidget->TakeWidget());
-				PC->SetInputMode(InputMode);
-			}
-		}
 
-		GetCharacterMovement()->StopMovementImmediately();
-		SetState(ECharacterState::Interacting);
-	}
-}
 
-void AEldenCharacter::ToggleMenu()
-{
-	APlayerController* PC = Cast<APlayerController>(GetController());
-	// 메뉴창이 켜져있을 때
-	if (MenuWidget)
-	{
-		MenuWidget->RemoveFromParent();
-		MenuWidget = nullptr;
-
-		if (PC)
-		{
-			PC->bShowMouseCursor = false;
-			FInputModeGameOnly InputMode;
-			PC->SetInputMode(InputMode);
-		}
-
-		SetState(ECharacterState::Idle);
-		// 메뉴 창 닫을 때 게임 재개
-		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
-	}
-	else
-	{
-		UEldenMenuWidget* NewMenuWidget = CreateWidget<UEldenMenuWidget>(GetWorld(), MenuWidgetClass);
-		if (!NewMenuWidget) return;
-		NewMenuWidget->InitMenu(InventoryComponent, StatComponent, EquipmentComponent);
-		MenuWidget = NewMenuWidget;
-		MenuWidget->AddToViewport();
-		if (PC)
-		{
-			PC->bShowMouseCursor = true;
-			FInputModeGameAndUI InputMode;
-			InputMode.SetWidgetToFocus(NewMenuWidget->TakeWidget());
-			InputMode.SetHideCursorDuringCapture(false);
-			PC->SetInputMode(InputMode);
-		}
-		GetCharacterMovement()->StopMovementImmediately();
-		SetState(ECharacterState::Interacting);
-		// 메뉴 창 열 때 게임 정지
-		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.0001f);
-	}
-}
 
 
 void AEldenCharacter::Revive(const FTransform& SpawnTransform)

@@ -5,6 +5,7 @@
 #include "EldenPlayerController.generated.h"
 
 class UEldenHUDWidget;
+class UEldenMenuWidget;
 class UUserWidget;
 
 UCLASS()
@@ -25,10 +26,24 @@ public:
 
 	UEldenHUDWidget* GetCurrentHUD() const { return CurrentHUD; }
 
+	void ToggleMenu();
+	void OpenLevelUpMenu(TSubclassOf<UUserWidget> WidgetClass);
+
+	void ExitUIMode();
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UUserWidget> HUDWidgetClass;
 
 	UPROPERTY()
 	UEldenHUDWidget* CurrentHUD = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UUserWidget> MenuWidgetClass;
+
+	UPROPERTY()
+	UEldenMenuWidget* MenuWidget = nullptr;
+
+private:
+	void EnterUIMode(UUserWidget* FocusWidget, bool bAllowGameInput);
 };

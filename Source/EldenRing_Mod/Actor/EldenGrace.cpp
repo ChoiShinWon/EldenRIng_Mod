@@ -7,6 +7,7 @@
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
+#include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/EldenGameMode.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
@@ -99,9 +100,10 @@ FText AEldenGrace::GetInteractionPrompt() const
 
 void AEldenGrace::OnMenuDelayed()
 {
-	if (PendingPlayer.IsValid() && LevelUpWidgetClass)
+	if (PendingPlayer.IsValid())
 	{
-		PendingPlayer->OpenLevelUpMenu(LevelUpWidgetClass);
+		if(AEldenPlayerController* PC = PendingPlayer->GetEldenController())
+		PC->OpenLevelUpMenu(LevelUpWidgetClass);
 	}
 }
 

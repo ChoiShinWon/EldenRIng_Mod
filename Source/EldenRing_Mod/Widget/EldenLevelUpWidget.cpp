@@ -1,10 +1,9 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
+﻿
 #include "EldenRing_Mod/Widget/EldenLevelUpWidget.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
+#include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
@@ -175,12 +174,9 @@ void UEldenLevelUpWidget::OnConfirmClicked()
 
 		PlayerStatComponent->RecalculateDerivedStats();
 
-		if (APlayerController* PC = Cast<APlayerController>(PlayerCharacter->GetController()))
+		if (AEldenPlayerController* PC = PlayerCharacter->GetEldenController())
 		{
-			
-			FInputModeGameOnly InputMode;
-			PC->SetInputMode(InputMode);
-			PC->bShowMouseCursor = false;
+			PC->ExitUIMode();
 		}
 
 		PlayerCharacter->GraceRestComponent->ExitRest();
@@ -193,12 +189,9 @@ void UEldenLevelUpWidget::OnCancelClicked()
 {
 	if (PlayerCharacter)
 	{
-		if (APlayerController* PC = Cast<APlayerController>(PlayerCharacter->GetController()))
+		if (AEldenPlayerController* PC = PlayerCharacter->GetEldenController())
 		{
-
-			FInputModeGameOnly InputMode;
-			PC->SetInputMode(InputMode);
-			PC->bShowMouseCursor = false;
+			PC->ExitUIMode();
 		}
 
 		PlayerCharacter->GraceRestComponent->ExitRest();

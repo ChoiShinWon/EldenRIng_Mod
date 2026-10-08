@@ -63,12 +63,7 @@ protected:
 	 * UI
 	 *=============================================================================*/
 	
-	// 에디터에서 EldenMenuWidget BP 지정
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
-	TSubclassOf<class UUserWidget> MenuWidgetClass;
 
-	UPROPERTY()
-	class UEldenMenuWidget* MenuWidget;
 	
 	/*=============================================================================
 	 * Enhanced Input 
@@ -217,13 +212,6 @@ public:
 	bool GetIsLockedOn() const;
 	// 기본 데미지 처리 함수 오버라이드
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-
-
-	// 은총에서 레벨업 UI를 여는 함수
-	void OpenLevelUpMenu(TSubclassOf<class UUserWidget> WidgetClass);
-
-	// 인벤토리 메뉴 여는 함수
-	void ToggleMenu();
 
 	// 외부에서 무적 상태를 켜고 끌 수 있는 함수
 	void SetInvincible(bool bState);
