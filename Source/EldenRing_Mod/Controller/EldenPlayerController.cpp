@@ -7,6 +7,12 @@
 #include "Kismet/GameplayStatics.h"
 
 
+void AEldenPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+	ExitUIMode();
+}
+
 
 void AEldenPlayerController::InitHUD()
 {

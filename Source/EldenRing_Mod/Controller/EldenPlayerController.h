@@ -30,6 +30,8 @@ public:
 	void ExitUIMode();
 
 protected:
+	virtual void BeginPlay() override;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UUserWidget> HUDWidgetClass;
 
