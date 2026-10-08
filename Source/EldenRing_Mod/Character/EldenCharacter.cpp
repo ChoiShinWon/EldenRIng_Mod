@@ -18,12 +18,12 @@
 #include "InputActionValue.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
-#include "EldenRing_Mod/Widget/EldenHUDWidget.h"
 #include "EldenRing_Mod/Widget/EldenMenuWidget.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/PointLightComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "EldenRing_Mod/Controller/EldenPlayerController.h"
 
 
 AEldenCharacter::AEldenCharacter()
@@ -78,6 +78,11 @@ AEldenCharacter::AEldenCharacter()
 	LocomotionComponent = CreateDefaultSubobject<UEldenLocomotionComponent>(TEXT("LocomotionComponent"));
 }
 
+AEldenPlayerController* AEldenCharacter::GetEldenController() const
+{
+	return GetController<AEldenPlayerController>();
+}
+
 void AEldenCharacter::SetState(ECharacterState NewState)
 {
 	if (GetState() == ECharacterState::Dead) return;
@@ -89,7 +94,6 @@ ECharacterState AEldenCharacter::GetState() const
 	return CharacterState;
 }
 
-// Called when the game starts or when spawned
 void AEldenCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -115,14 +119,14 @@ void AEldenCharacter::BeginPlay()
 	}
 
 
-	if (HUDWidgetClass)
+	AEldenPlayerController* PC = GetEldenController();
+	if (PC)
 	{
-		CurrentHUD = CreateWidget<UEldenHUDWidget>(GetWorld(), HUDWidgetClass);
-		if (CurrentHUD)
-		{
-			CurrentHUD->AddToViewport();
-			RefreshEquipmentUI();
-		}
+		PC->InitHUD();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AEldenPlayerController가 아님"));
 	}
 
 	MeshDefaultRelLoc = GetMesh()->GetRelativeLocation();
@@ -380,7 +384,10 @@ void AEldenCharacter::Revive(const FTransform& SpawnTransform)
 	if (InventoryComponent) InventoryComponent->RefillPotions();
 
 	// 부활하면 플레이어 HUD 다시 Visible
-	if (CurrentHUD) CurrentHUD->SetVisibility(ESlateVisibility::Visible);
+	if (AEldenPlayerController* PC = GetEldenController())
+	{
+		PC->SetHUDVisible(true);
+	}
 }
 
 
@@ -406,9 +413,9 @@ void AEldenCharacter::HandleDeath()
 	GetMesh()->SetSimulatePhysics(true);
 
 	// 죽었을때 플레이어 HUD 숨김
-	if (CurrentHUD)
+	if (AEldenPlayerController* PC = GetEldenController())
 	{
-		CurrentHUD->SetVisibility(ESlateVisibility::Collapsed);
+		PC->SetHUDVisible(false);
 	}
 
 	OnPlayerDied.Broadcast(this);
@@ -482,14 +489,6 @@ void AEldenCharacter::SetInvincible(bool bState)
 	CombatComponent->bIsInvincible = bState;
 }
 
-void AEldenCharacter::SetHUDVisible(bool bVisible)
-{
-	if (CurrentHUD)
-	{
-		if (bVisible) CurrentHUD->SetVisibility(ESlateVisibility::Visible);
-		else CurrentHUD->SetVisibility(ESlateVisibility::Collapsed);
-	}
-}
 
 #if WITH_EDITOR
 void AEldenCharacter::DebugLevelUpVigor()
@@ -525,30 +524,5 @@ void AEldenCharacter::SetDrinkingVisuals(bool bDrinking)
 	if (DrinkLight) DrinkLight->SetVisibility(bDrinking);
 	if (EquipmentComponent->GetEquippedWeapon() && EquipmentComponent->GetEquippedWeapon()->GetWeaponStance() == EWeaponStance::TwoHanded) return;
 	if (EquipmentComponent->GetEquippedShield()) EquipmentComponent->GetEquippedShield()->SetActorHiddenInGame(bDrinking);
-}
-
-void AEldenCharacter::RefreshEquipmentUI()
-{
-	if (!CurrentHUD) return;
-	UTexture2D* WeaponTexture = nullptr;
-	UTexture2D* ShieldTexture = nullptr;
-	FString CurrentSkillName = TEXT("");
-
-	if (EquipmentComponent->GetEquippedWeapon())
-	{
-		WeaponTexture = EquipmentComponent->GetEquippedWeapon()->GetIcon();
-		CurrentSkillName = EquipmentComponent->GetEquippedWeapon()->GetSkillName();
-	}
-	// 방패를 장착하고 있는가가 아니라, 지금 화면에 방패가 보이는가를 기준으로 UI 갱신
-	// EquippedShield 포인터 자체는 두손 무기 장착 중에도 계속 살아있음
-	// SetActorHiddenInGame만 했지 슬롯에서 빼거나 nullptr로 비운게 아니기 때문
-	// 포인터 유무만 따지면 두손 무기 장착 중에도 방패 UI가 보이기 때문에 IsHidden() 체크
-	if (EquipmentComponent->GetEquippedShield() && !EquipmentComponent->GetEquippedShield()->IsHidden())
-	{
-		ShieldTexture = EquipmentComponent->GetEquippedShield()->GetIcon();
-		CurrentSkillName = EquipmentComponent->GetEquippedShield()->GetSkillName();
-	}
-	CurrentHUD->UpdateEquipmentUI(WeaponTexture, ShieldTexture,
-		InventoryComponent ? InventoryComponent->GetCurrentItemIcon() : nullptr, CurrentSkillName);
 }
 

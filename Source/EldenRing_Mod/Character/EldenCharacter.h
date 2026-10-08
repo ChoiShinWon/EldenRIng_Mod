@@ -7,6 +7,7 @@
 #include "EldenCharacter.generated.h"
 
 // 전방 선언
+class AEldenPlayerController;
 class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
@@ -61,13 +62,7 @@ protected:
 	/*=============================================================================
 	 * UI
 	 *=============================================================================*/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
-	TSubclassOf<class UUserWidget> HUDWidgetClass;
 	
-	// 생성된 위젯을 저장할 포인터
-	UPROPERTY()
-	class UEldenHUDWidget* CurrentHUD;
-
 	// 에디터에서 EldenMenuWidget BP 지정
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<class UUserWidget> MenuWidgetClass;
@@ -152,6 +147,7 @@ protected:
 	FRotator MeshDefaultRelRot;
 	FVector MeshDefaultRelScale;
 	FName    MeshDefaultProfile;
+
 	void HandleDeath();
 
 	/*=============================================================================
@@ -168,6 +164,8 @@ protected:
 
 public:
 	AEldenCharacter();
+
+	AEldenPlayerController* GetEldenController() const;
 
 	void SetState(ECharacterState NewState);
 	ECharacterState GetState() const;
@@ -230,8 +228,6 @@ public:
 	// 외부에서 무적 상태를 켜고 끌 수 있는 함수
 	void SetInvincible(bool bState);
 
-	// HUD 보이기/ 감싸기
-	void SetHUDVisible(bool bVisible);
 
 #if WITH_EDITOR
 	void DebugLevelUpVigor();
@@ -242,14 +238,10 @@ public:
 	void SetDrinkingVisuals(bool bDrinking);
 
 
-	FORCEINLINE class UEldenHUDWidget* GetCurrentHUD() const { return CurrentHUD; }
 
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnPlayerDiedDelegate OnPlayerDied;
-
-	// HUD 장비 아이콘 갱신 헬퍼
-	void RefreshEquipmentUI();
 
 
 };

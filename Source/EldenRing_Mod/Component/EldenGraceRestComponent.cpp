@@ -4,7 +4,7 @@
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
-
+#include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -27,7 +27,10 @@ void UEldenGraceRestComponent::BeginPlay()
 void UEldenGraceRestComponent::EnterRest()
 {
 	if (!OwnerCharacter) return;
-	OwnerCharacter->SetHUDVisible(false);
+	if (AEldenPlayerController* PC = OwnerCharacter->GetEldenController())
+	{
+		PC->SetHUDVisible(false);
+	}
 	OwnerCharacter->EquipmentComponent->SetEquippedItemsHidden(true);
 
 	OwnerCharacter->GetCharacterMovement()->StopMovementImmediately();
@@ -53,13 +56,13 @@ void UEldenGraceRestComponent::ExitRest()
 	StandUpEndDelegate.BindUObject(this, &UEldenGraceRestComponent::OnStandUpMontageEnded);
 	AnimInstance->Montage_SetEndDelegate(StandUpEndDelegate, StandUpMontage);
 
-	if (APlayerController* PC = Cast<APlayerController>(OwnerCharacter->GetController()))
+	if (AEldenPlayerController* PC = OwnerCharacter->GetEldenController())
 	{
 		PC->SetViewTargetWithBlend(OwnerCharacter, ExitCameraBlendTime);
+		PC->SetHUDVisible(true);
 	}
 	OwnerCharacter->InventoryComponent->RefillPotions();
 	OwnerCharacter->StatComponent->FullRestore();
-	OwnerCharacter->SetHUDVisible(true);
 	OwnerCharacter->EquipmentComponent->SetEquippedItemsHidden(false);
 
 }

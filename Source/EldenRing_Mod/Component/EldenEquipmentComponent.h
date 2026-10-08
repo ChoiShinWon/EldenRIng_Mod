@@ -77,11 +77,13 @@ public:
 	// 캐릭터가 장착 중인 무기, 방패를 반환하는 함수
 	FORCEINLINE class AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon; }
 	FORCEINLINE class AEldenShield* GetEquippedShield() const { return EquippedShield; }
-	// 장비창 UI가 로테이션 전체 (오른손/왼손 5칸) 그릴 때 사용
+	// 장비창 UI가  로테이션 전체 (오른손/왼손 5칸) 그릴 때 사용
 	FORCEINLINE const TArray<class AEldenWeapon*>& GetSpawnedWeapons() const { return SpawnedWeapons; }
 	FORCEINLINE const TArray<class AEldenShield*>& GetSpawnedShields() const { return SpawnedShields; }
 private:
 	// 플레이어 캐릭터 캐싱
 	UPROPERTY()
 	class AEldenCharacter* PlayerCharacter;
+
+	void NotifyEquipmentChanged();
 };

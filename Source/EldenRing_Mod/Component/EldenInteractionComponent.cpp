@@ -1,5 +1,6 @@
 ﻿#include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Widget/EldenHUDWidget.h"
 
 UEldenInteractionComponent::UEldenInteractionComponent()
@@ -22,14 +23,17 @@ void UEldenInteractionComponent::SetInteractableTarget(TScriptInterface<class II
 {
 	CurrentInteractableTarget = NewTarget;
 
-	if (!PlayerCharacter->GetCurrentHUD()) return;
+	AEldenPlayerController* PC = PlayerCharacter->GetEldenController();
+	if (!PC) return;
+	UEldenHUDWidget* CurrentHUD = PC->GetCurrentHUD();
+	if (!CurrentHUD) return;
 	if (NewTarget)
 	{
-		PlayerCharacter->GetCurrentHUD()->ShowInteractPrompt(NewTarget->GetInteractionPrompt());
+		CurrentHUD->ShowInteractPrompt(NewTarget->GetInteractionPrompt());
 	}
 	else
 	{
-		PlayerCharacter->GetCurrentHUD()->HideInteractPrompt();
+		CurrentHUD->HideInteractPrompt();
 	}
 }
 
