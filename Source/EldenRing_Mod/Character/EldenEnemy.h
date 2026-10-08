@@ -1,0 +1,230 @@
+﻿
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Character.h"
+#include "Perception/PawnSensingComponent.h"
+#include "EldenRing_Mod/Interface/ITargetable.h"
+#include "EldenEnemy.generated.h"
+
+class UWidgetComponent;
+class UEldenHitboxComponent;
+class UEldenPoiseComponent;
+class UParticleSystem;
+class UBehaviorTree;
+
+UENUM(BlueprintType)
+enum class EEnemyState : uint8
+{
+	Idle UMETA(DisplayName = "Idle"),
+	Roaring UMETA(DisplayName = "Roaring"),
+	Attacking UMETA(DisplayName = "Attacking"),
+	Stunned UMETA(DisplayName = "Stunned"),
+	Dead UMETA(DisplayName = "Dead")
+};
+
+USTRUCT(BlueprintType)
+struct FTurnMontageEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere)
+	float Angle = 0.0f;
+
+	UPROPERTY(EditAnywhere)
+	UAnimMontage* Montage = nullptr;
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyDied, int32, RuneReward, APawn*, Killer);
+
+UCLASS()
+class ELDENRING_MOD_API AEldenEnemy : public ACharacter, public IITargetable
+{
+	GENERATED_BODY()
+
+public:
+	AEldenEnemy();
+
+protected:
+
+	virtual void BeginPlay() override;
+
+	FVector HomeLocation = FVector::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	class AEnemyAIController* EnemyController;
+	
+
+	// 몬스터의 시야(눈) 컴포넌트
+	UPROPERTY(VisibleAnywhere, Category = "AI")
+	class UPawnSensingComponent* PawnSensingComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	UEldenPoiseComponent* PoiseComp;
+
+	// 플레이어를 감지했는지 여부
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	bool bHasAggro = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	bool bHasRoared = false;
+
+	// 몬스터의 최대 체력과 현재 체력
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float MaxHealth = 100.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float CurrentHealth = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float WanderSpeed = 450.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float CombatSpeed = 600.f;
+
+	void SetMoveSpeed(float NewSpeed);
+	
+	// 몬스터의 애니메이션 몽타주들
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	class UAnimMontage* HitReactMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	class UAnimMontage* DeathMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	class UAnimMontage* AttackMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	class UAnimMontage* SlamMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	float SlamAttackChance = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	class UAnimMontage* AggroMontage;
+
+	void StartAggro(APawn* Target);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	class UAnimMontage* StunMontage;
+
+	// StunMontage가 NULL일때를 대비해서 정해둔 수치
+	// StunMontage가 있다면 몽타주 길이만큼 스턴
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	float StunDuration = 1.5f;
+
+	FTimerHandle StunTimerHandle;
+
+	// 현재 타겟으로 삼고 있는 플레이어 폰
+	UPROPERTY()
+	class APawn* CombatTarget;
+	
+	// 몬스터가 죽었을 때 호출되는 함수
+	virtual void Die();
+
+	// 죽음 애니메이션이 끝났을 때 호출되는 함수 (델리게이트로 연결)
+	void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	void SetState(EEnemyState NewState);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+	EEnemyState EnemyState = EEnemyState::Idle;
+
+
+
+	// 타겟 마크 위젯 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	UWidgetComponent* TargetMarkWidget;
+
+	/*=============================================================================
+	 * 공격 타격 판정 (Hitbox)
+	 *=============================================================================*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	UEldenHitboxComponent* RightHandHitbox;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	UEldenHitboxComponent* LeftHandHitbox;
+
+	/*=============================================================================
+	 * 룬 보상 시스템
+	 *=============================================================================*/
+	// 몬스터 잡았을 때 플레이어에게 줄 룬의 양
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
+	int32 RuneReward = 100;
+
+
+public:
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnEnemyDied OnEnemyDied;
+
+	// Enemy마다 할당할 Behavior Tree
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
+	class UBehaviorTree* EnemyBT;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Turn")
+	TArray<FTurnMontageEntry> TurnLeftEntries;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Turn")
+	TArray<FTurnMontageEntry> TurnRightEntries;
+
+	FORCEINLINE EEnemyState GetState() const { return EnemyState; }
+
+
+	// AI가 몬스터에 빙의할 때 엔진이 자동으로 호출해 주는 함수
+	virtual void PossessedBy(AController* NewController) override;
+
+	// 시야에 플레이어가 들어왔을 때 호출되는 함수
+	UFUNCTION()
+	void OnSeePlayer(APawn* Pawn);	
+
+	// Damage를 입었을 때 호출되는 함수 (데미지 처리 로직 포함)
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+		class AController* EventInstigator, class AActor* DamageCauser) override;
+
+	// 현재 체력, 최대 체력, 죽음 여부등을 반환하는 함수들
+	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+	FORCEINLINE bool GetIsDead() const { return GetState() == EEnemyState::Dead; }
+	FORCEINLINE bool GetIsStunned() const { return GetState() == EEnemyState::Stunned; }
+	FORCEINLINE bool GetIsAttacking() const { return GetState() == EEnemyState::Attacking; }
+	FORCEINLINE bool GetIsRoaring() const { return GetState() == EEnemyState::Roaring; }
+	FORCEINLINE FVector GetHomeLocation() const { return HomeLocation; }
+
+	// 어그로 종료 함수
+	void ResetAggro();
+
+	// 원래 위치로 되돌리는 함수
+	void ResetToSpawn(const FTransform& SpawnTransform);
+
+	// 어그로 애니메이션이 끝났을 때 호출되는 함수 
+	UFUNCTION()
+	void OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	// 공격 애니메이션을 재생하는 함수
+	void PlayAttackMontage();
+
+	void PlaySpecificMontage(class UAnimMontage* MontageToPlay);
+
+	// 공격 애니메이션이 끝났을 때 호출되는 함수 (델리게이트	로 연결)
+	UFUNCTION()
+	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	UFUNCTION()
+	void OnPoiseBroken();
+
+	// 패링 성공 시 외부(플레이어)에서 호출할 함수
+	void ApplyStun();
+
+	void TakePoiseDamage(float Amount);
+
+	void EndStun();
+
+	virtual bool IsTargetable() const override;
+	virtual void ShowTargetMark(bool bShow) override;
+
+	void EnableRightAttackCollision();
+	void DisableRightAttackCollision();
+	void EnableLeftAttackCollision();
+	void DisableLeftAttackCollision();
+};

@@ -1,0 +1,76 @@
+﻿
+
+#include "EldenRing_Mod/Component/EldenGraceRestComponent.h"
+#include "EldenRing_Mod/Component/EldenStatComponent.h"
+#include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
+#include "EldenRing_Mod/Controller/EldenPlayerController.h"
+#include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
+UEldenGraceRestComponent::UEldenGraceRestComponent()
+{
+	PrimaryComponentTick.bCanEverTick = false;
+
+}
+
+
+void UEldenGraceRestComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	OwnerCharacter = Cast<AEldenCharacter>(GetOwner());
+
+	
+}
+
+void UEldenGraceRestComponent::EnterRest()
+{
+	if (!OwnerCharacter) return;
+	if (AEldenPlayerController* PC = OwnerCharacter->GetEldenController())
+	{
+		PC->SetHUDVisible(false);
+	}
+	OwnerCharacter->EquipmentComponent->SetEquippedItemsHidden(true);
+
+	OwnerCharacter->GetCharacterMovement()->StopMovementImmediately();
+	OwnerCharacter->SetState(ECharacterState::Interacting);
+
+	UAnimInstance* AnimInstance = OwnerCharacter->GetMesh()->GetAnimInstance();
+
+	if (!AnimInstance) return;
+	AnimInstance->Montage_Play(SitMontage);
+}
+
+void UEldenGraceRestComponent::ExitRest()
+{
+	if (!OwnerCharacter) return;
+	// 단순 게터는 헤더로 안빼도 됨
+	UAnimInstance* AnimInstance = OwnerCharacter->GetMesh()->GetAnimInstance();
+
+	if (!AnimInstance) return;
+	AnimInstance->Montage_Play(StandUpMontage);
+
+	// 델리게이트 등록
+	FOnMontageEnded StandUpEndDelegate;
+	StandUpEndDelegate.BindUObject(this, &UEldenGraceRestComponent::OnStandUpMontageEnded);
+	AnimInstance->Montage_SetEndDelegate(StandUpEndDelegate, StandUpMontage);
+
+	if (AEldenPlayerController* PC = OwnerCharacter->GetEldenController())
+	{
+		PC->SetViewTargetWithBlend(OwnerCharacter, ExitCameraBlendTime);
+		PC->SetHUDVisible(true);
+	}
+	OwnerCharacter->InventoryComponent->RefillPotions();
+	OwnerCharacter->StatComponent->FullRestore();
+	OwnerCharacter->EquipmentComponent->SetEquippedItemsHidden(false);
+
+}
+
+void UEldenGraceRestComponent::OnStandUpMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (!OwnerCharacter) return;
+	OwnerCharacter->SetState(ECharacterState::Idle);
+}
+
+

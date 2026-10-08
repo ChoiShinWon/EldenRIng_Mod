@@ -1,0 +1,478 @@
+﻿
+
+#include "EldenRing_Mod/Character/EldenEnemy.h"
+#include "EldenRing_Mod/Component/EldenHitboxComponent.h"
+#include "EldenRing_Mod/Component/EldenPoiseComponent.h"
+#include "EldenRing_Mod/AI/EnemyAIController.h"
+#include "EldenRing_Mod/StatUtils.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/WidgetComponent.h"
+#include "Components/BoxComponent.h"
+#include "AIController.h"
+#include "AITypes.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include <Kismet/GameplayStatics.h>
+
+
+AEldenEnemy::AEldenEnemy()
+{
+	PrimaryActorTick.bCanEverTick = false;
+
+	// 타겟 마크 위젯 컴포넌트 생성 및 설정
+	TargetMarkWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("TargetMarkWidget"));
+	TargetMarkWidget->SetupAttachment(GetMesh());
+	TargetMarkWidget->SetWidgetSpace(EWidgetSpace::Screen);
+	TargetMarkWidget->SetDrawAtDesiredSize(true);
+	TargetMarkWidget->SetVisibility(false);
+
+	// 시야 컴포넌트	생성 및 설정
+	PawnSensingComp = CreateDefaultSubobject<UPawnSensingComponent>(TEXT("PawnSensingComp"));
+	PawnSensingComp->SightRadius = 1500.0f; // 시야 반경 설정
+	PawnSensingComp->SetPeripheralVisionAngle(60.0f); // 시야각 설정
+	
+	// 공격 박스 컴포넌트 생성 및 설정
+	RightHandHitbox = CreateDefaultSubobject<UEldenHitboxComponent>(TEXT("RightHandHitbox"));
+	RightHandHitbox->SetupAttachment(GetMesh(), FName("RightWeaponSocket"));
+
+	LeftHandHitbox = CreateDefaultSubobject<UEldenHitboxComponent>(TEXT("LeftHandHitbox"));
+	LeftHandHitbox->SetupAttachment(GetMesh(), FName("LeftWeaponSocket"));
+
+	PoiseComp = CreateDefaultSubobject<UEldenPoiseComponent>(TEXT("PoiseComp"));
+}
+
+
+void AEldenEnemy::BeginPlay()
+{
+	Super::BeginPlay();
+
+	HomeLocation = GetActorLocation();
+	SetMoveSpeed(WanderSpeed);
+
+	// 게임이 시작되면 현재 체력을 최대 체력으로 꽉 채워줌.
+	CurrentHealth = MaxHealth;
+
+	// 시야 컴포넌트가 유효하다면, 플레이어를 감지했을 때 호출될 함수를 바인딩
+	if (PawnSensingComp)
+	{
+		PawnSensingComp->OnSeePawn.AddDynamic(this, &AEldenEnemy::OnSeePlayer);
+	}
+
+
+	if (PoiseComp)
+	{
+		PoiseComp->OnPoiseBroken.AddDynamic(this, &AEldenEnemy::OnPoiseBroken);
+	}
+	
+}
+
+
+void AEldenEnemy::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	EnemyController = Cast<AEnemyAIController>(NewController);
+	
+}
+
+void AEldenEnemy::OnSeePlayer(APawn* Pawn)
+{
+	StartAggro(Pawn);
+}
+
+void AEldenEnemy::SetMoveSpeed(float NewSpeed)
+{
+	GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
+}
+
+void AEldenEnemy::OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (GetIsRoaring())
+	{
+		SetState(EEnemyState::Idle);
+	}
+	if (!bHasAggro || GetIsDead()) return;
+	SetMoveSpeed(CombatSpeed);
+	if (EnemyController && CombatTarget)
+	{
+		EnemyController->SetAggroTarget(CombatTarget);
+	}
+}
+
+void AEldenEnemy::PlayAttackMontage()
+{
+	if (GetState() != EEnemyState::Idle) return;
+
+	if (EnemyController)
+	{
+		EnemyController->StopMovement();
+		EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
+		EnemyController->ClearFocus(EAIFocusPriority::Default);
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	// 공격 애니메이션이 유효하다면 재생하고, 몽타주가 끝났을 때 호출될 델리게이트 설정
+	if (AnimInstance && AttackMontage)
+	{
+		SetState(EEnemyState::Attacking);
+
+		// 공격 애니메이션이 재생되는 동안에는 이동을 못하게 설정
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None); // 공격 중에는 이동 불가능하게 설정
+
+		PlaySpecificMontage(AttackMontage);
+	}
+}
+
+void AEldenEnemy::PlaySpecificMontage(UAnimMontage* MontageToPlay)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	if (AnimInstance && MontageToPlay)
+	{
+		AnimInstance->Montage_Play(MontageToPlay);
+		FOnMontageEnded EndDelegate;
+		EndDelegate.BindUObject(this, &AEldenEnemy::OnAttackMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(EndDelegate, MontageToPlay);
+	}
+}
+
+void AEldenEnemy::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (!GetIsAttacking()) return;
+
+	if (Montage == AttackMontage && !bInterrupted && SlamMontage != nullptr && FMath::FRand() < SlamAttackChance)
+	{
+		PlaySpecificMontage(SlamMontage);
+		return;
+	}
+
+	SetState(EEnemyState::Idle);
+
+	// 공격이 끝나면 다시 이동 가능하게 설정
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking); // 공격이 끝나면 다시 이동 가능하게 설정
+}
+void AEldenEnemy::OnPoiseBroken()
+{
+	ApplyStun();
+}
+
+
+float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator,
+	class AActor* DamageCauser)
+{
+	if (GetIsDead()) return 0.0f;
+
+	// 공격을 받아 피가 깎인 순간, 나를 때린 녀석이 누구인지 CombatTarget에 저장
+	if (EventInstigator && EventInstigator->GetPawn())
+	{
+		CombatTarget = EventInstigator->GetPawn();
+	}
+
+	// 부모 클래스의 기본 데미지 로직 실행
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	
+	// 스탯 처리 템플릿 적용 (FStatUtils)
+	FStatUtils::UpdateStat(CurrentHealth, MaxHealth, -ActualDamage);
+
+	// 사망 분기
+	if (CurrentHealth <= 0.0f)
+	{
+		Die();
+
+	}
+	// 생존 분기
+	else 
+	{
+		StartAggro(CombatTarget);
+		if (HitReactMontage && GetState() == EEnemyState::Idle)
+		{
+			// 맞는 모션 재생
+			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+			if (AnimInstance)
+			{
+				AnimInstance->Montage_Play(HitReactMontage);
+			}
+		}
+		
+	}
+	return ActualDamage;
+}
+
+// 플레이어가 은총 휴식하거나 죽고 부활했을때 어그로 초기화를 위해 실행되는 함수
+void AEldenEnemy::ResetAggro()
+{
+	bHasAggro = false;
+	CombatTarget = nullptr;
+
+	SetMoveSpeed(WanderSpeed);
+	if (EnemyController) 
+	{
+		EnemyController->ClearAggroTarget();
+		EnemyController->SetAlerted(false);
+
+		// 멈추기
+		EnemyController->StopMovement();
+	}
+
+}
+
+void AEldenEnemy::ResetToSpawn(const FTransform& SpawnTransform)
+{
+	if (GetIsDead()) return;
+	GetWorldTimerManager().ClearTimer(StunTimerHandle);
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance)
+	{
+		AnimInstance->StopAllMontages(0.f);
+	}
+	
+
+	if (EnemyController)
+	{
+		EnemyController->StopMovement();
+		EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
+		EnemyController->ClearFocus(EAIFocusPriority::Default);
+
+		// BB 키 초기화
+		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
+		{
+			BB->SetValueAsBool(AEnemyAIController::BBKey_Stunned, false);
+		}
+	}
+
+	// 공격/스턴으로 켜진 히트박스 끄기
+	DisableLeftAttackCollision();
+	DisableRightAttackCollision();
+
+	// 상태 초기화
+	SetState(EEnemyState::Idle);
+	CurrentHealth = MaxHealth;
+	bHasRoared = false;
+	ResetAggro();
+
+	// 이동/물리 복구
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	GetCharacterMovement()->StopMovementImmediately();
+
+	// 위치 복귀
+	SetActorLocationAndRotation(SpawnTransform.GetLocation(), SpawnTransform.GetRotation().Rotator(), false, nullptr, ETeleportType::TeleportPhysics);
+
+	// 포이즈 처리
+	if (PoiseComp)
+	{
+		PoiseComp->ResetPoise();
+	}
+}
+
+void AEldenEnemy::StartAggro(APawn* Target)
+{
+	if (bHasAggro || GetIsDead() || !Target) return;
+
+	// 나를 본게 플레이어가 맞는지 체크
+	
+	bHasAggro = true;
+
+	if (EnemyController)
+	{
+		EnemyController->SetAlerted(true);
+		EnemyController->StopMovement();
+	}
+	CombatTarget = Target;
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	// bHasRoared는 ResetAggro()에서 리섿되지 않는, 이 적의 생에 전체에 걸친 1회성 플래그다.
+	// 포효 몽타주는 이 적을 처음 어그로 걸 때 딱 한 번만 재생된다.
+	// 시야 밖으로 나갔다가 다시 감지되어도 포효 없이 즉시 전투에 들어감.
+	if (!bHasRoared && AnimInstance && AggroMontage && GetState()==EEnemyState::Idle)
+	{
+		bHasRoared = true;
+
+		GetCharacterMovement()->StopMovementImmediately();
+		SetState(EEnemyState::Roaring);
+		AnimInstance->Montage_Play(AggroMontage);
+
+		// 몽타주가 끝났을 때 호출될 델리게이트 설정
+		// 포효 몽타주 재생중에는 아직 SetAggroTarget 호출을 안하므로
+		// AI는 몽타주가 끝나는 순간까지 실제 전투 행동을 시작하지 않는다.
+		// 포효하는 동안은 가만히 서서 연출만 재생하기 위한 의도적 지연
+		FOnMontageEnded EndDelegate;
+		EndDelegate.BindUObject(this, &AEldenEnemy::OnAggroMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(EndDelegate, AggroMontage);
+
+
+	}
+	else
+	{
+		SetMoveSpeed(CombatSpeed);
+		if (EnemyController)
+		{
+			EnemyController->SetAggroTarget(CombatTarget);
+		}
+	}
+	
+}
+
+void AEldenEnemy::Die()
+{
+	if (GetIsDead()) return; 
+	SetState(EEnemyState::Dead);
+	// 스턴 타이머 초기화
+	GetWorldTimerManager().ClearTimer(StunTimerHandle);
+	OnEnemyDied.Broadcast(RuneReward, CombatTarget);
+
+
+	DisableRightAttackCollision();
+	DisableLeftAttackCollision();
+
+	if (EnemyController)
+	{
+		EnemyController->StopMovement();
+		EnemyController->UnPossess();
+	}
+
+
+	// 죽음 몽타주 재생
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && DeathMontage)
+	{
+		AnimInstance->Montage_Play(DeathMontage);
+
+		// 몽타주 종료 델리게이트 연결
+		FOnMontageEnded EndDelegate;
+		EndDelegate.BindUObject(this, &AEldenEnemy::OnDeathMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(EndDelegate, DeathMontage);
+	}
+	else
+	{
+		// 몽타주가 없다면 즉시 래그돌 (안전장치)
+		OnDeathMontageEnded(nullptr, false);
+	}
+
+}
+
+void AEldenEnemy::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	// 1. 캡슐 끄기 
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->StopMovementImmediately();
+	/*GetMesh()->bPauseAnims = true;*/
+
+	if (RightHandHitbox) RightHandHitbox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (LeftHandHitbox) LeftHandHitbox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	GetMesh()->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+
+
+	// 3. 래그돌 켜기
+	GetMesh()->SetSimulatePhysics(true);
+
+	
+
+	// 4. 삭제
+	SetLifeSpan(5.0f);
+}
+
+void AEldenEnemy::SetState(EEnemyState NewState)
+{
+	if (GetIsDead()) return;
+	EnemyState = NewState;
+}
+
+
+void AEldenEnemy::ApplyStun()
+{
+	if (GetIsDead() || GetIsStunned()) return;
+
+	SetState(EEnemyState::Stunned);
+	/*bIsParryable = false;*/
+	float Duration = StunDuration;
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance)
+	{
+		AnimInstance->StopAllMontages(0.1f);
+		if (StunMontage)
+		{
+			Duration = StunMontage->GetPlayLength();
+			AnimInstance->Montage_Play(StunMontage);
+		}		
+	}
+
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+
+	if (EnemyController)
+	{
+		EnemyController->StopMovement();
+		EnemyController->ClearFocus(EAIFocusPriority::Gameplay);
+		EnemyController->ClearFocus(EAIFocusPriority::Default);
+		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
+		{
+			BB->SetValueAsBool(AEnemyAIController::BBKey_Stunned, true);
+		}
+	}
+	GetWorldTimerManager().SetTimer(StunTimerHandle, this, &AEldenEnemy::EndStun, Duration, false);
+}
+
+void AEldenEnemy::EndStun()
+{
+	if (!GetIsStunned()) return;
+	GetWorldTimerManager().ClearTimer(StunTimerHandle);
+
+	SetState(EEnemyState::Idle);
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+
+	if (EnemyController)
+	{
+		if (UBlackboardComponent* BB = EnemyController->GetBlackboardComponent())
+		{
+			BB->SetValueAsBool(AEnemyAIController::BBKey_Stunned, false);
+		}
+	}
+}
+
+void AEldenEnemy::TakePoiseDamage(float Amount)
+{
+	if (!PoiseComp || GetIsStunned() || GetIsDead()) return;
+	PoiseComp->ApplyPoiseDamage(Amount);
+}
+
+
+
+bool AEldenEnemy::IsTargetable() const
+{
+	return !GetIsDead();
+}
+
+void AEldenEnemy::ShowTargetMark(bool bShow)
+{
+	if (TargetMarkWidget)
+	{
+		TargetMarkWidget->SetVisibility(bShow);
+	}
+}
+
+void AEldenEnemy::EnableRightAttackCollision()
+{
+	if (RightHandHitbox) RightHandHitbox->EnableHitbox();
+}
+
+void AEldenEnemy::DisableRightAttackCollision()
+{
+	if (RightHandHitbox) RightHandHitbox->DisableHitbox();
+}
+
+void AEldenEnemy::EnableLeftAttackCollision()
+{
+	if (LeftHandHitbox) LeftHandHitbox->EnableHitbox();
+}
+
+void AEldenEnemy::DisableLeftAttackCollision()
+{
+	if (LeftHandHitbox) LeftHandHitbox->DisableHitbox();
+}
