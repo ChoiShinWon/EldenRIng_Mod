@@ -6,6 +6,7 @@
 #include "EldenRing_Mod/Actor/Bloodstain.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "Components/AudioComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "EngineUtils.h"
@@ -18,6 +19,7 @@ AEldenGameMode::AEldenGameMode()
 void AEldenGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	StartBGM();
 
 	CachedPC = UGameplayStatics::GetPlayerController(this, 0);
 
@@ -213,4 +215,12 @@ void AEldenGameMode::HandleGraceRest(AEldenGrace* Grace, AEldenCharacter* Player
 	if (!Player || !Player->InventoryComponent) return;
 
 	Player->InventoryComponent->RefillPotions();
+}
+
+void AEldenGameMode::StartBGM()
+{
+	if (!MainBGM) return;
+	BGMComponent = UGameplayStatics::CreateSound2D(this, MainBGM);
+
+	if (BGMComponent) BGMComponent->FadeIn(FadeInTime);
 }

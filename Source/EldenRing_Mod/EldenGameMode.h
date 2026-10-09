@@ -9,6 +9,8 @@ class AEldenCharacter;
 class AEldenEnemy;
 class AEldenGrace;
 class ABloodstain;
+class USoundBase;
+class UAudioComponent;
 
 USTRUCT()
 struct FEnemySpawnInfo
@@ -51,6 +53,17 @@ protected:
 
 	UPROPERTY()
 	AEldenCharacter* CachedPlayer = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	USoundBase* MainBGM = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio", meta = (ClampMin = "0.0"))
+	float FadeInTime = 2.f;
+
+	UPROPERTY()
+	UAudioComponent* BGMComponent = nullptr;
+
+	void StartBGM();
 
 	UFUNCTION()
 	void HandlePlayerDeath(AEldenCharacter* DeadPlayer);

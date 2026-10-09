@@ -122,7 +122,9 @@ void AEldenCharacter::BeginPlay()
 	if (PC)
 	{
 		PC->InitHUD();
+		PC->ShowEntryAreaName();
 	}
+
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AEldenPlayerController가 아님"));
