@@ -5,10 +5,20 @@
 #include "Engine/TimerHandle.h"
 #include "EldenTitleWidget.generated.h"
 
+
+enum class ETitleMenuItem : uint8
+{
+	NewGame, Exit, Count,
+	None = 255
+};
+
 class UButton;
 class UWorld;
 class USoundBase;
 class UAudioComponent;
+class UImage;
+class UTextBlock;
+
 
 UCLASS()
 class ELDENRING_MOD_API UEldenTitleWidget : public UUserWidget
@@ -18,10 +28,36 @@ protected:
 	virtual void NativeConstruct() override;
 
 	UPROPERTY(meta = (BindWidget))
+	UImage* Img_SelectNewGame = nullptr;
+
+	UPROPERTY(meta = (BindWidget))
+	UImage* Img_SelectExit = nullptr;
+
+	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_NewGame = nullptr;
 
 	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Exit = nullptr;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* Txt_NewGame = nullptr;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* Txt_Exit = nullptr;
+
+	UPROPERTY()
+	TArray<UImage*> SelectImages;
+
+	UPROPERTY()
+	TArray<UTextBlock*> Labels;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Color")
+	FLinearColor SelectedColor = FLinearColor::White;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Color")
+	FLinearColor NormalColor = FLinearColor::White;
+
+	ETitleMenuItem CurrentItem = ETitleMenuItem::None;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Title")
 	TSoftObjectPtr<UWorld> NewGameLevel;
@@ -58,4 +94,17 @@ protected:
 
 	UFUNCTION()
 	void OnExitClicked();
+
+	UFUNCTION()
+	void OnNewGameHovered();
+
+	UFUNCTION()
+	void OnExitHovered();
+
+	UFUNCTION()
+	void OnMenuUnhovered();
+
+	void SelectItem(ETitleMenuItem Item);
+
+	void RefreshSelection();
 };
