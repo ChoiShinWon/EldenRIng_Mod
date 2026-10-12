@@ -3,6 +3,7 @@
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "EldenRing_Mod/Component/EldenHitboxComponent.h"
 #include "EldenRing_Mod/Component/EldenPoiseComponent.h"
+#include "EldenRing_Mod/Component/EldenEnemyHPBarComponent.h"
 #include "EldenRing_Mod/AI/EnemyAIController.h"
 #include "EldenRing_Mod/StatUtils.h"
 #include "Components/CapsuleComponent.h"
@@ -39,6 +40,9 @@ AEldenEnemy::AEldenEnemy()
 	LeftHandHitbox->SetupAttachment(GetMesh(), FName("LeftWeaponSocket"));
 
 	PoiseComp = CreateDefaultSubobject<UEldenPoiseComponent>(TEXT("PoiseComp"));
+
+	HPBarComp = CreateDefaultSubobject<UEldenEnemyHPBarComponent>(TEXT("HPBarComp"));
+	HPBarComp->SetupAttachment(GetMesh());
 }
 
 
@@ -173,6 +177,7 @@ float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 	
 	// 스탯 처리 템플릿 적용 (FStatUtils)
 	FStatUtils::UpdateStat(CurrentHealth, MaxHealth, -ActualDamage);
+	HPBarComp->UpdateHealth(CurrentHealth, MaxHealth);
 
 	// 사망 분기
 	if (CurrentHealth <= 0.0f)
@@ -183,6 +188,7 @@ float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 	// 생존 분기
 	else 
 	{
+		HPBarComp->ShowOnHit();
 		StartAggro(CombatTarget);
 		if (HitReactMontage && GetState() == EEnemyState::Idle)
 		{
@@ -248,6 +254,8 @@ void AEldenEnemy::ResetToSpawn(const FTransform& SpawnTransform)
 	// 상태 초기화
 	SetState(EEnemyState::Idle);
 	CurrentHealth = MaxHealth;
+	HPBarComp->UpdateHealth(CurrentHealth, MaxHealth, true);
+	HPBarComp->HideImmediately();
 	bHasRoared = false;
 	ResetAggro();
 
@@ -317,6 +325,8 @@ void AEldenEnemy::Die()
 {
 	if (GetIsDead()) return; 
 	SetState(EEnemyState::Dead);
+	// HP바 숨기기
+	HPBarComp->HideImmediately();
 	// 스턴 타이머 초기화
 	GetWorldTimerManager().ClearTimer(StunTimerHandle);
 	OnEnemyDied.Broadcast(RuneReward, CombatTarget);
@@ -455,6 +465,7 @@ void AEldenEnemy::ShowTargetMark(bool bShow)
 	{
 		TargetMarkWidget->SetVisibility(bShow);
 	}
+	HPBarComp->SetLockedOn(bShow && !GetIsDead());
 }
 
 void AEldenEnemy::EnableRightAttackCollision()
