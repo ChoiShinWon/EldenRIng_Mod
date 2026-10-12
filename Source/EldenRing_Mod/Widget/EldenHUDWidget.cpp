@@ -14,6 +14,11 @@
 void UEldenHUDWidget::NativeConstruct()
 {
     Super::NativeConstruct();
+	if (Anim_FadeIn)
+	{
+		PlayAnimation(Anim_FadeIn);
+	}
+
     PlayerRef = Cast<AEldenCharacter>(GetOwningPlayerPawn());
     if (!PlayerRef) return;
     if (PlayerRef->StatComponent)

@@ -64,6 +64,8 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* PotionCountText;
 
+	UPROPERTY(meta = (BindWidgetAnimOptional), Transient)
+	UWidgetAnimation* Anim_FadeIn = nullptr;
 
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* InteractPromptText;
