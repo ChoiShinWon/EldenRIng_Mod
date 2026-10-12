@@ -10,8 +10,10 @@
 class UWidgetComponent;
 class UEldenHitboxComponent;
 class UEldenPoiseComponent;
+class UEldenEnemyHPBarWidget;
 class UParticleSystem;
 class UBehaviorTree;
+class UEldenEnemyHPBarComponent;
 
 UENUM(BlueprintType)
 enum class EEnemyState : uint8
@@ -136,6 +138,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	UWidgetComponent* TargetMarkWidget;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	UEldenEnemyHPBarComponent* HPBarComp;
+
 	/*=============================================================================
 	 * 공격 타격 판정 (Hitbox)
 	 *=============================================================================*/
@@ -157,6 +162,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnEnemyDied OnEnemyDied;
+
+
+
 
 	// Enemy마다 할당할 Behavior Tree
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")

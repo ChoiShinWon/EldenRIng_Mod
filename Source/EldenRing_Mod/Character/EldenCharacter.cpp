@@ -18,7 +18,6 @@
 #include "InputActionValue.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
-#include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/PointLightComponent.h"
 #include "Components/CapsuleComponent.h"
