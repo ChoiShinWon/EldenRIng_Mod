@@ -2,6 +2,7 @@
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/EldenLocomotionComponent.h"
+#include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "Animation/AnimInstance.h"
 
@@ -27,6 +28,8 @@ void UEldenItemUseComponent::UseItem()
 	if (!OwnerCharacter) return;
 	// 1. 공통 예외 처리 (어떤 아이템이든 구르거나 죽어있을 땐 못 씀)
 	if (OwnerCharacter->GetState() != ECharacterState::Idle) return;
+
+	if (OwnerCharacter->InteractionComponent->HasInteractableTarget()) return;
 
 	// 2. 인벤토리에게 현재 장착된 아이템이 뭔지 물어봄
 	EConsumableType CurrentItem = CachedInventoryComp->GetCurrentSelectedItem();

@@ -44,3 +44,4 @@ void UEldenInteractionComponent::ExecuteInteract()
 		CurrentInteractableTarget->Interact(PlayerCharacter);
 	}
 }
+

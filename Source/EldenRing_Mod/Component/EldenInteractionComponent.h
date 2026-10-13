@@ -26,6 +26,8 @@ public:
 
 	void ExecuteInteract();
 
+	bool HasInteractableTarget() const { return CurrentInteractableTarget != nullptr; }
+
 private:
 	// 소유자 캐릭터 캐싱
 	UPROPERTY()
