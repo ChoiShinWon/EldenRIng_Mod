@@ -27,6 +27,7 @@ void UEldenGraceRestComponent::BeginPlay()
 void UEldenGraceRestComponent::EnterRest()
 {
 	if (!OwnerCharacter) return;
+	bResting = true;
 	if (AEldenPlayerController* PC = OwnerCharacter->GetEldenController())
 	{
 		PC->SetHUDVisible(false);
@@ -70,6 +71,7 @@ void UEldenGraceRestComponent::ExitRest()
 void UEldenGraceRestComponent::OnStandUpMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (!OwnerCharacter) return;
+	bResting = false;
 	OwnerCharacter->SetState(ECharacterState::Idle);
 }
 

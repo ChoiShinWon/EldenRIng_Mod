@@ -298,12 +298,6 @@ void AEldenCharacter::Look(const FInputActionValue& Value)
 }
 
 
-
-
-
-
-
-
 void AEldenCharacter::Revive(const FTransform& SpawnTransform)
 {
 	GetMesh()->SetSimulatePhysics(false);
@@ -366,8 +360,8 @@ void AEldenCharacter::HandleDeath()
 
 float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	// 죽었다면 무시
-	if (GetState() == ECharacterState::Dead) return 0.0f;
+	// 죽었다면 무시, 상호작용중이라면 무시
+	if (GetState() == ECharacterState::Dead || GetState() == ECharacterState::Interacting) return 0.0f;
 
 	EDamageResult Result;
 	float FinalDamage = CombatComponent->ResolveIncomingDamage(DamageAmount, DamageCauser, Result);
@@ -426,6 +420,10 @@ bool AEldenCharacter::GetIsLockedOn() const
 	return LockOnComponent && LockOnComponent->HasTarget();
 }
 
+bool AEldenCharacter::IsResting() const
+{
+	return GraceRestComponent&& GraceRestComponent->IsResting();
+}
 
 void AEldenCharacter::SetInvincible(bool bState)
 {
