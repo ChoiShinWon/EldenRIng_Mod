@@ -12,6 +12,9 @@ class ABloodstain;
 class USoundBase;
 class UAudioComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyKilledDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGraceRestedDelegate);
+
 USTRUCT()
 struct FEnemySpawnInfo
 {
@@ -37,6 +40,12 @@ public:
 	AEldenGameMode();
 
 	void RegisterGrace(AEldenGrace* Grace);
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnEnemyKilledDelegate OnEnemyKilled;
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnGraceRestedDelegate OnGraceRested;
 
 	void ResetAllEnemies();
 

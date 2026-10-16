@@ -93,6 +93,8 @@ void AEldenGameMode::HandleEnemyDied(int32 RuneReward, APawn* Killer)
 	{
 		Player->StatComponent->AddRunes(RuneReward);
 	}
+
+	OnEnemyKilled.Broadcast();
 }
 
 void AEldenGameMode::BindEnemy(AEldenEnemy* Enemy)
@@ -212,6 +214,8 @@ void AEldenGameMode::HandleGraceRest(AEldenGrace* Grace, AEldenCharacter* Player
 {
 	RegisterGrace(Grace);
 	ResetAllEnemies();
+	OnGraceRested.Broadcast();
+
 	if (!Player || !Player->InventoryComponent) return;
 
 	Player->InventoryComponent->RefillPotions();

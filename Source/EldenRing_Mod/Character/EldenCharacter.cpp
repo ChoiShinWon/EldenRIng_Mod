@@ -417,11 +417,13 @@ float AEldenCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 
 bool AEldenCharacter::GetIsLockedOn() const
 {
+	// 락온 타겟이 있는지 없는지 반환
 	return LockOnComponent && LockOnComponent->HasTarget();
 }
 
 bool AEldenCharacter::IsResting() const
 {
+	// 은총에서 쉬는지 안쉬는지 반환
 	return GraceRestComponent&& GraceRestComponent->IsResting();
 }
 

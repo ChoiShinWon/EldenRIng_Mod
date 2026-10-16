@@ -6,6 +6,7 @@
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
+#include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Dialogue/EldenDialogueData.h"
 
 AEldenNPC::AEldenNPC()
@@ -63,25 +64,51 @@ void AEldenNPC::Interact(AEldenCharacter* Player)
 	}
 }
 
+UEldenDialogueData* AEldenNPC::PickDialogue() const
+{
+	if (!Stages.IsValidIndex(CurrentStage)) return nullptr;
+	return Stages[CurrentStage].Dialogue;
+}
+
+void AEldenNPC::AdvanceStage()
+{
+	if (Stages.IsValidIndex(CurrentStage + 1)) CurrentStage++;
+
+}
+
 void AEldenNPC::StartDialogue(AEldenCharacter* Player)
 {
-	if (!DialogueData) return;
+	CurrentDialogue = PickDialogue();
+	if (!CurrentDialogue) return;
+
 	bTalking = true;
 	CurrentLineIndex = 0;
 	CurrentPlayer = Player;
 
 	Player->GetCharacterMovement()->StopMovementImmediately();
 	Player->SetState(ECharacterState::Interacting);
-	if (Player->GetEldenController())
+	if (AEldenPlayerController* PC = GetCurrentPC())
 	{
-		Player->GetEldenController()->ShowDialogue(DialogueData->GetSpeakerName(), DialogueData->GetLine(CurrentLineIndex));
+		PC->ShowDialogue(CurrentDialogue->GetSpeakerName(), CurrentDialogue->GetLine(CurrentLineIndex));
 	}
 }
 
 void AEldenNPC::AdvanceDialogue()
 {
-	if (DialogueData->IsLastLine(CurrentLineIndex))
+	if (CurrentDialogue->IsLastLine(CurrentLineIndex))
 	{
+		if (Stages.IsValidIndex(CurrentStage))
+		{
+			const FNPCStage& Stage = Stages[CurrentStage];
+			if (Stage.Advance == ENPCStageAdvance::AfterTalk)
+			{
+				if (Stage.RewardRunes > 0 && CurrentPlayer.IsValid() && CurrentPlayer->StatComponent)
+				{
+					CurrentPlayer->StatComponent->AddRunes(Stage.RewardRunes);
+				}
+				AdvanceStage();
+			}
+		}
 		EndDialogue();
 		return;
 	}
@@ -89,7 +116,7 @@ void AEldenNPC::AdvanceDialogue()
 
 	if (AEldenPlayerController* PC = GetCurrentPC())
 	{
-		PC->ShowDialogue(DialogueData->GetSpeakerName(), DialogueData->GetLine(CurrentLineIndex));
+		PC->ShowDialogue(CurrentDialogue->GetSpeakerName(), CurrentDialogue->GetLine(CurrentLineIndex));
 	}
 	
 }
@@ -112,6 +139,7 @@ void AEldenNPC::EndDialogue()
 		}
 	}
 	CurrentPlayer.Reset();
+	CurrentDialogue = nullptr;
 
 }
 
