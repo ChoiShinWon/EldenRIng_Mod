@@ -3,6 +3,8 @@
 #include "Components/SphereComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "EldenRing_Mod/EldenGameMode.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
@@ -19,6 +21,29 @@ AEldenNPC::AEldenNPC()
 
 	InteractionSphere->OnComponentBeginOverlap.AddDynamic(this, &AEldenNPC::OnOverlapBegin);
 	InteractionSphere->OnComponentEndOverlap.AddDynamic(this, &AEldenNPC::OnOverlapEnd);
+}
+
+
+
+void AEldenNPC::BeginPlay()
+{
+	Super::BeginPlay();
+	if (AEldenGameMode* GameMode = Cast<AEldenGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GameMode->OnEnemyKilled.AddDynamic(this, &AEldenNPC::HandleEnemyKilled);
+		GameMode->OnGraceRested.AddDynamic(this, &AEldenNPC::HandleGraceRested);
+	}
+}
+
+void AEldenNPC::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (AEldenGameMode* GameMode = Cast<AEldenGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GameMode->OnEnemyKilled.RemoveDynamic(this, &AEldenNPC::HandleEnemyKilled);
+		GameMode->OnGraceRested.RemoveDynamic(this, &AEldenNPC::HandleGraceRested);
+
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 void AEldenNPC::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -64,6 +89,34 @@ void AEldenNPC::Interact(AEldenCharacter* Player)
 	}
 }
 
+void AEldenNPC::HandleEnemyKilled()
+{
+	if (!Stages.IsValidIndex(CurrentStage)) return;
+	
+	const FNPCStage& Stage = Stages[CurrentStage];
+	if (Stage.Advance != ENPCStageAdvance::OnKillTarget) return;
+	if (++KillCount >= Stage.KillTarget) AdvanceStage();
+	
+}
+
+void AEldenNPC::HandleGraceRested()
+{
+	if (Stages.IsValidIndex(CurrentStage) && Stages[CurrentStage].Advance == ENPCStageAdvance::OnGraceRest)
+	{
+		AdvanceStage();
+	}
+
+	if (!Stages.IsValidIndex(CurrentStage)) return;
+
+	const FNPCStage& Stage = Stages[CurrentStage];
+
+	if (IsValid(Stage.StandPoint))
+	{
+		SetActorLocationAndRotation(Stage.StandPoint->GetActorLocation(), Stage.StandPoint->GetActorRotation());
+	}
+
+}
+
 UEldenDialogueData* AEldenNPC::PickDialogue() const
 {
 	if (!Stages.IsValidIndex(CurrentStage)) return nullptr;
@@ -73,6 +126,7 @@ UEldenDialogueData* AEldenNPC::PickDialogue() const
 void AEldenNPC::AdvanceStage()
 {
 	if (Stages.IsValidIndex(CurrentStage + 1)) CurrentStage++;
+	KillCount = 0;
 
 }
 

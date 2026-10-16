@@ -15,10 +15,10 @@ class AEldenPlayerController;
 UENUM(BlueprintType)
 enum class ENPCStageAdvance : uint8
 {
-	None, // 마지막 단계: 더 이상 안넘어감
-	AfterTalk, // 대화가 끝나면
-	OnKillTarget, // 적을 KillTarget 마리 처치하면
-	OnGraceRest // 은총에서 쉬면
+	None UMETA(ToolTip = "마지막 단계용. 안 넘어감"), 
+	AfterTalk UMETA(ToolTip = "대사를 끝까지 보면 넘어감. RewardRunes는 이때만 지급"), 
+	OnKillTarget UMETA(ToolTip = "KillTarget마리 처치하면 넘어감"), 
+	OnGraceRest UMETA(ToolTip = "은총에서 쉬면 넘어감") 
 };
 
 USTRUCT(BlueprintType)
@@ -26,18 +26,23 @@ struct FNPCStage
 {
 	GENERATED_BODY()
 
+	// 이 단계에서 말을 걸면 나오는 대사
 	UPROPERTY(EditAnywhere, Category = "Stage")
 	TObjectPtr<UEldenDialogueData> Dialogue;
 
+	// 이 단계를 끝내는 조건
 	UPROPERTY(EditAnywhere, Category = "Stage")
 	ENPCStageAdvance Advance = ENPCStageAdvance::None;
 
+	// Advance가 OnKillTarget일 때만 사용
 	UPROPERTY(EditAnywhere, Category = "Stage")
 	int32 KillTarget = 0;
 
+	// 은총에서 쉰 뒤 이 단계가 현재 단계일 때 NPC가 서는 곳, 비우면 제자리 유지
 	UPROPERTY(EditAnywhere, Category = "Stage")
 	TObjectPtr<AActor> StandPoint = nullptr;
 
+	// Advance가 AfterTalk일 때만 지급, 대화를 끝까지 본 순간 한 번
 	UPROPERTY(EditAnywhere, Category = "Stage")
 	int32 RewardRunes = 0;
 };
@@ -63,6 +68,9 @@ public:
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* InteractionSphere = nullptr;
 
@@ -78,6 +86,14 @@ private:
 	TWeakObjectPtr<AEldenCharacter> CurrentPlayer;
 
 	int32 CurrentStage = 0;
+
+	int32 KillCount = 0;
+
+	UFUNCTION()
+	void HandleEnemyKilled();
+
+	UFUNCTION()
+	void HandleGraceRested();
 
 	UPROPERTY()
 	TObjectPtr<UEldenDialogueData> CurrentDialogue;
