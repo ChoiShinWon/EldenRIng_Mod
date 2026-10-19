@@ -1,6 +1,7 @@
 ﻿
 
 #include "EldenRing_Mod/Character/EldenEnemy.h"
+#include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Component/EldenHitboxComponent.h"
 #include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "EldenRing_Mod/Component/EldenEnemyHPBarComponent.h"
@@ -277,8 +278,10 @@ void AEldenEnemy::StartAggro(APawn* Target)
 {
 	if (bHasAggro || GetIsDead() || !Target) return;
 
+	AEldenCharacter* Player = Cast<AEldenCharacter>(Target);
+	if (Player && Player->IsResting()) return;
+
 	// 나를 본게 플레이어가 맞는지 체크
-	
 	bHasAggro = true;
 
 	if (EnemyController)

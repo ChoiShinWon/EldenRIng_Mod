@@ -207,9 +207,10 @@ public:
 	
 	FORCEINLINE bool GetIsDead() const { return GetState() == ECharacterState::Dead; }
 
-
-
 	bool GetIsLockedOn() const;
+
+	bool IsResting() const;
+
 	// 기본 데미지 처리 함수 오버라이드
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 

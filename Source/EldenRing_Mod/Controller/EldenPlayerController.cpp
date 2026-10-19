@@ -2,6 +2,7 @@
 #include "EldenRing_Mod/Widget/EldenHUDWidget.h"
 #include "EldenRing_Mod/Widget/EldenMenuWidget.h"
 #include "EldenRing_Mod/Widget/EldenAreaNameWidget.h"
+#include "EldenRing_Mod/Widget/EldenDialogueWidget.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "Blueprint/UserWidget.h"
@@ -103,6 +104,8 @@ void AEldenPlayerController::ToggleMenu()
 	// 열기
 	else
 	{
+		if (PlayerCharacter->GetState() != ECharacterState::Idle) return;
+
 		MenuWidget = CreateWidget<UEldenMenuWidget>(this, MenuWidgetClass);
 		if (!MenuWidget) return;
 		MenuWidget->InitMenu(PlayerCharacter->InventoryComponent, PlayerCharacter->StatComponent, PlayerCharacter->EquipmentComponent);
@@ -140,4 +143,34 @@ void AEldenPlayerController::ShowEntryAreaName()
 {
 	if (EntryAreaName.IsEmpty()) return;
 	ShowAreaName(EntryAreaName, EntryDelay);
+}
+
+void AEldenPlayerController::ShowDialogue(const FText& Speaker, const FText& Line)
+{
+	if (!DialogueWidgetClass) return;
+	if (!DialogueWidget)
+	{
+		DialogueWidget = CreateWidget<UEldenDialogueWidget>(this, DialogueWidgetClass);
+		if (!DialogueWidget) return;
+	}
+
+	if (!DialogueWidget->IsInViewport())
+	{
+		DialogueWidget->AddToViewport(10);
+		SetHUDVisible(false);
+	}
+
+	DialogueWidget->SetLine(Speaker, Line);
+
+
+}
+
+void AEldenPlayerController::HideDialogue()
+{
+	if (!DialogueWidget || !DialogueWidget->IsInViewport())
+	{
+		return;
+	}
+	DialogueWidget->RemoveFromParent();
+	SetHUDVisible(true);
 }

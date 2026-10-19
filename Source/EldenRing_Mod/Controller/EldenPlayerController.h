@@ -7,6 +7,7 @@
 class UEldenHUDWidget;
 class UEldenMenuWidget;
 class UEldenAreaNameWidget;
+class UEldenDialogueWidget;
 class UUserWidget;
 
 UCLASS()
@@ -35,6 +36,9 @@ public:
 
 	// 레벨 진입 자막 전용 진입점
 	void ShowEntryAreaName();
+
+	void ShowDialogue(const FText& Speaker, const FText& Line);
+	void HideDialogue();
 
 protected:
 	virtual void BeginPlay() override;
@@ -69,6 +73,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI", meta = (ClampMin = "0.0"))
 	float EntryDelay = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UEldenDialogueWidget> DialogueWidgetClass;
+
+	UPROPERTY()
+	UEldenDialogueWidget* DialogueWidget = nullptr;
 
 private:
 	void EnterUIMode(UUserWidget* FocusWidget, bool bAllowGameInput);

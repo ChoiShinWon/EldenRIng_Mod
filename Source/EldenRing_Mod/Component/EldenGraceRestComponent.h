@@ -30,10 +30,14 @@ public:
 	void EnterRest();
 	void ExitRest();
 
+	bool IsResting() const { return bResting; }
+
 	UFUNCTION()
 	void OnStandUpMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 private:
 	UPROPERTY()
 	class AEldenCharacter* OwnerCharacter;
+
+	bool bResting = false;
 };
