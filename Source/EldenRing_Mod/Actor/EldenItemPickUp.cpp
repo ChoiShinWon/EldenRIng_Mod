@@ -24,16 +24,28 @@ void AEldenItemPickUp::Interact(AEldenCharacter* Player)
 {
 	if (!Player || !Player->InventoryComponent || !ItemDef) return;
 
+	// 인벤토리에 몇 개 더 들어가는지
+	int32 Addable = Player->InventoryComponent->GetRemainingCapacity(ItemDef);
+
+	// 이번에 실제로 넣을 개수
+	int32 ToAdd = FMath::Min(PickAmount, Addable);
+
+	// 하나도 못 넣으면 거부
+	if (ToAdd <= 0) return;
+
 	bool bIsNew = !Player->InventoryComponent->HasItem(ItemDef);
-	Player->InventoryComponent->AddItem(ItemDef, PickAmount);
+	Player->InventoryComponent->AddItem(ItemDef, ToAdd);
 
 	AEldenPlayerController* PC = Player->GetEldenController();
 
 	if (PC)
 	{
-		PC->ShowItemAcquired(ItemDef, PickAmount, bIsNew);
+		PC->ShowItemAcquired(ItemDef, ToAdd, bIsNew);
 	}
 
+	// 남은 게 있는 부분 획득이면 여기서 끝
+	PickAmount -= ToAdd;
+	if (PickAmount > 0) return;
 	// 곧 Destroy될 액터이므로, 상호작용 대상 참조를 먼저 비워서 댕글링 방지
 	Player->InteractionComponent->SetInteractableTarget(nullptr);
 
