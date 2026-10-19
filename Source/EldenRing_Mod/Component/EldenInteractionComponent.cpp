@@ -39,6 +39,12 @@ void UEldenInteractionComponent::SetInteractableTarget(TScriptInterface<class II
 
 void UEldenInteractionComponent::ExecuteInteract()
 {
+	AEldenPlayerController* PC = PlayerCharacter->GetEldenController();
+
+	if (PC && PC->TryCloseItemPopup())
+	{
+		return;
+	}
 	if (CurrentInteractableTarget != nullptr)
 	{
 		CurrentInteractableTarget->Interact(PlayerCharacter);

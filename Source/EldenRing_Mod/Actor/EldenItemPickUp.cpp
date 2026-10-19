@@ -1,5 +1,6 @@
 ﻿#include "EldenRing_Mod/Actor/EldenItemPickUp.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -23,7 +24,15 @@ void AEldenItemPickUp::Interact(AEldenCharacter* Player)
 {
 	if (!Player || !Player->InventoryComponent || !ItemDef) return;
 
+	bool bIsNew = !Player->InventoryComponent->HasItem(ItemDef);
 	Player->InventoryComponent->AddItem(ItemDef, PickAmount);
+
+	AEldenPlayerController* PC = Player->GetEldenController();
+
+	if (PC)
+	{
+		PC->ShowItemAcquired(ItemDef, PickAmount, bIsNew);
+	}
 
 	// 곧 Destroy될 액터이므로, 상호작용 대상 참조를 먼저 비워서 댕글링 방지
 	Player->InteractionComponent->SetInteractableTarget(nullptr);
@@ -33,11 +42,8 @@ void AEldenItemPickUp::Interact(AEldenCharacter* Player)
 
 FText AEldenItemPickUp::GetInteractionPrompt() const
 {
-	if (!ItemDef) return FText::FromString(TEXT("???"));
+	return FText::FromString(TEXT("줍기"));
 
-	// 이름을 따로 저장 안하고 ItemDef->DisplayName 재사용 (데이터 에셋에서 설정)
-	FText InteractPrompt = FText::Format(FText::FromString(TEXT("{0} 줍기")), ItemDef->DisplayName);
-	return InteractPrompt;
 }
 
 

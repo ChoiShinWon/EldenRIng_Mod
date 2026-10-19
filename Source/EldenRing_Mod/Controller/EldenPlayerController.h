@@ -8,6 +8,8 @@ class UEldenHUDWidget;
 class UEldenMenuWidget;
 class UEldenAreaNameWidget;
 class UEldenDialogueWidget;
+class UEldenItemPickupPopupWidget;
+class UEldenItemDefinition;
 class UUserWidget;
 
 UCLASS()
@@ -40,6 +42,8 @@ public:
 	void ShowDialogue(const FText& Speaker, const FText& Line);
 	void HideDialogue();
 
+	void ShowItemAcquired(const UEldenItemDefinition* Def, int32 Amount, bool bIsNew);
+	bool TryCloseItemPopup();
 protected:
 	virtual void BeginPlay() override;
 
@@ -80,6 +84,11 @@ protected:
 	UPROPERTY()
 	UEldenDialogueWidget* DialogueWidget = nullptr;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UEldenItemPickupPopupWidget> ItemPopupWidgetClass;
+
+	UPROPERTY()
+	UEldenItemPickupPopupWidget* ItemPopupWidget = nullptr;
 private:
 	void EnterUIMode(UUserWidget* FocusWidget, bool bAllowGameInput);
 };
