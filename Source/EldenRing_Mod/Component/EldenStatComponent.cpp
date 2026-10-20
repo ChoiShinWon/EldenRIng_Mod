@@ -119,6 +119,10 @@ void UEldenStatComponent::RecalculateDerivedStats()
 	// 잃었던 체력의 절대량을 그대로 보존하기 위해 계산
 	CurrentHealth += (MaxHealth - OldMaxHealth);
 	CurrentMana += (MaxMana - OldMana);
+
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+	OnManaChanged.Broadcast(CurrentMana, MaxMana);
+	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
 }
 
 void UEldenStatComponent::ConsumeStamina(float Amount)

@@ -66,5 +66,5 @@ public:
 
 private:
 	void RefreshCategorySlots(UUniformGridPanel* Panel, int32 SlotCount, int32 ColumnCount,
-		const TArray<TObjectPtr<UEldenItemDefinition>>* EquippedData);
+		const TArray<TObjectPtr<UEldenItemDefinition>>* EquippedData, bool bShowCount);
 };

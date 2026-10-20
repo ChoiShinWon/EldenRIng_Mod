@@ -165,9 +165,26 @@ bool UEldenInventoryComponent::CanUseItem() const
 
 void UEldenInventoryComponent::ConsumeItem()
 {
+	UEldenItemDefinition* Def = SelectedConsumable;
 	if (!CanUseItem()) return;
-	GetSelectedSlot()->Count--;
-	BroadcastPotionCount();
+
+	// HP포션이거나 마나 포션이면 0 유지
+	if (Def == HPPotionDef || Def == ManaPotionDef)
+	{
+		GetSelectedSlot()->Count--;
+		BroadcastSelectedHotbarItemCount();
+		return;
+	}
+	if (GetCurrentItemCount() > 1)
+	{
+		GetSelectedSlot()->Count--;
+
+		BroadcastSelectedHotbarItemCount();
+		return;
+	}
+	SelectNextItem();
+	UnequipConsumable(Def);
+	RemoveItem(Def, 1);
 }
 
 float UEldenInventoryComponent::GetPotionRestoreAmount() const
@@ -188,7 +205,7 @@ void UEldenInventoryComponent::RefillPotions()
 		ManaSlot->Count = ManaPotionDef->MaxCount;
 	}
 	
-	BroadcastPotionCount();
+	BroadcastSelectedHotbarItemCount();
 }
 
 UTexture2D* UEldenInventoryComponent::GetCurrentItemIcon() const
@@ -218,7 +235,7 @@ void UEldenInventoryComponent::SetSelectedConsumable(UEldenItemDefinition* Selec
 	SelectedConsumable = Selected;
 	// 선택이 바뀌었다는 것과, 그로 인해 포션 개수 표시도 바뀌었다는 것을 둘 다 알림
 	OnSelectedItemChanged.Broadcast();
-	BroadcastPotionCount();
+	BroadcastSelectedHotbarItemCount();
 }
 
 void UEldenInventoryComponent::SelectNextItem()
@@ -250,9 +267,9 @@ const TArray<TObjectPtr<UEldenItemDefinition>>& UEldenInventoryComponent::GetEqu
 }
 
 
-void UEldenInventoryComponent::BroadcastPotionCount()
+void UEldenInventoryComponent::BroadcastSelectedHotbarItemCount()
 {
-	OnPotionCountChanged.Broadcast(GetCurrentItemCount(), GetMaxItemCount());
+	OnSelectedHotbarItemCountChanged.Broadcast(GetCurrentItemCount(), GetMaxItemCount());
 }
 
 const FEldenItemSlot* UEldenInventoryComponent::GetSelectedSlot() const

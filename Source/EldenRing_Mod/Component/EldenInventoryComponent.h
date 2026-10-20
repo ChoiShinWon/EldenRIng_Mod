@@ -6,8 +6,13 @@
 #include "EldenRing_Mod/Item/EldenItemDefinition.h"
 #include "EldenInventoryComponent.generated.h"
 
-// HUD가 포션 개수(현재/최대)를 갱신할 때 구독하는 델리게이트
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPotionCountChangeDelegate, int32, CurrentValue, int32, MaxValue);
+// 핫바에서 "지금 선택된" 아이템 하나의 (현재 수량, 최대 수량)을 알리는 델리게이트.
+//  - 핫바에 들어 있는 아이템의 종류 수가 아니라, 선택된 아이템의 '보유 수량'임
+//    (HP 포션 / 마나 포션 / 장착한 일반 소모품 중 지금 선택된 것)
+//  - 방송 시점: 아이템 사용으로 수량이 줄 때, 은총 휴식 리필 때, 선택이 바뀔 때
+//  - 구독자: HUD의 수량 텍스트 (UEldenHUDWidget::OnSelectedHotbarItemCountUpdated)
+//  - 선택된 아이템 '자체'가 바뀐 것은 아래 FOnSelectedItemChangedDelegate가 따로 알림 (아이콘 갱신용)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSelectedHotbarItemCountChangedDelegate, int32, CurrentValue, int32, MaxValue);
 // 핫바에서 선택한 아이템이 바뀔 때마다 구독자(HUD 등)에게 알리는 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelectedItemChangedDelegate);
 
@@ -136,18 +141,19 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnSelectedItemChangedDelegate OnSelectedItemChanged;
 
-	// 포션 개수 변경 시 브로드캐스트 (HUD 게이지 등이 구독)
+	// 선택된 핫바 아이템의 수량이 바뀔 때 브로드캐스트 (HUD 수량 텍스트가 구독)
+	// 값의 의미와 방송 시점은 파일 위쪽 FOnSelectedHotbarItemCountChangedDelegate 주석 참고
 	UPROPERTY(BlueprintAssignable, Category = "Events")
-	FOnPotionCountChangeDelegate OnPotionCountChanged;
+	FOnSelectedHotbarItemCountChangedDelegate OnSelectedHotbarItemCountChanged;
 
-	// 현재 슬롯에 있는 아이템의 현재 개수
+	// 핫바에서 선택된 아이템의 현재 보유 수량 (선택된 게 없으면 0)
 	int32 GetCurrentItemCount() const
 	{
 		const FEldenItemSlot* Slot = GetSelectedSlot();
 		return Slot ? Slot->Count : 0;
 	}
 
-	// 현재 슬롯에 있는 아이템의 최대 개수
+	// 핫바에서 선택된 아이템의 최대 보유 수량 = 정의의 MaxCount (선택된 게 없으면 0)
 	int32 GetMaxItemCount() const
 	{
 		const UEldenItemDefinition* Def = GetSelectedDefinition();
@@ -161,8 +167,9 @@ public:
 	const TArray<TObjectPtr<UEldenItemDefinition>>& GetEquippedConsumables() const;
 	
 private:
-	// OnPotionCountChanged 델리게이트에 현재/최대 개수를 실어 브로드캐스트 하는 공용 헬퍼
-	void BroadcastPotionCount();
+	// OnSelectedHotbarItemCountChanged로 선택된 아이템의 (현재, 최대) 수량을 방송하는 공용 헬퍼.
+	// 선택된 아이템의 수량을 바꾼 직후, 또는 선택이 바뀐 직후에 호출할 것
+	void BroadcastSelectedHotbarItemCount();
 
 	// 선택된 소모품을 바꾸고, 관련 델리게이트 두 개를 함께 브로드캐스트
 	void SetSelectedConsumable(UEldenItemDefinition* Selected);

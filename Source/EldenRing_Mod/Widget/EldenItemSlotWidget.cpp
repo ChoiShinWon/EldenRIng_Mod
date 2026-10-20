@@ -12,7 +12,7 @@ void UEldenItemSlotWidget::NativeConstruct()
 	ItemClickButton->OnClicked.AddDynamic(this, &UEldenItemSlotWidget::OnSlotClicked);
 }
 
-void UEldenItemSlotWidget::SetItemData(UEldenItemDefinition* Def, int32 Count, int32 InSlotIndex)
+void UEldenItemSlotWidget::SetItemData(UEldenItemDefinition* Def, int32 Count, int32 InSlotIndex, bool bShowCount)
 {
 	DisplayedItem = Def;
 	SlotIndex = InSlotIndex;
@@ -32,7 +32,7 @@ void UEldenItemSlotWidget::SetItemData(UEldenItemDefinition* Def, int32 Count, i
 		ItemImage->SetColorAndOpacity(FLinearColor(1, 1, 1, 1));
 
 		// 개수가 의미 있을 때만 숫자 표시
-		if (Def->MaxCount > 1)
+		if (bShowCount && Def->MaxCount > 1)
 		{
 			ItemCountText->SetText(FText::AsNumber(Count));
 		}

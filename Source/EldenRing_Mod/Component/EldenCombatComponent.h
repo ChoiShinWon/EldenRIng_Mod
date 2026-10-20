@@ -14,12 +14,11 @@ class ELDENRING_MOD_API UEldenCombatComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:	
-	// Sets default values for this component's properties
 	UEldenCombatComponent();
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
 
