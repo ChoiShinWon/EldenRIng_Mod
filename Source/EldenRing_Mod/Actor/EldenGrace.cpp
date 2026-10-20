@@ -61,7 +61,7 @@ void AEldenGrace::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor);
 	if (Player)
 	{
-		Player->InteractionComponent->SetInteractableTarget(nullptr);
+		Player->InteractionComponent->ClearInteractableTarget(this);
 	}
 }
 

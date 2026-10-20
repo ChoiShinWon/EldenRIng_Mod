@@ -73,6 +73,9 @@ bool UEldenEquipmentComponent::UnequipWeapon(AEldenWeapon* Weapon)
 	// 장착중인 무기가 해제할 무기인가 (들고 있는 무기를 해제하는 경우엔 다음 무기로 자동 승계)
 	bool bWasActiveWeapon = (EquippedWeapon == Weapon) ;
 
+	// 해제하면 이 무기가 인벤토리로 돌아갈 자리가 있는지 먼저 확인
+	if (PlayerCharacter->InventoryComponent->GetRemainingCapacity(Weapon->GetItemDefinition()) <= 0) return false;
+	
 	SpawnedWeapons.Remove(Weapon);
 	// 액터를 다시 인벤토리로 반환
 	PlayerCharacter->InventoryComponent->AddItem(Weapon->GetItemDefinition(), 1);
@@ -143,6 +146,8 @@ bool UEldenEquipmentComponent::UnequipShield(AEldenShield* Shield)
 	// 장착중인 방패인가 해제할 방패인가
 	bool bWasActiveShield = (EquippedShield == Shield);
 
+	if (PlayerCharacter->InventoryComponent->GetRemainingCapacity(Shield->GetItemDefinition()) <= 0) return false;
+	
 	SpawnedShields.Remove(Shield);
 	PlayerCharacter->InventoryComponent->AddItem(Shield->GetItemDefinition(), 1);
 	Shield->Destroy();

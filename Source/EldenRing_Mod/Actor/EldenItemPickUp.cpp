@@ -74,6 +74,6 @@ void AEldenItemPickUp::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor*
 {
 	if (AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor))
 	{
-		Player->InteractionComponent->SetInteractableTarget(nullptr);
+		Player->InteractionComponent->ClearInteractableTarget(this);
 	}
 }

@@ -78,6 +78,6 @@ void ABloodstain::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	if (AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor))
 	{
 		// 오버랩 끝나면 가리키던 포인터 끊기
-		Player->InteractionComponent->SetInteractableTarget(nullptr);
+		Player->InteractionComponent->ClearInteractableTarget(this);
 	}
 }

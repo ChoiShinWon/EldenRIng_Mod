@@ -23,6 +23,8 @@ void UEldenInteractionComponent::SetInteractableTarget(TScriptInterface<class II
 {
 	CurrentInteractableTarget = NewTarget;
 
+	if (!PlayerCharacter) return;
+
 	AEldenPlayerController* PC = PlayerCharacter->GetEldenController();
 	if (!PC) return;
 	UEldenHUDWidget* CurrentHUD = PC->GetCurrentHUD();
@@ -48,6 +50,14 @@ void UEldenInteractionComponent::ExecuteInteract()
 	if (CurrentInteractableTarget != nullptr)
 	{
 		CurrentInteractableTarget->Interact(PlayerCharacter);
+	}
+}
+
+void UEldenInteractionComponent::ClearInteractableTarget(const IInteractable* Requester)
+{
+	if (Requester == CurrentInteractableTarget.GetInterface())
+	{
+		SetInteractableTarget(nullptr);
 	}
 }
 

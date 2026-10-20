@@ -7,7 +7,7 @@
 #include "AnimModifier_FlattenPelvis.generated.h"
 
 UCLASS()
-class ELDENRING_MOD_API UAnimModifier_FlattenPelvis : public UAnimationModifier
+class ELDENRING_MODEDITOR_API UAnimModifier_FlattenPelvis : public UAnimationModifier
 {
 	GENERATED_BODY()
 

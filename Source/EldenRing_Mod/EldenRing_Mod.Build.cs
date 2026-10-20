@@ -10,7 +10,6 @@ public class EldenRing_Mod : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
 			"UMG","Slate", "SlateCore", "AnimGraphRuntime",
-        "AIModule", "GameplayTasks", "AnimationModifiers", "AnimationDataController",
-		"AnimationBlueprintLibrary", "NavigationSystem"});
+			"AIModule", "GameplayTasks", "NavigationSystem"});
 	}
 }

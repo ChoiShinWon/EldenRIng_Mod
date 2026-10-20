@@ -11,9 +11,13 @@
 			"AdditionalDependencies": [
 				"Engine",
 				"UMG",
-				"AIModule",
-				"AnimationModifiers"
+				"AIModule"
 			]
+		},
+		{
+			"Name": "EldenRing_ModEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
