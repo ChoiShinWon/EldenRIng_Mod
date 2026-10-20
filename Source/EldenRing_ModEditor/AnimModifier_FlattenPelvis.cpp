@@ -1,7 +1,6 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
-#include "EldenRing_Mod/AnimModifiers/AnimModifier_FlattenPelvis.h"
+#include "AnimModifier_FlattenPelvis.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimData/IAnimationDataModel.h"
 #include "Animation/AnimData/IAnimationDataController.h"

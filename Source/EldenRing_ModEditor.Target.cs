@@ -11,5 +11,6 @@ public class EldenRing_ModEditorTarget : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_5;
 		ExtraModuleNames.Add("EldenRing_Mod");
+		ExtraModuleNames.Add("EldenRing_ModEditor");
 	}
 }

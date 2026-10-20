@@ -4,6 +4,7 @@
 #include "EldenRing_Mod/Widget/EldenAreaNameWidget.h"
 #include "EldenRing_Mod/Widget/EldenDialogueWidget.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "EldenRing_Mod/Widget/EldenItemPickupPopupWidget.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
@@ -36,6 +37,10 @@ void AEldenPlayerController::SetHUDVisible(bool bVisible)
 		// Collapsed: 보이지 않을 뿐 아니라 레이아웃/입력에서도 완전히 제외
 		CurrentHUD->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
+	if (!bVisible)
+	{
+		TryCloseItemPopup();
+	}
 
 }
 
@@ -43,6 +48,7 @@ void AEldenPlayerController::SetHUDVisible(bool bVisible)
 
 void AEldenPlayerController::EnterUIMode(UUserWidget* FocusWidget, bool bAllowGameInput)
 {
+	TryCloseItemPopup();
 	bShowMouseCursor = true;
 
 	if (bAllowGameInput)
@@ -173,4 +179,24 @@ void AEldenPlayerController::HideDialogue()
 	}
 	DialogueWidget->RemoveFromParent();
 	SetHUDVisible(true);
+}
+
+void AEldenPlayerController::ShowItemAcquired(const UEldenItemDefinition* Def, int32 Amount, bool bIsNew)
+{
+	if (!Def || !ItemPopupWidgetClass) return;
+	if (!ItemPopupWidget)
+	{
+		ItemPopupWidget = CreateWidget<UEldenItemPickupPopupWidget>(this, ItemPopupWidgetClass);
+		if (!ItemPopupWidget) return;
+		ItemPopupWidget->AddToViewport(10);
+	}
+	ItemPopupWidget->ShowPopup(Def, Amount, bIsNew);
+}
+
+bool AEldenPlayerController::TryCloseItemPopup()
+{
+	if (!ItemPopupWidget || !ItemPopupWidget->IsShowing()) return false;
+	ItemPopupWidget->HidePopup();
+	return true;
+	
 }

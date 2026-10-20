@@ -1,5 +1,6 @@
 ﻿#include "EldenRing_Mod/Actor/EldenItemPickUp.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -23,8 +24,28 @@ void AEldenItemPickUp::Interact(AEldenCharacter* Player)
 {
 	if (!Player || !Player->InventoryComponent || !ItemDef) return;
 
-	Player->InventoryComponent->AddItem(ItemDef, PickAmount);
+	// 인벤토리에 몇 개 더 들어가는지
+	int32 Addable = Player->InventoryComponent->GetRemainingCapacity(ItemDef);
 
+	// 이번에 실제로 넣을 개수
+	int32 ToAdd = FMath::Min(PickAmount, Addable);
+
+	// 하나도 못 넣으면 거부
+	if (ToAdd <= 0) return;
+
+	bool bIsNew = !Player->InventoryComponent->HasItem(ItemDef);
+	Player->InventoryComponent->AddItem(ItemDef, ToAdd);
+
+	AEldenPlayerController* PC = Player->GetEldenController();
+
+	if (PC)
+	{
+		PC->ShowItemAcquired(ItemDef, ToAdd, bIsNew);
+	}
+
+	// 남은 게 있는 부분 획득이면 여기서 끝
+	PickAmount -= ToAdd;
+	if (PickAmount > 0) return;
 	// 곧 Destroy될 액터이므로, 상호작용 대상 참조를 먼저 비워서 댕글링 방지
 	Player->InteractionComponent->SetInteractableTarget(nullptr);
 
@@ -33,11 +54,8 @@ void AEldenItemPickUp::Interact(AEldenCharacter* Player)
 
 FText AEldenItemPickUp::GetInteractionPrompt() const
 {
-	if (!ItemDef) return FText::FromString(TEXT("???"));
+	return FText::FromString(TEXT("줍기"));
 
-	// 이름을 따로 저장 안하고 ItemDef->DisplayName 재사용 (데이터 에셋에서 설정)
-	FText InteractPrompt = FText::Format(FText::FromString(TEXT("{0} 줍기")), ItemDef->DisplayName);
-	return InteractPrompt;
 }
 
 
@@ -56,6 +74,6 @@ void AEldenItemPickUp::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor*
 {
 	if (AEldenCharacter* Player = Cast<AEldenCharacter>(OtherActor))
 	{
-		Player->InteractionComponent->SetInteractableTarget(nullptr);
+		Player->InteractionComponent->ClearInteractableTarget(this);
 	}
 }

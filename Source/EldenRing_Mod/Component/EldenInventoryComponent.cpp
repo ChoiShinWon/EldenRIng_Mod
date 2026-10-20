@@ -143,6 +143,15 @@ int32 UEldenInventoryComponent::GetItemCount(const UEldenItemDefinition* Definit
 	return FoundSlot ? FoundSlot->Count : 0; // 없다면 0개로 취급
 }
 
+int32 UEldenInventoryComponent::GetRemainingCapacity(const UEldenItemDefinition* Definition) const
+{
+	if (!Definition) return 0;
+
+	int32 RemainingCount = Definition->MaxCount - GetItemCount(Definition);
+
+	return FMath::Max(0, RemainingCount);
+}
+
 bool UEldenInventoryComponent::HasItem(const UEldenItemDefinition* Definition) const
 {
 	return GetItemCount(Definition) > 0;

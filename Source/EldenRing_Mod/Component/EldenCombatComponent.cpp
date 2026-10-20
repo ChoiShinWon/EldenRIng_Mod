@@ -86,7 +86,7 @@ float UEldenCombatComponent::ResolveIncomingDamage(float Damage, AActor* DamageC
 			else
 			{
 				// 스태미너 부족하므로 가드 붕괴
-				Stat->CurrentStamina = 0.0f;
+				Stat->ConsumeStamina(StaminaCost);
 				PlayerCharacter->SetState(ECharacterState::Idle);
 				if (AEldenShield* Shield = PlayerCharacter->EquipmentComponent->GetEquippedShield())
 				{
@@ -324,7 +324,11 @@ void UEldenCombatComponent::OnSkillMontageEnded(UAnimMontage* Montage, bool bInt
 	if (PlayerCharacter)
 	{
 		// 상태를 다시 평소(Idle)로 복구
-		PlayerCharacter->SetState(ECharacterState::Idle);
+		if (PlayerCharacter->GetState() == ECharacterState::UsingSkill)
+		{
+			PlayerCharacter->SetState(ECharacterState::Idle);
+
+		}
 	}
 }
 
@@ -433,8 +437,11 @@ void UEldenCombatComponent::OnParryMontageEnded(UAnimMontage* Montage, bool bInt
 {
     if (PlayerCharacter)
     {
-        // 상태를 다시 평소(Idle)로 복구
-        PlayerCharacter->SetState(ECharacterState::Idle);
+		if (PlayerCharacter->GetState() == ECharacterState::Parrying)
+		{
+			// 상태를 다시 평소(Idle)로 복구
+			PlayerCharacter->SetState(ECharacterState::Idle);
+		}
     }
 }
 

@@ -102,6 +102,9 @@ public:
 	// 특정 아이템을 몇 개 가지고 있는 조회 (O(1) 해시 조회)
 	int32 GetItemCount(const UEldenItemDefinition* Definition) const;
 
+	// 이 아이템을 몇 개 더 넣을 수 있나
+	int32 GetRemainingCapacity(const UEldenItemDefinition* Definition) const;
+
 	// 특정 아이템을 1개 이상 갖고 있는지 여부
 	bool HasItem(const UEldenItemDefinition* Definition) const;
 

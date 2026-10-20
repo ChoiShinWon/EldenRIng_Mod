@@ -19,6 +19,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	// CurrentInteractableTarget을 여기로 옮기기
+	UPROPERTY()
 	TScriptInterface<class IInteractable> CurrentInteractableTarget;
 
 public:
@@ -27,6 +28,8 @@ public:
 	void ExecuteInteract();
 
 	bool HasInteractableTarget() const { return CurrentInteractableTarget != nullptr; }
+
+	void ClearInteractableTarget(const IInteractable* Requester);
 
 private:
 	// 소유자 캐릭터 캐싱

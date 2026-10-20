@@ -65,7 +65,7 @@ void AEldenNPC::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherA
 		{
 			EndDialogue();
 		}
-		Player->InteractionComponent->SetInteractableTarget(nullptr);
+		Player->InteractionComponent->ClearInteractableTarget(this);
 	}
 	
 }
