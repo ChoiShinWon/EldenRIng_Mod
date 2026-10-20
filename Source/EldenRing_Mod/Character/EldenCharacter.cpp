@@ -27,6 +27,7 @@
 AEldenCharacter::AEldenCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	// 스프링 암 생성 및 루트 컴포넌트에 부착
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
