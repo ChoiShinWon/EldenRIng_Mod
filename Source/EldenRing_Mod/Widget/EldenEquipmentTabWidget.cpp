@@ -37,11 +37,10 @@ void UEldenEquipmentTabWidget::RefreshEquipment(UEldenInventoryComponent* Invent
 	}
 
 
-	RefreshCategorySlots(RightHandGridPanel, RightHandSlotCount, RightHandSlotCount, &RightHandItems);
-	RefreshCategorySlots(LeftHandGridPanel, LeftHandSlotCount, LeftHandSlotCount, &LeftHandItems);
-	RefreshCategorySlots(TalismanGridPanel, TalismanSlotCount, TalismanSlotCount, nullptr);
-
-	RefreshCategorySlots(ConsumableGridPanel, ConsumableSlotCount, ConsumableColumnCount, &Inventory->GetEquippedConsumables());
+	RefreshCategorySlots(RightHandGridPanel, RightHandSlotCount, RightHandSlotCount, &RightHandItems, false);
+	RefreshCategorySlots(LeftHandGridPanel, LeftHandSlotCount, LeftHandSlotCount, &LeftHandItems, false);
+	RefreshCategorySlots(TalismanGridPanel, TalismanSlotCount, TalismanSlotCount, nullptr, false);
+	RefreshCategorySlots(ConsumableGridPanel, ConsumableSlotCount, ConsumableColumnCount, &Inventory->GetEquippedConsumables(), true);
 
 }
 
@@ -50,7 +49,7 @@ void UEldenEquipmentTabWidget::OnEquipmentSlotClicked(UEldenItemDefinition* Clic
 	OnSelectedItemClicked.Broadcast(ClickedItem, SlotIndex);
 }
 
-void UEldenEquipmentTabWidget::RefreshCategorySlots(UUniformGridPanel* Panel, int32 SlotCount, int32 ColumnCount, const TArray<TObjectPtr<UEldenItemDefinition>>* EquippedData)
+void UEldenEquipmentTabWidget::RefreshCategorySlots(UUniformGridPanel* Panel, int32 SlotCount, int32 ColumnCount, const TArray<TObjectPtr<UEldenItemDefinition>>* EquippedData, bool bShowCount)
 {
 	if (!Panel || !EquipmentSlotWidgetClass) return;
 	Panel->ClearChildren();
@@ -67,7 +66,7 @@ void UEldenEquipmentTabWidget::RefreshCategorySlots(UUniformGridPanel* Panel, in
 
 
 	
-		NewSlot->SetItemData(CurrentItem, CurrentCount, Index);
+		NewSlot->SetItemData(CurrentItem, CurrentCount, Index, bShowCount);
 		NewSlot->OnSelectedItemClicked.AddDynamic(this,
 			&UEldenEquipmentTabWidget::OnEquipmentSlotClicked);
 

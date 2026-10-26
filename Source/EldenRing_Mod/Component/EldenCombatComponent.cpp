@@ -1,7 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "EldenRing_Mod/Component/EldenCombatComponent.h"
+﻿#include "EldenRing_Mod/Component/EldenCombatComponent.h"
 #include "EldenRing_Mod/Component/EldenPoiseComponent.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
@@ -40,6 +37,17 @@ void UEldenCombatComponent::BeginPlay()
         CachedAnimInstance = PlayerCharacter->GetMesh()->GetAnimInstance();
     }
 	
+}
+
+void UEldenCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UWorld* World = GetWorld();
+	if (World && World->GetTimerManager().IsTimerActive(HitStopTimerHandle))
+	{
+		World->GetTimerManager().ClearTimer(HitStopTimerHandle);
+		ResetTimeDilation();
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 float UEldenCombatComponent::ResolveIncomingDamage(float Damage, AActor* DamageCauser, EDamageResult& OutResult)

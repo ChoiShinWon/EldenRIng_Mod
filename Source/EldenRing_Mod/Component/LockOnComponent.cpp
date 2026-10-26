@@ -43,6 +43,7 @@ void ULockOnComponent::ToggleLockOn()
 			OwnerCharacter->GetCharacterMovement()->bUseControllerDesiredRotation = true;
 		}
 	}
+	OwnerCharacter->SetActorTickEnabled(HasTarget());
 }
 
 void ULockOnComponent::UpdateLockOn(float DeltaTime)

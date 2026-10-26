@@ -8,11 +8,12 @@
 UEldenStatComponent::UEldenStatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+
 
 }
 
 
-// Called when the game starts
 void UEldenStatComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -39,11 +40,18 @@ void UEldenStatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// 1. 스태미너 자동 회복 로직 (캐릭터에서 이사 옴)
-	if (bCanRegen && CurrentStamina < MaxStamina)
+	if (bCanRegen)
 	{
-		// FStatUtils를 사용하여 안전하게 더하고 최대치를 넘지 않도록 제한합니다.
-		FStatUtils::UpdateStat(CurrentStamina, MaxStamina, (StaminaRegenRate * DeltaTime));
-		OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
+		if (CurrentStamina < MaxStamina)
+		{
+			// FStatUtils를 사용하여 안전하게 더하고 최대치를 넘지 않도록 제한합니다.
+			FStatUtils::UpdateStat(CurrentStamina, MaxStamina, (StaminaRegenRate * DeltaTime));
+			OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
+		}
+		else
+		{
+			SetComponentTickEnabled(false);
+		}
 	}
 }
 
@@ -112,6 +120,8 @@ void UEldenStatComponent::RecalculateDerivedStats()
 	MaxStamina = 100.0f + (Endurance * 2.0f);
 	AttackPower = 3 + (Strength * 3.0f);
 
+	SetComponentTickEnabled(true);
+
 	// MaxHealth가 늘어난 만큼 CurrentHealth도 그대로 밀어올림
 	// 단순히 CurrentHealth를 새 MaxHealth로 클램프/리셋 해버리면
 	// 체력 80/100이던 캐릭터가 레벨업으로 Max가 150이 되었을 때 70을 잃은 채로 시작하는게 아니라
@@ -119,6 +129,10 @@ void UEldenStatComponent::RecalculateDerivedStats()
 	// 잃었던 체력의 절대량을 그대로 보존하기 위해 계산
 	CurrentHealth += (MaxHealth - OldMaxHealth);
 	CurrentMana += (MaxMana - OldMana);
+
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+	OnManaChanged.Broadcast(CurrentMana, MaxMana);
+	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
 }
 
 void UEldenStatComponent::ConsumeStamina(float Amount)
@@ -139,6 +153,7 @@ void UEldenStatComponent::ConsumeStamina(float Amount)
 	GetWorld()->GetTimerManager().SetTimer(RegenDelayTimerHandle, this,
 		&UEldenStatComponent::ResetRegen, StaminaRegenDelay, false);
 
+	SetComponentTickEnabled(true);
 }
 
 void UEldenStatComponent::ResetRegen()

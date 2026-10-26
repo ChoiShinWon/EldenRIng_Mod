@@ -89,7 +89,7 @@ protected:
 	void OnSelectedItemChanged();
 
 	UFUNCTION()
-	void OnPotionCountUpdated(int32 Current, int32 Max);
+	void OnSelectedHotbarItemCountUpdated(int32 Current, int32 Max);
 
 	UFUNCTION()
 	void OnEquipmentChanged();

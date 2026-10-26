@@ -342,6 +342,11 @@ void AEldenEnemy::Die()
 	{
 		EnemyController->StopMovement();
 		EnemyController->UnPossess();
+
+		// 이 컨트롤러 액터를 직접 파괴
+		EnemyController->Destroy();
+		// 멤버 EnemyController를 nullptr로 되돌린다
+		EnemyController = nullptr;
 	}
 
 

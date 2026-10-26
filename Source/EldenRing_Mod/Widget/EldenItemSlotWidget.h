@@ -53,7 +53,7 @@ protected:
 public:
 	// 상위 위젯이 그리드를 새로 그릴 때마다 호출해서
 	// 이 슬롯의 내용을 갱신 시키는 함수
-	void SetItemData(UEldenItemDefinition* Def, int32 Count, int32 InSlotIndex);
+	void SetItemData(UEldenItemDefinition* Def, int32 Count, int32 InSlotIndex, bool bShowCount = true);
 
 	// 상위 위젯이 구독해서 이 슬롯이 클릭됐다는 이벤트를 받는 델리게이트
 	UPROPERTY()

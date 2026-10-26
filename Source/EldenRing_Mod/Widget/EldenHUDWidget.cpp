@@ -38,10 +38,10 @@ void UEldenHUDWidget::NativeConstruct()
     if (PlayerRef->InventoryComponent)
     {
 		PlayerRef->InventoryComponent->OnSelectedItemChanged.AddDynamic(this,&UEldenHUDWidget::OnSelectedItemChanged);
-        PlayerRef->InventoryComponent->OnPotionCountChanged.AddDynamic(this, &UEldenHUDWidget::OnPotionCountUpdated);
+        PlayerRef->InventoryComponent->OnSelectedHotbarItemCountChanged.AddDynamic(this, &UEldenHUDWidget::OnSelectedHotbarItemCountUpdated);
 
 		OnSelectedItemChanged();
-        OnPotionCountUpdated(PlayerRef->InventoryComponent->GetCurrentItemCount(), PlayerRef->InventoryComponent->GetMaxItemCount());
+        OnSelectedHotbarItemCountUpdated(PlayerRef->InventoryComponent->GetCurrentItemCount(), PlayerRef->InventoryComponent->GetMaxItemCount());
     }
 
 	if (PlayerRef->EquipmentComponent)
@@ -66,7 +66,7 @@ void UEldenHUDWidget::NativeDestruct()
     if (PlayerRef && PlayerRef->InventoryComponent)
     {
 		PlayerRef->InventoryComponent->OnSelectedItemChanged.RemoveDynamic(this, &UEldenHUDWidget::OnSelectedItemChanged);
-        PlayerRef->InventoryComponent->OnPotionCountChanged.RemoveDynamic(this, &UEldenHUDWidget::OnPotionCountUpdated);
+        PlayerRef->InventoryComponent->OnSelectedHotbarItemCountChanged.RemoveDynamic(this, &UEldenHUDWidget::OnSelectedHotbarItemCountUpdated);
     
     }
 
@@ -118,7 +118,11 @@ void UEldenHUDWidget::OnSelectedItemChanged()
 	}
 }
 
-void UEldenHUDWidget::OnPotionCountUpdated(int32 Current, int32 Max)
+// 핫바에서 "선택된" 아이템의 (현재, 최대) 수량 방송을 받아 수량 텍스트를 갱신
+// - 어떤 아이템이든 선택된 것의 수량을 그대로 표시 (HP/마나 포션, 일반 소모품 공통)
+// - Max는 지금 쓰지 않음: MaxCount가 1인 소모품도 "1"로 표시됨. 숨기고 싶으면 여기서 Max > 1 조건 추가
+// - 위젯 변수명 PotionCountText는 WBP의 BindWidget 이름과 맞아야 해서 일부러 안 바꿨음
+void UEldenHUDWidget::OnSelectedHotbarItemCountUpdated(int32 Current, int32 Max)
 {
     if (PotionCountText)
     {
