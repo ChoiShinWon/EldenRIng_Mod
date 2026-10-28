@@ -1,7 +1,9 @@
 ﻿#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Item/EldenItemDefinition.h"
+#include "EldenRing_Mod/Item/EldenTalismanDefinition.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 
@@ -27,6 +29,11 @@ void UEldenEquipmentComponent::BeginPlay()
 	if (EquippedWeapon) EquippedWeapon->SetActorHiddenInGame(false);
 	EquippedShield = SpawnedShields.IsValidIndex(0) ? SpawnedShields[0] : nullptr;
 	if (EquippedShield) EquippedShield->SetActorHiddenInGame(false);
+	
+	for (UEldenTalismanDefinition* Def : DefaultTalismans)
+	{
+		EquipTalisman(Def);
+	}
 }
 
 
@@ -133,6 +140,41 @@ bool UEldenEquipmentComponent::EquipShield(UEldenItemDefinition* Item)
 
 	PlayerCharacter->InventoryComponent->RemoveItem(Item, 1);
 
+	return true;
+}
+
+bool UEldenEquipmentComponent::EquipTalisman(UEldenTalismanDefinition* Item)
+{
+	if (!Item || EquippedTalismans.Num() >= GetTalismanSlotCount() || EquippedTalismans.Contains(Item)) return false;
+
+	// 조건 통과하면 목록에 추가
+	EquippedTalismans.Add(Item);
+
+	// 인벤토리에서 뺀다
+	PlayerCharacter->InventoryComponent->RemoveItem(Item, 1);
+
+	// 탈리스만 효과 재계산
+	RecalculateTalismanBonus();
+
+	OnEquipmentChanged.Broadcast();
+	return true;
+}
+
+bool UEldenEquipmentComponent::UnequipTalisman(UEldenTalismanDefinition* Item)
+{
+	// 아이템이 null 이거나 장착중이 아니거나, 인벤토리로 돌아갈 자리가 없으면 false 리턴
+	if (!Item || !EquippedTalismans.Contains(Item) || PlayerCharacter->InventoryComponent->GetRemainingCapacity(Item) <= 0) return false;
+
+	// 조건 통과하면 장착중인 탈리스만 목록에서 해제
+	EquippedTalismans.Remove(Item);
+
+	// 인벤토리에 반환
+	PlayerCharacter->InventoryComponent->AddItem(Item, 1);
+
+	// 탈리스만 효과 재계산
+	RecalculateTalismanBonus();
+
+	OnEquipmentChanged.Broadcast();
 	return true;
 }
 
@@ -283,5 +325,81 @@ void UEldenEquipmentComponent::SetEquippedItemsHidden(bool bInHidden)
 			EquippedShield->SetActorHiddenInGame(false);
 		}
 	}
+}
+
+// 장착한 탈리스만 목록을 받아서, 실제로 효과가 적용되는 것만 골라서 스탯 종류별로 Flat/Percent 합계를 낸 표를 만들어 냄. 여기서 말하는 표는 Result(반환값)이다.
+TMap<EStatModifierTarget, FEldenStatBonus> UEldenEquipmentComponent::BuildTalismanBonus() const
+{
+	// 최종 결과: 스탯 종류 -> 그 종류의 (Flat 합, Percent 합)
+	TMap<EStatModifierTarget, FEldenStatBonus> Result;
+
+	// 계열 이름 -> 그 계열의 최고 등급 탈리스만
+	TMap<FName, const UEldenTalismanDefinition*> BestByFamily; 
+
+	// 각 계열에서 누가 제일 최고 등급인지 찾는다.
+	for (const UEldenTalismanDefinition* Talisman : EquippedTalismans)
+	{
+		// NULL 이거나 계열이 없으면 건너뛴다. 계열 없는 탈리스만이 비교할 필요 없음
+		if (!Talisman || Talisman->FamilyName == NAME_None) continue;
+
+		// 이 계열의 칸을 맵에서 찾고, 그 칸의 별명을 Best로 받는다
+		const UEldenTalismanDefinition*& Best = BestByFamily.FindOrAdd(Talisman->FamilyName);
+
+		// 아직 이 계열의 최고가 없거나, 순회하고 있는 지금 것이 더 높은 등급이면 교체
+		// 동률일때는 교체 X
+		if (!Best || Talisman->FamilyRank > Best->FamilyRank)
+		{
+			Best = Talisman;
+		}
+	}
+
+	// 계열별 최고가 정해졌으니, 효과를 실제로 더하는 단계
+	for (const UEldenTalismanDefinition* Talisman : EquippedTalismans)
+	{
+		if (!Talisman) continue;
+
+		// 계열이 있는데 자기 계열의 최고가 아니면 건너뛴다
+		if (Talisman->FamilyName != NAME_None && BestByFamily.FindRef(Talisman->FamilyName) != Talisman) continue;
+
+		// 이 탈리스만의 효과를 하나씩 합산
+		for (const FEldenStatModifier& Modifier : Talisman->Modifiers)
+		{
+			// 파생 스탯 수정 대상 미지정인 칸은 무시한다.
+			if (Modifier.Target == EStatModifierTarget::None) continue;
+
+			// 이 스탯 종류의 합계 칸을 찾아서 별명으로 받는다.
+			FEldenStatBonus& Bonus = Result.FindOrAdd(Modifier.Target);
+
+			if (Modifier.Op == EModifierOp::Flat)
+			{
+				// 고정값은 Flat 합계에
+				Bonus.Flat += Modifier.Value;
+			}
+			else if (Modifier.Op == EModifierOp::Percent)
+			{
+				// 비율은 Percent 합계에
+				Bonus.Percent += Modifier.Value;
+			}
+		}
+	}
+
+	// TMap을 값으로 반환해도 복사가 아니라 이동이라 비용 걱정 없음
+	return Result;
+}
+
+void UEldenEquipmentComponent::RecalculateTalismanBonus()
+{
+	const TMap<EStatModifierTarget, FEldenStatBonus> Bonus = BuildTalismanBonus();
+
+	UE_LOG(LogTemp, Log, TEXT("[Talisman] 재계산: %d종"), Bonus.Num());
+	for (const TPair<EStatModifierTarget, FEldenStatBonus>& Pair : Bonus)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[Talisman] %s Flat=%.2f Percent=%.2f"), *UEnum::GetValueAsString(Pair.Key), Pair.Value.Flat, Pair.Value.Percent);
+	}
+
+	if (!PlayerCharacter || !PlayerCharacter->StatComponent) return;
+
+	PlayerCharacter->StatComponent->SetEquipmentBonus(Bonus);
+	
 }
 

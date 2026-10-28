@@ -1,9 +1,8 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "EldenRing_Mod/EldenStatModifier.h"
 #include "EldenStatComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnZeroHealthDelegate);
@@ -126,8 +125,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
 	float CurrentStamina = 100.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
+	// 효과값. 기준값에 장비 보너스를 반영한 계산 결과라서 에디터에서 못 고치게 했다. Tick이 이 값을 읽는다.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
 	float StaminaRegenRate = 20.f;
+
+	// 기준값. 에디터에서 직접 정하는 값이다. 재계산할 때마다 이 값에서 효과값을 새로 만든다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
+	float BaseStaminaRegenRate = 20.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
 	float StaminaRegenDelay = 1.5f;
@@ -169,4 +173,15 @@ public:
 	// 마나용 게터함수
 	FORCEINLINE float GetCurrentMana() const { return CurrentMana; }
 	FORCEINLINE float GetMaxMana() const { return MaxMana; }
+
+	// Equipment가 호출할 입구
+	void SetEquipmentBonus(const TMap<EStatModifierTarget, FEldenStatBonus>& InBonus);
+
+private:
+
+	// 합산 결과 보관. 레벨업 때 Recalculate가 다시 읽으니까 저장해둬야 함.
+	TMap<EStatModifierTarget, FEldenStatBonus> EquipmentBonus;
+
+	// 맵에서 Target 칸을 찾아 보너스를 반영한 최종값을 돌려줌. 멤버를 안 바꾸니 const
+	float CalcWithBonus(float BaseValue, EStatModifierTarget Target) const;
 };

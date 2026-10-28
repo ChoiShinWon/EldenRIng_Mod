@@ -26,7 +26,8 @@ enum class EItemCategory : uint8
 	Usable UMETA(DisplayName = "Usable"),
 	Weapon UMETA(DisplayName = "Weapon"),
 	Armor UMETA(DisplayName = "Armor"),
-	Key UMETA(DisplayName = "Key")
+	Key UMETA(DisplayName = "Key"),
+	Talisman UMETA(DisplayName = "Talisman")
 };
 
 // 월드에 스폰되는 액터가 아니라 콘텐츠 브라우저에 저장해두고 재사용하는 순수 데이터 에셋
