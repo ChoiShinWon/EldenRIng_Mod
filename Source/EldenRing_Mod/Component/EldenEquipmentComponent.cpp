@@ -391,12 +391,6 @@ void UEldenEquipmentComponent::RecalculateTalismanBonus()
 {
 	const TMap<EStatModifierTarget, FEldenStatBonus> Bonus = BuildTalismanBonus();
 
-	UE_LOG(LogTemp, Log, TEXT("[Talisman] 재계산: %d종"), Bonus.Num());
-	for (const TPair<EStatModifierTarget, FEldenStatBonus>& Pair : Bonus)
-	{
-		UE_LOG(LogTemp, Log, TEXT("[Talisman] %s Flat=%.2f Percent=%.2f"), *UEnum::GetValueAsString(Pair.Key), Pair.Value.Flat, Pair.Value.Percent);
-	}
-
 	if (!PlayerCharacter || !PlayerCharacter->StatComponent) return;
 
 	PlayerCharacter->StatComponent->SetEquipmentBonus(Bonus);

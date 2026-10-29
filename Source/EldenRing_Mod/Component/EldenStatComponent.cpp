@@ -63,7 +63,7 @@ void UEldenStatComponent::SetEquipmentBonus(const TMap<EStatModifierTarget, FEld
 
 // 최종값 = 기준값 * (1 + 퍼센트) + 고정값
 // 고정값은 퍼센트의 영향을 받지 않는다.
-// 레벨 스탯(Vigor 등)으로 기준값을 만들고 장비 보너스를 반영해 파생 스탯을 재계산
+// 결과가 음수면 0으로 막는다. 퍼센트가 -100%보다 많이 깎여도 최대치가 음수가 되지 않게 하려는 것.
 float UEldenStatComponent::CalcWithBonus(float BaseValue, EStatModifierTarget Target) const
 {
 	// 맵에 Target 칸이 없으면 0, 0짜리 기본값이 나온다. 그래서 보너스가 없을 땐 기준값이 그대로 반환된다.
@@ -76,14 +76,23 @@ float UEldenStatComponent::CalcWithBonus(float BaseValue, EStatModifierTarget Ta
 
 void UEldenStatComponent::ApplyDamage(float DamageAmount)
 {
-	// 2. 데미지 적용 로직 (FStatUtils 활용)
+
+	// 받는 피해 보정. Percent는 배율. Flat은 한 방당 가감.
+	// DamageAmount > 0 일 때만 적용: 가드로 0이 된 피격에 Flat 페널티가 붙어 체력이 닳는 것을 막으려는 것.
+	if (DamageAmount > 0)
+	{
+		DamageAmount = CalcWithBonus(DamageAmount, EStatModifierTarget::DamageTaken);
+	}
+
+
+	// 데미지 적용 로직 (FStatUtils 활용)
 	// 데미지이므로 음수(-)를 붙여서 깎아줍니다.
 	FStatUtils::UpdateStat(CurrentHealth, MaxHealth, -DamageAmount);
 
 	// 체력이 변했으니 OnHealthChanged 방송
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 
-	// 3. 체력이 0 이하가 되면 방송(Broadcast)을 때립니다!
+	// 체력이 0 이하가 되면 방송(Broadcast)을 때립니다!
 	if (CurrentHealth <= 0.0f)
 	{
 		OnZeroHealth.Broadcast();
@@ -130,7 +139,7 @@ void UEldenStatComponent::RecalculateDerivedStats()
 	float OldMaxHealth = MaxHealth;
 	float OldMana = MaxMana;
 
-	// 레벨업 시 Vigor 등 스탯에 따라 파생 스탯(MaxHealth 등)을 재계산
+	// 레벨 스탯(Vigor 등)으로 기준값을 만들고 장비 보너스를 반영해 파생 스탯(MaxHealth 등)을 재계산
 	MaxHealth = CalcWithBonus(100.0f + (Vigor * 25.0f), EStatModifierTarget::MaxHealth);
 	MaxMana = CalcWithBonus(100.0f + (Mind * 25.0f), EStatModifierTarget::MaxMana);
 	MaxStamina = CalcWithBonus(100.0f + (Endurance * 2.0f), EStatModifierTarget::MaxStamina);
@@ -163,7 +172,6 @@ void UEldenStatComponent::RecalculateDerivedStats()
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 	OnManaChanged.Broadcast(CurrentMana, MaxMana);
 	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
-	UE_LOG(LogTemp, Log, TEXT("[Stat] HP %.1f/%.1f Mana %.1f/%.1f Stam %.1f/%.1f Atk %.1f Regen %.1f"), CurrentHealth, MaxHealth, CurrentMana, MaxMana, CurrentStamina, MaxStamina, AttackPower, StaminaRegenRate);
 }
 
 void UEldenStatComponent::ConsumeStamina(float Amount)

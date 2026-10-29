@@ -19,7 +19,7 @@ enum class EStatModifierTarget : uint8
 	MaxMana UMETA(DisplayName = "최대 마나"),
 	AttackPower UMETA(DisplayName = "공격력"),
 	StaminaRegenRate UMETA(DisplayName = "스태미너 회복 속도"),
-	DamageTaken UMETA(DisplayName = "받는 피해") // Percent기준 +면 받는 피해 증가, -면 감소
+	DamageTaken UMETA(DisplayName = "받는 피해") // Percent기준 +면 받는 피해 증가, -면 감소. Flat: 한 방당 가감(예: -5면 맞을때마다 5 덜 받음)
 };
 
 
