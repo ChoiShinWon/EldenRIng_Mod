@@ -3,14 +3,30 @@
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "EldenRing_Mod/Item/EldenItemDefinition.h"
+#include "EldenRing_Mod/Item/EldenTalismanDefinition.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "Components/UniformGridPanel.h"
 
 void UEldenEquipmentTabWidget::RefreshEquipment(UEldenInventoryComponent* Inventory, class UEldenEquipmentComponent* Equipment)
 {
+	const int32 TalismanSlots = Equipment ? Equipment->GetTalismanSlotCount() : 0;
 	CachedInventoryComponent = Inventory;
 	if (!Inventory) return;
+
+	TArray<TObjectPtr<UEldenItemDefinition>> TalismanItems;
+	
+	if (Equipment)
+	{
+		for (UEldenTalismanDefinition* Talisman : Equipment->GetEquippedTalismans())
+		{
+			if (Talisman)
+			{
+				TalismanItems.Add(Talisman);
+			}
+		}
+	}
+	
 
 	TArray<TObjectPtr<UEldenItemDefinition>> RightHandItems;
 	if (Equipment)
@@ -39,7 +55,7 @@ void UEldenEquipmentTabWidget::RefreshEquipment(UEldenInventoryComponent* Invent
 
 	RefreshCategorySlots(RightHandGridPanel, RightHandSlotCount, RightHandSlotCount, &RightHandItems, false);
 	RefreshCategorySlots(LeftHandGridPanel, LeftHandSlotCount, LeftHandSlotCount, &LeftHandItems, false);
-	RefreshCategorySlots(TalismanGridPanel, TalismanSlotCount, TalismanSlotCount, nullptr, false);
+	RefreshCategorySlots(TalismanGridPanel, TalismanSlots, TalismanSlots, &TalismanItems, false);
 	RefreshCategorySlots(ConsumableGridPanel, ConsumableSlotCount, ConsumableColumnCount, &Inventory->GetEquippedConsumables(), true);
 
 }
