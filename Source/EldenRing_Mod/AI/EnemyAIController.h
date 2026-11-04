@@ -1,0 +1,27 @@
+﻿
+#pragma once
+
+#include "CoreMinimal.h"
+#include "AIController.h"
+#include "EnemyAIController.generated.h"
+
+UCLASS()
+class ELDENRING_MOD_API AEnemyAIController : public AAIController
+{
+	GENERATED_BODY()
+public:
+
+	void SetAggroTarget(AActor* Target);
+
+	void ClearAggroTarget();
+
+	virtual void OnPossess(APawn* InPawn) override;
+
+	virtual void OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result) override;
+
+	void SetAlerted(bool bAlerted);
+
+	static const FName BBKey_Target;
+	static const FName BBKey_Aggroed;
+	static const FName BBKey_Stunned;
+};
