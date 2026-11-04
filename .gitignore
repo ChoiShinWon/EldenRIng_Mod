@@ -28,6 +28,7 @@ Build/
 /AGENTS.md
 /CLAUDE.md
 *.sln
+*.slnx
 *.suo
 *.opensdf
 *.sdf
