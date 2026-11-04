@@ -5,6 +5,7 @@
 #include "EldenRing_Mod/Widget/EldenInventoryTabWidget.h"
 #include "EldenRing_Mod/Widget/EldenEquipmentTabWidget.h"
 #include "EldenRing_Mod/Item/EldenItemDefinition.h"
+#include "EldenRing_Mod/Item/EldenTalismanDefinition.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -55,7 +56,11 @@ void UEldenMenuWidget::OnItemActionConfirmed(UEldenItemDefinition* Item, EItemAc
 {
 	if (ActionType == EItemActionType::Equip)
 	{
-		if (Item->WeaponClass)
+		if (UEldenTalismanDefinition* Talisman = Cast<UEldenTalismanDefinition>(Item))
+		{
+			CachedEquipmentComponent->EquipTalisman(Talisman);
+		}
+		else if (Item->WeaponClass)
 		{
 			CachedEquipmentComponent->EquipWeapon(Item);
 		}
@@ -71,8 +76,11 @@ void UEldenMenuWidget::OnItemActionConfirmed(UEldenItemDefinition* Item, EItemAc
 	}
 	else if (ActionType == EItemActionType::UnEquip)
 	{
-
-		if (Item->WeaponClass)
+		if (UEldenTalismanDefinition* Talisman = Cast<UEldenTalismanDefinition>(Item))
+		{
+			CachedEquipmentComponent->UnequipTalisman(Talisman);
+		}
+		else if (Item->WeaponClass)
 		{
 			CachedEquipmentComponent->UnequipWeaponByItem(Item);
 		}

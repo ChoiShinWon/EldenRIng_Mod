@@ -30,10 +30,6 @@ void UEldenEquipmentComponent::BeginPlay()
 	EquippedShield = SpawnedShields.IsValidIndex(0) ? SpawnedShields[0] : nullptr;
 	if (EquippedShield) EquippedShield->SetActorHiddenInGame(false);
 	
-	for (UEldenTalismanDefinition* Def : DefaultTalismans)
-	{
-		EquipTalisman(Def);
-	}
 }
 
 

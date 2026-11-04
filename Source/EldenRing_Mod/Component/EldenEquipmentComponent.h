@@ -66,10 +66,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Talisman")
 	TArray<TObjectPtr<UEldenTalismanDefinition>> EquippedTalismans;
 
-	// [임시] 시작 시 장착해 둘 탈리스만. 장비창 UI 전에 PIE로 효과를 테스트하려는 용도
-	UPROPERTY(EditDefaultsOnly, Category = "Talisman")
-	TArray<TObjectPtr<UEldenTalismanDefinition>> DefaultTalismans;
-
 public:
 
 	UEldenEquipmentComponent();

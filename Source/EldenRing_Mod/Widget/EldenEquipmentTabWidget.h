@@ -42,9 +42,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Item")
 	int32 LeftHandSlotCount = 5;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Item")
-	int32 TalismanSlotCount = 4;
-
 	// 소모품만 "칸 수"와 "한 줄 폭"이 다르므로 둘 다 필요
 	UPROPERTY(EditDefaultsOnly, Category = "Item")
 	int32 ConsumableSlotCount = 10;
