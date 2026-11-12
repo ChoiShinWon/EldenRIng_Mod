@@ -2,6 +2,7 @@
 
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/StatUtils.h"
+#include "EldenRing_Mod/Save/EldenSaveGame.h"
 #include "Engine/World.h" // 타이머 매니저(GetWorld())를 사용하기 위해 필수
 #include "TimerManager.h"
 
@@ -59,6 +60,33 @@ void UEldenStatComponent::SetEquipmentBonus(const TMap<EStatModifierTarget, FEld
 {
 	EquipmentBonus = InBonus;
 	RecalculateDerivedStats();
+}
+
+void UEldenStatComponent::CaptureTo(FEldenSavedStats& Out) const
+{
+	Out.Level = Level;
+	Out.Vigor = Vigor;
+	Out.Mind = Mind;
+	Out.Endurance = Endurance;
+	Out.Strength = Strength;
+	Out.CurrentRunes = CurrentRunes;
+	Out.RequiredRunes = RequiredRunes;
+}
+
+void UEldenStatComponent::ApplyFrom(const FEldenSavedStats& In)
+{
+	Level = In.Level;
+	Vigor = In.Vigor;
+	Mind = In.Mind;
+	Endurance = In.Endurance;
+	Strength = In.Strength;
+	CurrentRunes = In.CurrentRunes;
+	RequiredRunes = In.RequiredRunes;
+
+	// Max 값 재계산
+	RecalculateDerivedStats();
+	FullRestore();
+	OnRunesChanged.Broadcast(CurrentRunes);
 }
 
 // 최종값 = 기준값 * (1 + 퍼센트) + 고정값

@@ -6,6 +6,8 @@
 #include "EldenRing_Mod/Item/EldenItemDefinition.h"
 #include "EldenInventoryComponent.generated.h"
 
+struct FEldenSavedInventory;
+
 // 핫바에서 "지금 선택된" 아이템 하나의 (현재 수량, 최대 수량)을 알리는 델리게이트.
 //  - 핫바에 들어 있는 아이템의 종류 수가 아니라, 선택된 아이템의 '보유 수량'임
 //    (HP 포션 / 마나 포션 / 장착한 일반 소모품 중 지금 선택된 것)
@@ -73,7 +75,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Item")
 	TObjectPtr<UEldenItemDefinition> ManaPotionDef;
 
+	void EnsureFixedPotions();
+
 public:
+	void CaptureTo(FEldenSavedInventory& Out) const;
+
+	void ApplyFrom(const FEldenSavedInventory& In);
+
 	// 일반 소모품을 핫바에 추가 (Usable 카테고리만 허용)
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	bool EquipConsumable(UEldenItemDefinition* Definition);

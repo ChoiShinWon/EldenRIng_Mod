@@ -1,4 +1,5 @@
 ﻿#include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/Save/EldenSaveGame.h"
 #include "Engine/Texture.h"
 
 UEldenInventoryComponent::UEldenInventoryComponent()
@@ -14,15 +15,11 @@ void UEldenInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// HP/마나 포션은 줍는 아이템이 아니라 시작하자마자 무조건 최대치로 지급되는 고정 슬롯
-	// 이미 갖고 있다면 또 지급하지 않게 HasItem으로 방어
-	if (HPPotionDef && !HasItem(HPPotionDef)) AddItem(HPPotionDef, HPPotionDef->MaxCount);
-	if (ManaPotionDef && !HasItem(ManaPotionDef)) AddItem(ManaPotionDef, ManaPotionDef->MaxCount);
-	
+	EnsureFixedPotions();
 	
 	TArray<UEldenItemDefinition*> CycleOrder = BuildCycleOrder();
 
-	// 저장된 SelectedConsumable이 여전히 유효환 순환 목록 안에 있다면 유지
+	// 저장된 SelectedConsumable이 여전히 유효한 순환 목록 안에 있다면 유지
 	if (SelectedConsumable && CycleOrder.Contains(SelectedConsumable))
 	{
 
@@ -52,13 +49,87 @@ TArray<UEldenItemDefinition*> UEldenInventoryComponent::BuildCycleOrder() const
 	return CycleOrder;
 }
 
+void UEldenInventoryComponent::EnsureFixedPotions()
+{
+	// HP/마나 포션은 줍는 아이템이 아니라 시작하자마자 무조건 최대치로 지급되는 고정 슬롯
+	// 이미 갖고 있다면 또 지급하지 않게 HasItem으로 방어
+	if (HPPotionDef && !HasItem(HPPotionDef)) AddItem(HPPotionDef, HPPotionDef->MaxCount);
+	if (ManaPotionDef && !HasItem(ManaPotionDef)) AddItem(ManaPotionDef, ManaPotionDef->MaxCount);
+}
+
+void UEldenInventoryComponent::CaptureTo(FEldenSavedInventory& Out) const
+{
+	Out.SavedItem.Empty();
+	Out.EquippedConsumables.Empty();
+	
+
+	for (const TObjectPtr<UEldenItemDefinition>& Def : ItemOrder)
+	{
+		const FEldenItemSlot* Slot = ItemMap.Find(Def);
+		if (!Slot) continue;
+		FEldenSavedItem Entry;
+		Entry.Item = Slot->Definition;
+		Entry.ItemCount = Slot->Count;
+		Out.SavedItem.Add(Entry);
+	}
+
+	Out.SelectedConsumable = SelectedConsumable;
+
+	for (const TObjectPtr<UEldenItemDefinition>& Def : EquippedConsumables)
+	{
+		Out.EquippedConsumables.Add(Def);
+	}
+}
+
+void UEldenInventoryComponent::ApplyFrom(const FEldenSavedInventory& In)
+{
+	ItemMap.Empty();
+	ItemOrder.Empty();
+	EquippedConsumables.Empty();
+
+	for (const FEldenSavedItem& Entry : In.SavedItem)
+	{
+		UEldenItemDefinition* Def = Entry.Item.LoadSynchronous();
+		if (!Def) continue;
+		AddItem(Def, Entry.ItemCount);
+	}
+	EnsureFixedPotions();
+
+	for (const TSoftObjectPtr<UEldenItemDefinition>& Consumable : In.EquippedConsumables)
+	{
+		UEldenItemDefinition* Def = Consumable.LoadSynchronous();
+		if (!Def) continue;
+		EquipConsumable(Def);
+	}
+
+	UEldenItemDefinition* Selected = In.SelectedConsumable.LoadSynchronous();
+	TArray<UEldenItemDefinition*> CycleOrder = BuildCycleOrder();
+
+	if (Selected && CycleOrder.Contains(Selected))
+	{
+
+	}
+	else
+	{
+		if (CycleOrder.IsEmpty())
+		{
+			Selected = nullptr;
+		}
+		else
+		{
+			Selected = CycleOrder[0];
+		}
+	}
+	SetSelectedConsumable(Selected);
+}
+
 bool UEldenInventoryComponent::EquipConsumable(UEldenItemDefinition* Definition)
 {
 	// HP, 마나 포션은 이미 고정이라 장착/해제라는 개념 자체가 없음
 	if (Definition == HPPotionDef || Definition == ManaPotionDef) return false;
 	if (!Definition) return false;
 
-	// 소모품 카테고리만 장착 하용
+	// 소모품 카테고리만 장착 허용
 	if (Definition->Category == EItemCategory::Usable)
 	{
 		// 인벤토리에 보유중인가

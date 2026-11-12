@@ -51,6 +51,11 @@ public:
 
 	void HandleGraceRest(class AEldenGrace* Grace, class AEldenCharacter* Player);
 
+	void SaveProgress();
+
+	void ApplySavedProgress();
+
+
 protected:
 
 	virtual void BeginPlay() override;

@@ -8,9 +8,10 @@
 
 enum class ETitleMenuItem : uint8
 {
-	NewGame, Exit, Count,
+	Continue, NewGame, Exit, Count,
 	None = 255
 };
+
 
 class UButton;
 class UWorld;
@@ -18,7 +19,8 @@ class USoundBase;
 class UAudioComponent;
 class UImage;
 class UTextBlock;
-
+class UEldenSaveSubsystem;
+class UWidget;
 
 UCLASS()
 class ELDENRING_MOD_API UEldenTitleWidget : public UUserWidget
@@ -27,6 +29,13 @@ class ELDENRING_MOD_API UEldenTitleWidget : public UUserWidget
 protected:
 	virtual void NativeConstruct() override;
 
+	UPROPERTY()
+	UEldenSaveSubsystem* Sub = nullptr;
+
+
+	UPROPERTY(meta = (BindWidget))
+	UImage* Img_SelectContinue = nullptr;
+
 	UPROPERTY(meta = (BindWidget))
 	UImage* Img_SelectNewGame = nullptr;
 
@@ -34,10 +43,19 @@ protected:
 	UImage* Img_SelectExit = nullptr;
 
 	UPROPERTY(meta = (BindWidget))
+	UButton* Btn_Continue = nullptr;
+
+	UPROPERTY(meta = (BindWidget))
+	UWidget* Row_Continue = nullptr;
+
+	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_NewGame = nullptr;
 
 	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Exit = nullptr;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* Txt_Continue = nullptr;
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Txt_NewGame = nullptr;
@@ -90,10 +108,17 @@ protected:
 	bool bIsTransitioning = false;
 
 	UFUNCTION()
+	void OnContinueClicked();
+
+	UFUNCTION()
 	void OnNewGameClicked();
 
 	UFUNCTION()
 	void OnExitClicked();
+
+	UFUNCTION()
+	void OnContinueHovered();
+
 
 	UFUNCTION()
 	void OnNewGameHovered();
@@ -107,4 +132,8 @@ protected:
 	void SelectItem(ETitleMenuItem Item);
 
 	void RefreshSelection();
+
+	void StartTransition();
+
+	void SetContinueAvailable(bool bAvailable);
 };

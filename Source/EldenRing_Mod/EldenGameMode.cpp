@@ -3,9 +3,12 @@
 #include "EldenRing_Mod/Actor/EldenGrace.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
+#include "EldenRing_Mod/Save/EldenSaveSubsystem.h"
+#include "EldenRing_Mod/Save/EldenSaveGame.h"
 #include "EldenRing_Mod/Actor/Bloodstain.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
+#include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "Components/AudioComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
@@ -41,6 +44,7 @@ void AEldenGameMode::BeginPlay()
 		BindEnemy(*It);
 	}
 
+	GetWorldTimerManager().SetTimerForNextTick(this, &AEldenGameMode::ApplySavedProgress);
 }
 
 void AEldenGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -219,6 +223,68 @@ void AEldenGameMode::HandleGraceRest(AEldenGrace* Grace, AEldenCharacter* Player
 	if (!Player || !Player->InventoryComponent) return;
 
 	Player->InventoryComponent->RefillPotions();
+
+
+	SaveProgress();
+
+}
+
+void AEldenGameMode::SaveProgress()
+{
+	if (!CachedPlayer || !LastGrace.IsValid()) return;
+	UEldenSaveSubsystem* Sub = GetGameInstance()->GetSubsystem<UEldenSaveSubsystem>();
+	if (!Sub) return;
+
+	UEldenSaveGame* Save = Sub->GetOrCreateSave();
+	if (!Save) return;
+
+	CachedPlayer->StatComponent->CaptureTo(Save->Stats);
+
+	CachedPlayer->InventoryComponent->CaptureTo(Save->SavedInventory);
+	CachedPlayer->EquipmentComponent->CaptureTo(Save->SavedEquipment);
+
+	Save->LastGraceId = LastGrace->GetGraceId();
+
+	const bool bOk = Sub->WriteToDisk();
+	UE_LOG(LogTemp, Log, TEXT("[Save] 은총 %s 저장 %s"),
+		*Save->LastGraceId.ToString(), bOk ? TEXT("성공") : TEXT("실패"));
+}
+
+void AEldenGameMode::ApplySavedProgress()
+{
+	if (!CachedPlayer) return;
+
+	UEldenSaveSubsystem* Sub = GetGameInstance()->GetSubsystem<UEldenSaveSubsystem>();
+	if (!Sub) return;
+
+	UEldenSaveGame* Save = Sub->GetCurrentSave();
+	if (!Save) return;
+
+	CachedPlayer->InventoryComponent->ApplyFrom(Save->SavedInventory);
+	CachedPlayer->EquipmentComponent->ApplyFrom(Save->SavedEquipment);
+	CachedPlayer->StatComponent->ApplyFrom(Save->Stats);
+
+	AEldenGrace* Found = nullptr;
+	for (TActorIterator<AEldenGrace> It(GetWorld()); It; ++It)
+	{
+		if (It->GetGraceId() == Save->LastGraceId)
+		{
+			Found = *It;
+			break;
+		}
+	}
+	if (!Found)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("마지막 은총을 찾지 못함: ID %s"), *Save->LastGraceId.ToString());
+		return;
+	}
+
+
+	RegisterGrace(Found);
+
+	const FTransform T = Found->GetRespawnTransform();
+	CachedPlayer->SetActorLocationAndRotation(T.GetLocation(), T.GetRotation().Rotator(), false, nullptr, ETeleportType::TeleportPhysics);
+
 }
 
 void AEldenGameMode::StartBGM()

@@ -6,6 +6,7 @@
 #include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
 #include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/EldenGameMode.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 UEldenGraceRestComponent::UEldenGraceRestComponent()
@@ -66,6 +67,9 @@ void UEldenGraceRestComponent::ExitRest()
 	OwnerCharacter->StatComponent->FullRestore();
 	OwnerCharacter->EquipmentComponent->SetEquippedItemsHidden(false);
 
+	AEldenGameMode* GM = GetWorld()->GetAuthGameMode<AEldenGameMode>();
+	if (!GM) return;
+	GM->SaveProgress();
 }
 
 void UEldenGraceRestComponent::OnStandUpMontageEnded(UAnimMontage* Montage, bool bInterrupted)
