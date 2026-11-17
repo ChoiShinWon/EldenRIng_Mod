@@ -10,6 +10,7 @@ class USphereComponent;
 class UStaticMeshComponent;
 class UParticleSystem;
 class AEldenCharacter;
+struct FEldenSavedBloodstain;
 
 UCLASS()
 class ELDENRING_MOD_API ABloodstain : public AActor, public IInteractable
@@ -25,6 +26,11 @@ public:
 	virtual void Interact(AEldenCharacter* Player) override;
 
 	virtual FText GetInteractionPrompt() const override;
+
+	// 세이브 구조체로 복사
+	void CaptureTo(FEldenSavedBloodstain& Out) const;
+
+	// ApplyFrom이 없는 이유는 핏자국은 복원할 액터 자체가 없기 때문.
 protected:
 	virtual void BeginPlay() override;
 

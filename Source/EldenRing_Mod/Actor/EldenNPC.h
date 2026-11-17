@@ -10,6 +10,7 @@ class USkeletalMeshComponent;
 class UEldenDialogueData;
 class AEldenCharacter;
 class AEldenPlayerController;
+struct FEldenSavedNPC;
 
 // 다음 단계로 넘어가는 조건
 UENUM(BlueprintType)
@@ -66,6 +67,12 @@ public:
 	UFUNCTION()
 	void OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	// 세이브 구조체로 복사
+	void CaptureTo(FEldenSavedNPC& Out) const;
+
+	// 세이브 구조체에서 복원
+	void ApplyFrom(const FEldenSavedNPC& In);
 
 protected:
 	virtual void BeginPlay() override;

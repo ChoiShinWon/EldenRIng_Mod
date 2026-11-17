@@ -3,6 +3,7 @@
 #include "EldenRing_Mod/Actor/Bloodstain.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "EldenRing_Mod/Save/EldenSaveGame.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -58,6 +59,12 @@ void ABloodstain::Interact(AEldenCharacter* Player)
 FText ABloodstain::GetInteractionPrompt() const
 {
 	return FText::FromString(TEXT("룬 회수"));
+}
+
+void ABloodstain::CaptureTo(FEldenSavedBloodstain& Out) const
+{
+	Out.Runes = StoredRunes;
+	Out.SpawnLocation = GetActorLocation();
 }
 
 

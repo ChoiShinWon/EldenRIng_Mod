@@ -87,6 +87,52 @@ struct FEldenSavedEquipment
 	TArray<TSoftObjectPtr<UEldenTalismanDefinition>> Talismans;
 };
 
+USTRUCT()
+struct FEldenSavedNPC
+{
+	GENERATED_BODY()
+
+	// NPC 퀘스트 진행 단계
+	UPROPERTY()
+	int32 Stage = 0;
+
+	UPROPERTY()
+	int32 KillCount = 0;
+
+	// NPC 위치값
+	UPROPERTY()
+	FTransform Transform;
+};
+
+USTRUCT()
+struct FEldenSavedBloodstain
+{
+	GENERATED_BODY()
+
+	// 룬 0 = 핏자국 없음
+	UPROPERTY()
+	int32 Runes = 0;
+
+	UPROPERTY()
+	FVector SpawnLocation = FVector::ZeroVector;
+};
+
+USTRUCT()
+struct FEldenSavedWorld
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TSet<FName> PickupIDs;
+
+	// TMap으로 관리하는 NPC별 상태 장부
+	UPROPERTY()
+	TMap<FName, FEldenSavedNPC> NPCs;
+
+	UPROPERTY()
+	FEldenSavedBloodstain Bloodstain;
+};
+
 UCLASS()
 class ELDENRING_MOD_API UEldenSaveGame : public USaveGame
 {
@@ -107,5 +153,8 @@ public:
 
 	UPROPERTY()
 	FEldenSavedEquipment SavedEquipment;
+
+	UPROPERTY()
+	FEldenSavedWorld SavedWorld;
 
 };

@@ -5,6 +5,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "EldenRing_Mod/EldenGameMode.h"
+#include "EldenRing_Mod/Save/EldenSaveGame.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
@@ -68,6 +69,20 @@ void AEldenNPC::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherA
 		Player->InteractionComponent->ClearInteractableTarget(this);
 	}
 	
+}
+
+void AEldenNPC::CaptureTo(FEldenSavedNPC& Out) const
+{
+	Out.Stage = CurrentStage;
+	Out.KillCount = KillCount;
+	Out.Transform = GetActorTransform();
+}
+
+void AEldenNPC::ApplyFrom(const FEldenSavedNPC& In)
+{
+	CurrentStage = Stages.IsValidIndex(In.Stage) ? In.Stage : 0;
+	KillCount = In.KillCount;
+	SetActorTransform(In.Transform);
 }
 
 FText AEldenNPC::GetInteractionPrompt() const

@@ -1,11 +1,13 @@
 ﻿
 #include "EldenRing_Mod/EldenGameMode.h"
 #include "EldenRing_Mod/Actor/EldenGrace.h"
+#include "EldenRing_Mod/Actor/EldenItemPickUp.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Character/EldenEnemy.h"
 #include "EldenRing_Mod/Save/EldenSaveSubsystem.h"
 #include "EldenRing_Mod/Save/EldenSaveGame.h"
 #include "EldenRing_Mod/Actor/Bloodstain.h"
+#include "EldenRing_Mod/Actor/EldenNPC.h"
 #include "EldenRing_Mod/Component/EldenStatComponent.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/EldenEquipmentComponent.h"
@@ -156,8 +158,6 @@ void AEldenGameMode::DropBloodstain(AEldenCharacter* DeadPlayer)
 		ECC_Visibility,
 		TraceParams);
 
-	// 스폰 위치
-	FVector SpawnLoc = bHit ? Hit.ImpactPoint : StartLoc;
 
 	// 회수 안 된 이전 블러드스테인 영구 소멸
 	if (ActiveBloodstain.IsValid()) ActiveBloodstain->Destroy();
@@ -166,21 +166,33 @@ void AEldenGameMode::DropBloodstain(AEldenCharacter* DeadPlayer)
 	// 남은 룬이 없다면 실행 X
 	if (Lost <= 0) return;
 
+	const FVector SpawnLoc = bHit ? Hit.ImpactPoint : StartLoc;
+
+	if (!SpawnBloodstain(SpawnLoc, Lost)) return;
+	// 플레이어 룬 0으로
+	DeadPlayer->StatComponent->LoseAllRunes();
+}
+
+bool AEldenGameMode::SpawnBloodstain(const FVector& Location, int32 Runes)
+{
+	if (!BloodstainClass) return false;
+
+
 	// 스폰
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride =
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	ABloodstain* Spawned = GetWorld()->SpawnActor<ABloodstain>(
-		BloodstainClass, SpawnLoc, FRotator::ZeroRotator, SpawnParams);
+		BloodstainClass, Location, FRotator::ZeroRotator, SpawnParams);
 
-	if (!Spawned) return;
+	if (!Spawned) return false;
 	// 손실 룬을 Bloodstain에 전달
-	Spawned->InitBloodstain(Lost);
+	Spawned->InitBloodstain(Runes);
 	ActiveBloodstain = Spawned;
 
-	// 플레이어 룬 0으로
-	DeadPlayer->StatComponent->LoseAllRunes();
+	return true;
+
 }
 
 void AEldenGameMode::ResetAllEnemies()
@@ -244,6 +256,27 @@ void AEldenGameMode::SaveProgress()
 	CachedPlayer->EquipmentComponent->CaptureTo(Save->SavedEquipment);
 
 	Save->LastGraceId = LastGrace->GetGraceId();
+	Save->SavedWorld.PickupIDs = CollectedPickups;
+
+	// 맵에 칸을 만들고 채우기
+	// 없으면 칸을 새로 만들어 주므로 항상 존재 -> 참조로 받아 맵 안의 칸을 직접 채움
+	for (TActorIterator<AEldenNPC> It(GetWorld()); It; ++It)
+	{
+		FEldenSavedNPC& Entry = Save->SavedWorld.NPCs.FindOrAdd(It->GetFName());
+		It->CaptureTo(Entry);
+	}
+
+	// 회수 전의 핏자국이 있으면 위치와 룬을 저장
+	if (ActiveBloodstain.IsValid())
+	{
+		ActiveBloodstain->CaptureTo(Save->SavedWorld.Bloodstain);
+	}
+	// 없으면 없음(Runes = 0)을 덮어씀. 안 하면 재사용되는 Save에 옛 핏자국이 남아 이어하기 때 되살아남
+	else
+	{
+		FEldenSavedBloodstain Temp;
+		Save->SavedWorld.Bloodstain = Temp;
+	}
 
 	const bool bOk = Sub->WriteToDisk();
 	UE_LOG(LogTemp, Log, TEXT("[Save] 은총 %s 저장 %s"),
@@ -263,6 +296,32 @@ void AEldenGameMode::ApplySavedProgress()
 	CachedPlayer->InventoryComponent->ApplyFrom(Save->SavedInventory);
 	CachedPlayer->EquipmentComponent->ApplyFrom(Save->SavedEquipment);
 	CachedPlayer->StatComponent->ApplyFrom(Save->Stats);
+
+	CollectedPickups = Save->SavedWorld.PickupIDs;
+	// 이어하기 시 레벨이 새로 열려서 배치된 픽업이 전부 다시 생겨남
+	// 저장된 "이미 주운 ID" 집합에 있는 픽업은 월드에서 제거
+	for (TActorIterator<AEldenItemPickUp> It(GetWorld()); It; ++It)
+	{
+		if (CollectedPickups.Contains(It->GetFName()))
+		{
+			It->Destroy();
+		}
+	}
+
+	// 칸이 없을 수 있음(옛 세이브 등) -> 포인터로 받고 nullptr이면 건너뜀, 읽기만 하니 const
+	for (TActorIterator<AEldenNPC> It(GetWorld()); It; ++It)
+	{
+		const FEldenSavedNPC* SavedNPC = Save->SavedWorld.NPCs.Find(It->GetFName());
+		if (!SavedNPC) continue;
+		It->ApplyFrom(*SavedNPC);
+	}
+
+	const FEldenSavedBloodstain& SavedBloodstain = Save->SavedWorld.Bloodstain;
+
+	if (SavedBloodstain.Runes > 0)
+	{
+		SpawnBloodstain(SavedBloodstain.SpawnLocation, SavedBloodstain.Runes);
+	}
 
 	AEldenGrace* Found = nullptr;
 	for (TActorIterator<AEldenGrace> It(GetWorld()); It; ++It)
@@ -285,6 +344,13 @@ void AEldenGameMode::ApplySavedProgress()
 	const FTransform T = Found->GetRespawnTransform();
 	CachedPlayer->SetActorLocationAndRotation(T.GetLocation(), T.GetRotation().Rotator(), false, nullptr, ETeleportType::TeleportPhysics);
 
+	
+}
+
+void AEldenGameMode::MarkPickupCollected(FName ID)
+{
+	if (ID == NAME_None) return;
+	CollectedPickups.Add(ID);
 }
 
 void AEldenGameMode::StartBGM()
