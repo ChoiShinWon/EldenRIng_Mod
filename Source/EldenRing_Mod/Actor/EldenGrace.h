@@ -49,7 +49,14 @@ protected:
 
 	// Interact() 에서 Player 포인터를 잠깐 저장해둬야 콜백에서 접근 가능
 	TWeakObjectPtr<class AEldenCharacter> PendingPlayer;
-public:	
+public:
+
+	UPROPERTY(EditInstanceOnly, Category = "Grace")
+	FName GraceId;
+
+	const FName& GetGraceId() const { return GraceId; }
+
+
 	virtual void Interact(class AEldenCharacter* Player) override;
 	virtual FText GetInteractionPrompt() const override;
 

@@ -1,5 +1,6 @@
 ﻿#include "EldenRing_Mod/Actor/EldenItemPickUp.h"
 #include "EldenRing_Mod/Character/EldenCharacter.h"
+#include "EldenRing_Mod/EldenGameMode.h"
 #include "EldenRing_Mod/Controller/EldenPlayerController.h"
 #include "EldenRing_Mod/Component/EldenInventoryComponent.h"
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
@@ -49,6 +50,10 @@ void AEldenItemPickUp::Interact(AEldenCharacter* Player)
 	// 곧 Destroy될 액터이므로, 상호작용 대상 참조를 먼저 비워서 댕글링 방지
 	Player->InteractionComponent->SetInteractableTarget(nullptr);
 
+	if (AEldenGameMode* GM = GetWorld()->GetAuthGameMode<AEldenGameMode>())
+	{
+		GM->MarkPickupCollected(GetFName());
+	}
 	Destroy();
 }
 

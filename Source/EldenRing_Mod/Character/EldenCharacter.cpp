@@ -93,6 +93,7 @@ ECharacterState AEldenCharacter::GetState() const
 	return CharacterState;
 }
 
+
 void AEldenCharacter::BeginPlay()
 {
 	Super::BeginPlay();

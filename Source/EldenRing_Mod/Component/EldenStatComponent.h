@@ -9,6 +9,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnZeroHealthDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStatChangeDelegate, float, CurrentValue, float, MaxValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRunesChangeDelegate, int32, NewRunes);
 
+struct FEldenSavedStats;
+
 UENUM(BlueprintType)
 enum class EEldenStatType : uint8
 {
@@ -176,6 +178,11 @@ public:
 
 	// Equipment가 호출할 입구
 	void SetEquipmentBonus(const TMap<EStatModifierTarget, FEldenStatBonus>& InBonus);
+
+
+	void CaptureTo(FEldenSavedStats& Out) const;
+
+	void ApplyFrom(const FEldenSavedStats& In);
 
 private:
 

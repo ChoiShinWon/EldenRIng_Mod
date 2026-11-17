@@ -4,6 +4,7 @@
 #include "EldenRing_Mod/Character/EldenCharacter.h"
 #include "EldenRing_Mod/Item/EldenItemDefinition.h"
 #include "EldenRing_Mod/Item/EldenTalismanDefinition.h"
+#include "EldenRing_Mod/Save/EldenSaveGame.h"
 #include "EldenRing_Mod/Weapon/EldenWeapon.h"
 #include "EldenRing_Mod/Weapon/EldenShield.h"
 
@@ -24,45 +25,16 @@ void UEldenEquipmentComponent::BeginPlay()
 	EquipWeapon(DefaultWeaponDef);
 	EquipShield(DefaultShieldDef);
 
-	// 방금 추가한 인덱스 0을 명시적으로 활성화 (nullptr 방어 후 역참조)
-	EquippedWeapon = SpawnedWeapons.IsValidIndex(0) ? SpawnedWeapons[0] : nullptr;
-	if (EquippedWeapon) EquippedWeapon->SetActorHiddenInGame(false);
-	EquippedShield = SpawnedShields.IsValidIndex(0) ? SpawnedShields[0] : nullptr;
-	if (EquippedShield) EquippedShield->SetActorHiddenInGame(false);
+	ActivateCurrentEquipment();
 	
 }
 
 
 bool UEldenEquipmentComponent::EquipWeapon(UEldenItemDefinition* Item)
 {
-	// 무기 아이템이 아니면 (WeaponClass가 없다면) 리턴
-	if (!Item || !Item->WeaponClass) return false;
-
-	// 다섯개가 꽉 차있다면 반환
-	if (SpawnedWeapons.Num() >= 5) return false;
-
-
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = PlayerCharacter;
-	SpawnParams.Instigator = PlayerCharacter->GetInstigator();
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	// 인벤토리(데이터)에 있던 아이템을 실제 월드 액터로 스폰 - 장착 시에만 액터 생성
-	AEldenWeapon* NewWeapon = GetWorld()->SpawnActor<AEldenWeapon>(Item->WeaponClass,
-		PlayerCharacter->GetActorLocation(), PlayerCharacter->GetActorRotation(), SpawnParams);
-	if (!NewWeapon) return false;
-
-	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-	NewWeapon->AttachToComponent(PlayerCharacter->GetMesh(), AttachmentRules, FName("RightHandSocket"));
-
-	// 새로 장착해도 자동으로 활상화 하진 않음, 로테이션에 추가해놓고 Visible은 꺼둠
-	NewWeapon->SetActorHiddenInGame(true);
-	SpawnedWeapons.Add(NewWeapon);
-
+	if (!SpawnWeaponActor(Item)) return false;
 	// 장비창으로 옮겼으니 인벤토리에서는 빠짐
 	PlayerCharacter->InventoryComponent->RemoveItem(Item, 1);
-
-
 	return true;
 }
 
@@ -115,29 +87,12 @@ bool UEldenEquipmentComponent::UnequipWeapon(AEldenWeapon* Weapon)
 
 bool UEldenEquipmentComponent::EquipShield(UEldenItemDefinition* Item)
 {
-	if (!Item || !Item->ShieldClass) return false;
-	if (SpawnedShields.Num() >= 5) return false;
-
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = PlayerCharacter;
-	SpawnParams.Instigator = PlayerCharacter->GetInstigator();
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	AEldenShield* NewShield = GetWorld()->SpawnActor<AEldenShield>(Item->ShieldClass,
-		PlayerCharacter->GetActorLocation(), PlayerCharacter->GetActorRotation(), SpawnParams);
-
-	if (!NewShield) return false;
-
-	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-	NewShield->AttachToComponent(PlayerCharacter->GetMesh(), AttachmentRules, FName("LeftHandSocket"));
-
-	NewShield->SetActorHiddenInGame(true);
-	SpawnedShields.Add(NewShield);
-
+	if (!SpawnShieldActor(Item)) return false;
+	// 장비창으로 옮겼으니 인벤토리에서는 빠짐
 	PlayerCharacter->InventoryComponent->RemoveItem(Item, 1);
-
 	return true;
 }
+
 
 bool UEldenEquipmentComponent::EquipTalisman(UEldenTalismanDefinition* Item)
 {
@@ -323,6 +278,103 @@ void UEldenEquipmentComponent::SetEquippedItemsHidden(bool bInHidden)
 	}
 }
 
+void UEldenEquipmentComponent::CaptureTo(FEldenSavedEquipment& Out) const
+{
+	Out.RightHand.Empty();
+	Out.LeftHand.Empty();
+	Out.Talismans.Empty();
+
+	for (AEldenWeapon* Weapon : SpawnedWeapons)
+	{
+		if (!Weapon) continue;
+		UEldenItemDefinition* Def = Weapon->GetItemDefinition();
+		if (!Def) continue;
+		Out.RightHand.Add(Def);
+	}
+
+	for (AEldenShield* Shield : SpawnedShields)
+	{
+		if (!Shield) continue;
+		UEldenItemDefinition* Def = Shield->GetItemDefinition();
+		if (!Def) continue;
+
+		Out.LeftHand.Add(Def);
+	}
+
+	Out.RightHandIndex = CurrentWeaponIndex;
+	Out.LeftHandIndex = CurrentShieldIndex;
+
+	for (UEldenTalismanDefinition* Talisman : EquippedTalismans)
+	{
+		if (!Talisman) continue;
+		Out.Talismans.Add(Talisman);
+	}
+}
+
+void UEldenEquipmentComponent::ApplyFrom(const FEldenSavedEquipment& In)
+{
+	if (!PlayerCharacter) return;
+
+	// 기존 액터 정리
+	for (AEldenWeapon* Weapon : SpawnedWeapons)
+	{
+		if (Weapon) Weapon->Destroy();
+	}
+	for (AEldenShield* Shield : SpawnedShields)
+	{
+		if (Shield) Shield->Destroy();
+	}
+	SpawnedWeapons.Empty();
+	SpawnedShields.Empty();
+	EquippedWeapon = nullptr;
+	EquippedShield = nullptr;
+	CurrentWeaponIndex = 0;
+	CurrentShieldIndex = 0;
+
+	// 무기 재구성
+	for (const TSoftObjectPtr<UEldenItemDefinition>& Item : In.RightHand)
+	{
+		UEldenItemDefinition* Def = Item.LoadSynchronous();
+		if (!Def) continue;
+		SpawnWeaponActor(Def);
+	}
+
+	for (const TSoftObjectPtr<UEldenItemDefinition>& Item : In.LeftHand)
+	{
+		UEldenItemDefinition* Def = Item.LoadSynchronous();
+		if (!Def) continue;
+		SpawnShieldActor(Def);
+	}
+
+	// 복원 후에도 배열이 비어 있으면 (저장본이 비었거나 옛 세이브)
+	if (SpawnedWeapons.IsEmpty())
+	{
+		SpawnWeaponActor(DefaultWeaponDef);
+	}
+	if (SpawnedShields.IsEmpty())
+	{
+		SpawnShieldActor(DefaultShieldDef);
+	}
+	CurrentWeaponIndex = In.RightHandIndex;
+	CurrentShieldIndex = In.LeftHandIndex;
+
+	ActivateCurrentEquipment();
+
+	// 탈리스만
+	EquippedTalismans.Empty();
+	for (const TSoftObjectPtr<UEldenTalismanDefinition>& Talisman : In.Talismans)
+	{
+		UEldenTalismanDefinition* Def = Talisman.LoadSynchronous();
+		if (!Def) continue;
+
+		EquippedTalismans.Add(Def);
+	}
+	RecalculateTalismanBonus();
+
+	OnEquipmentChanged.Broadcast();
+
+}
+
 // 장착한 탈리스만 목록을 받아서, 실제로 효과가 적용되는 것만 골라서 스탯 종류별로 Flat/Percent 합계를 낸 표를 만들어 냄. 여기서 말하는 표는 Result(반환값)이다.
 TMap<EStatModifierTarget, FEldenStatBonus> UEldenEquipmentComponent::BuildTalismanBonus() const
 {
@@ -391,5 +443,78 @@ void UEldenEquipmentComponent::RecalculateTalismanBonus()
 
 	PlayerCharacter->StatComponent->SetEquipmentBonus(Bonus);
 	
+}
+
+bool UEldenEquipmentComponent::SpawnWeaponActor(UEldenItemDefinition* Item)
+{
+	// 무기 아이템이 아니면 (WeaponClass가 없다면) 리턴
+	if (!Item || !Item->WeaponClass) return false;
+
+	// 다섯개가 꽉 차있다면 반환
+	if (SpawnedWeapons.Num() >= 5) return false;
+
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = PlayerCharacter;
+	SpawnParams.Instigator = PlayerCharacter->GetInstigator();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	// 인벤토리(데이터)에 있던 아이템을 실제 월드 액터로 스폰 - 장착 시에만 액터 생성
+	AEldenWeapon* NewWeapon = GetWorld()->SpawnActor<AEldenWeapon>(Item->WeaponClass,
+		PlayerCharacter->GetActorLocation(), PlayerCharacter->GetActorRotation(), SpawnParams);
+	if (!NewWeapon) return false;
+
+	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	NewWeapon->AttachToComponent(PlayerCharacter->GetMesh(), AttachmentRules, FName("RightHandSocket"));
+
+	// 새로 장착해도 자동으로 활상화 하진 않음, 로테이션에 추가해놓고 Visible은 꺼둠
+	NewWeapon->SetActorHiddenInGame(true);
+	SpawnedWeapons.Add(NewWeapon);
+	return true;
+}
+
+bool UEldenEquipmentComponent::SpawnShieldActor(UEldenItemDefinition* Item)
+{
+	// 방패 아이템이 아니면  리턴
+	if (!Item || !Item->ShieldClass) return false;
+
+	// 다섯개가 꽉 차있다면 반환
+	if (SpawnedShields.Num() >= 5) return false;
+
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = PlayerCharacter;
+	SpawnParams.Instigator = PlayerCharacter->GetInstigator();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	// 인벤토리(데이터)에 있던 아이템을 실제 월드 액터로 스폰 - 장착 시에만 액터 생성
+	AEldenShield* NewShield = GetWorld()->SpawnActor<AEldenShield>(Item->ShieldClass,
+		PlayerCharacter->GetActorLocation(), PlayerCharacter->GetActorRotation(), SpawnParams);
+	if (!NewShield) return false;
+
+	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	NewShield->AttachToComponent(PlayerCharacter->GetMesh(), AttachmentRules, FName("LeftHandSocket"));
+
+	// 새로 장착해도 자동으로 활상화 하진 않음, 로테이션에 추가해놓고 Visible은 꺼둠
+	NewShield->SetActorHiddenInGame(true);
+	SpawnedShields.Add(NewShield);
+	return true;
+}
+
+void UEldenEquipmentComponent::ActivateCurrentEquipment()
+{
+	if (!SpawnedWeapons.IsValidIndex(CurrentWeaponIndex)) CurrentWeaponIndex = 0;
+	if (!SpawnedShields.IsValidIndex(CurrentShieldIndex)) CurrentShieldIndex = 0;
+
+	EquippedWeapon = SpawnedWeapons.IsValidIndex(CurrentWeaponIndex) ? SpawnedWeapons[CurrentWeaponIndex] : nullptr;
+	if (EquippedWeapon) EquippedWeapon->SetActorHiddenInGame(false);
+	EquippedShield = SpawnedShields.IsValidIndex(CurrentShieldIndex) ? SpawnedShields[CurrentShieldIndex] : nullptr;
+	if (EquippedShield) EquippedShield->SetActorHiddenInGame(false);
+
+	if (EquippedWeapon && EquippedWeapon->GetWeaponStance() == EWeaponStance::TwoHanded && EquippedShield)
+	{
+		// 두손 무기로 바꿨다면 방패를 숨긴다.
+		EquippedShield->SetActorHiddenInGame(true);
+	}
 }
 

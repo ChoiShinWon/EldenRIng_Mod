@@ -51,6 +51,13 @@ public:
 
 	void HandleGraceRest(class AEldenGrace* Grace, class AEldenCharacter* Player);
 
+	void SaveProgress();
+
+	void ApplySavedProgress();
+
+	void MarkPickupCollected(FName ID);
+
+
 protected:
 
 	virtual void BeginPlay() override;
@@ -113,8 +120,12 @@ protected:
 
 	void DropBloodstain(AEldenCharacter* DeadPlayer);
 
+	// 핏자국을 스폰하고 ActiveBloodstain에 등록하는 공용 헬퍼
+	bool SpawnBloodstain(const FVector& Location, int32 Runes);
+
 	UPROPERTY()
 	TArray<FEnemySpawnInfo> EnemySpawnSnapshot;
 
-
+private:
+	TSet<FName> CollectedPickups;
 };

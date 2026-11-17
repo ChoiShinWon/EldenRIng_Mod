@@ -1,5 +1,6 @@
 ﻿
 #include "EldenRing_Mod/Widget/EldenTitleWidget.h"
+#include "EldenRing_Mod/Save/EldenSaveSubsystem.h"
 #include "Components/AudioComponent.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
@@ -17,18 +18,27 @@ void UEldenTitleWidget::NativeConstruct()
 	SelectImages.Reset();
 	Labels.Reset();
 
+	SelectImages.Add(Img_SelectContinue);
+	Labels.Add(Txt_Continue);
 	SelectImages.Add(Img_SelectNewGame);
 	Labels.Add(Txt_NewGame);
 	SelectImages.Add(Img_SelectExit);
 	Labels.Add(Txt_Exit);
 
+	Btn_Continue->OnClicked.AddDynamic(this, &UEldenTitleWidget::OnContinueClicked);
 	Btn_NewGame->OnClicked.AddDynamic(this, &UEldenTitleWidget::OnNewGameClicked);
 	Btn_Exit->OnClicked.AddDynamic(this, &UEldenTitleWidget::OnExitClicked);
+
+	Btn_Continue->OnHovered.AddDynamic(this, &UEldenTitleWidget::OnContinueHovered);
 	Btn_NewGame->OnHovered.AddDynamic(this, &UEldenTitleWidget::OnNewGameHovered);
 	Btn_Exit->OnHovered.AddDynamic(this, &UEldenTitleWidget::OnExitHovered);
+
+	Btn_Continue->OnUnhovered.AddDynamic(this, &UEldenTitleWidget::OnMenuUnhovered);
 	Btn_NewGame->OnUnhovered.AddDynamic(this, &UEldenTitleWidget::OnMenuUnhovered);
 	Btn_Exit->OnUnhovered.AddDynamic(this, &UEldenTitleWidget::OnMenuUnhovered);
 
+	Sub = GetWorld()->GetGameInstance()->GetSubsystem<UEldenSaveSubsystem>();
+	SetContinueAvailable(Sub && Sub->HasSave());
 
 	RefreshSelection();
 
@@ -53,13 +63,36 @@ void UEldenTitleWidget::NativeConstruct()
 
 }
 
+void UEldenTitleWidget::OnContinueClicked()
+{
+	if (NewGameLevel.IsNull() || bIsTransitioning) return;
+	if (!Sub) return;
+
+	if (!Sub->LoadFromDisk())
+	{
+		SetContinueAvailable(false);
+		return;
+	}
+	StartTransition();
+	
+}
+
 void UEldenTitleWidget::OnNewGameClicked()
 {
+	if (bIsTransitioning) return;
 	if (NewGameLevel.IsNull()) return;
+	if (!Sub) return;
+	Sub->ClearCurrentSave();
 
+	StartTransition();
+}
+
+void UEldenTitleWidget::StartTransition()
+{
 	if (bIsTransitioning) return;
 	bIsTransitioning = true;
 	GetWorld()->GetTimerManager().ClearTimer(BGMTimerHandle);
+	Btn_Continue->SetIsEnabled(false);
 	Btn_NewGame->SetIsEnabled(false);
 	Btn_Exit->SetIsEnabled(false);
 	PlayAnimation(Anim_FadeOut);
@@ -70,9 +103,20 @@ void UEldenTitleWidget::OnNewGameClicked()
 	}
 }
 
+void UEldenTitleWidget::SetContinueAvailable(bool bAvailable)
+{
+	if (bAvailable) Row_Continue->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	else Row_Continue->SetVisibility(ESlateVisibility::Collapsed);
+}
+
 void UEldenTitleWidget::OnExitClicked()
 {
 	UKismetSystemLibrary::QuitGame(this, GetOwningPlayer(), EQuitPreference::Quit, false);
+}
+
+void UEldenTitleWidget::OnContinueHovered()
+{
+	SelectItem(ETitleMenuItem::Continue);
 }
 
 void UEldenTitleWidget::OnNewGameHovered()

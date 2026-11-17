@@ -10,6 +10,7 @@ class AEldenShield;
 class AEldenCharacter;
 class UEldenTalismanDefinition;
 class UEldenItemDefinition;
+struct FEldenSavedEquipment;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquipmentChangedDelegate);
 
@@ -98,6 +99,9 @@ public:
 	// 장착 무기 방패 숨기기 (포션 마시는 중 등, 일시적으로 양손을 비워야 할 때 사용)
 	void SetEquippedItemsHidden(bool bInHidden);
 
+	void CaptureTo(FEldenSavedEquipment& Out) const;
+	void ApplyFrom(const FEldenSavedEquipment& In);
+
 	// 캐릭터가 장착 중인 무기, 방패를 반환하는 함수
 	FORCEINLINE AEldenWeapon* GetEquippedWeapon() const { return EquippedWeapon; }
 	FORCEINLINE AEldenShield* GetEquippedShield() const { return EquippedShield; }
@@ -122,5 +126,10 @@ private:
 
 	// 장착 변경 시 호출: BuildTalismanBonus 결과를 StatComponent로 넘겨 파생 스탯을 갱신하게 함
 	void RecalculateTalismanBonus();
+
+	bool SpawnWeaponActor(UEldenItemDefinition* Item);
+	bool SpawnShieldActor(UEldenItemDefinition* Item);
+
+	void ActivateCurrentEquipment();
 
 };
