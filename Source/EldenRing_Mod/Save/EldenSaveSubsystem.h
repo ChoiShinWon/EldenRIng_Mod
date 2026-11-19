@@ -24,8 +24,10 @@ public:
 	UEldenSaveGame* GetOrCreateSave();
 
 	// 새 게임 시작 시 메모리의 세이브를 비움
+	// 디스크 파일은 지우지 않음. 첫 은총 휴식 때 새 세이브가 덮어씀
 	void ClearCurrentSave();
 
+	// 로드했거나 방금 캡처해 둔 세이브. nullptr이면 새 게임 -> ApplySavedProgress는 복원하지 않고 끝냄.
 	UEldenSaveGame* GetCurrentSave() const;
 
 private:

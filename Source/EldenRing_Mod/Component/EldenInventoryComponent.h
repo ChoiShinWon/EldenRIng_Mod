@@ -78,8 +78,10 @@ protected:
 	void EnsureFixedPotions();
 
 public:
+	// Capture: 현재 인벤토리를 구조체로 복사
 	void CaptureTo(FEldenSavedInventory& Out) const;
 
+	// Apply: 비우고 복원->고정 포션 보장->소모품 장착 순서
 	void ApplyFrom(const FEldenSavedInventory& In);
 
 	// 일반 소모품을 핫바에 추가 (Usable 카테고리만 허용)

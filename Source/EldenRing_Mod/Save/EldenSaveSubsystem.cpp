@@ -21,8 +21,7 @@ bool UEldenSaveSubsystem::WriteToDisk()
 	if (CurrentSave == nullptr) return false;
 	const bool bOk = UGameplayStatics::SaveGameToSlot(CurrentSave, SlotName, UserIndex);
 	
-	UE_LOG(LogTemp, Log, TEXT("[Save] 슬롯 %s 쓰기 %s"),
-		SlotName, bOk ? TEXT("성공") : TEXT("실패"));
+	if (!bOk) UE_LOG(LogTemp, Warning, TEXT("[Save] 슬롯 %s 쓰기 %s"), SlotName, TEXT("실패"));
 	return bOk;
 }
 

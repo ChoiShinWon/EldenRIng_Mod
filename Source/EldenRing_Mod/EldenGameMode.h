@@ -11,6 +11,7 @@ class AEldenGrace;
 class ABloodstain;
 class USoundBase;
 class UAudioComponent;
+class UEldenSaveGame;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyKilledDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGraceRestedDelegate);
@@ -55,6 +56,7 @@ public:
 
 	void ApplySavedProgress();
 
+	// 레벨에 배치된 픽업만 호출할 것. GetFName()이 레벨 로드마다 같다는 전제로 ID로 씀.
 	void MarkPickupCollected(FName ID);
 
 
@@ -128,4 +130,15 @@ protected:
 
 private:
 	TSet<FName> CollectedPickups;
+
+	// 플레이어 상태 복원: 인벤토리 -> 장비 -> 스탯
+	// 전제: CachedPlayer가 유효해야 함 (호출자 ApplySavedProgress가 가드)
+	void RestorePlayerState(const UEldenSaveGame* Save);
+
+	// 월드 플래그 복원: 픽업 / NPC / 핏자국
+	void RestoreWorldState(const UEldenSaveGame* Save);
+
+	// 마지막 은총을 찾아 등록하고 플레이어를 텔레포트
+	// 전제: CachedPlayer가 유효해야 함 (호출자 ApplySavedProgress가 가드)
+	void RestoreGracePosition(const UEldenSaveGame* Save);
 };

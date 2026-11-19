@@ -99,7 +99,10 @@ public:
 	// 장착 무기 방패 숨기기 (포션 마시는 중 등, 일시적으로 양손을 비워야 할 때 사용)
 	void SetEquippedItemsHidden(bool bInHidden);
 
+	// Capture: 무기/방패 로테이션, 인덱스, 탈리스만을 구조체로 복사
 	void CaptureTo(FEldenSavedEquipment& Out) const;
+
+	// Apply: 기존 장비 액터 제거 후 재스폰, 아이템 차감은 안 함.
 	void ApplyFrom(const FEldenSavedEquipment& In);
 
 	// 캐릭터가 장착 중인 무기, 방패를 반환하는 함수
