@@ -50,7 +50,8 @@ protected:
 	// Interact() 에서 Player 포인터를 잠깐 저장해둬야 콜백에서 접근 가능
 	TWeakObjectPtr<class AEldenCharacter> PendingPlayer;
 public:
-
+	// 세이브 키. 에디터에서 인스턴스마다 직접 입력 (레벨 안에서 고유해야 함)
+	// 비거나 중복되면 이어하기 때 은총을 못 찾아 위치 복원이 조용히 실패
 	UPROPERTY(EditInstanceOnly, Category = "Grace")
 	FName GraceId;
 

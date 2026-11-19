@@ -47,17 +47,6 @@ void UEldenGraceRestComponent::EnterRest()
 void UEldenGraceRestComponent::ExitRest()
 {
 	if (!OwnerCharacter) return;
-	// 단순 게터는 헤더로 안빼도 됨
-	UAnimInstance* AnimInstance = OwnerCharacter->GetMesh()->GetAnimInstance();
-
-	if (!AnimInstance) return;
-	AnimInstance->Montage_Play(StandUpMontage);
-
-	// 델리게이트 등록
-	FOnMontageEnded StandUpEndDelegate;
-	StandUpEndDelegate.BindUObject(this, &UEldenGraceRestComponent::OnStandUpMontageEnded);
-	AnimInstance->Montage_SetEndDelegate(StandUpEndDelegate, StandUpMontage);
-
 	if (AEldenPlayerController* PC = OwnerCharacter->GetEldenController())
 	{
 		PC->SetViewTargetWithBlend(OwnerCharacter, ExitCameraBlendTime);
@@ -68,8 +57,30 @@ void UEldenGraceRestComponent::ExitRest()
 	OwnerCharacter->EquipmentComponent->SetEquippedItemsHidden(false);
 
 	AEldenGameMode* GM = GetWorld()->GetAuthGameMode<AEldenGameMode>();
-	if (!GM) return;
-	GM->SaveProgress();
+	if (GM) GM->SaveProgress();
+
+	// 단순 게터는 헤더로 안빼도 됨
+	UAnimInstance* AnimInstance = OwnerCharacter->GetMesh()->GetAnimInstance();
+	float Len = AnimInstance ? AnimInstance->Montage_Play(StandUpMontage) : 0.f;
+
+	// 몽타주 재생 성공
+	if (Len > 0)
+	{
+		// 종료 델리게이트 등록
+		FOnMontageEnded StandUpEndDelegate;
+		StandUpEndDelegate.BindUObject(this, &UEldenGraceRestComponent::OnStandUpMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(StandUpEndDelegate, StandUpMontage);
+
+	}
+	else
+	{
+		// 몽타주를 못 틀었으면 종료 콜백이 영영 안 옴
+		// 콜백이 하던 일을 직접 수행
+		OnStandUpMontageEnded(nullptr, false);
+	}
+
+
+
 }
 
 void UEldenGraceRestComponent::OnStandUpMontageEnded(UAnimMontage* Montage, bool bInterrupted)

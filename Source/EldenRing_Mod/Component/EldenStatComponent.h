@@ -179,9 +179,10 @@ public:
 	// Equipment가 호출할 입구
 	void SetEquipmentBonus(const TMap<EStatModifierTarget, FEldenStatBonus>& InBonus);
 
-
+	// Capture: 레벨.스탯/룬을 구조체로 복사
 	void CaptureTo(FEldenSavedStats& Out) const;
 
+	// Apply: 대입 -> 재계산 -> FullRestore 순서
 	void ApplyFrom(const FEldenSavedStats& In);
 
 private:

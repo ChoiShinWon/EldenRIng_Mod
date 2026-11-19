@@ -31,6 +31,7 @@ struct FEldenSavedStats
 	UPROPERTY()
 	int32 CurrentRunes = 0;
 
+	// 다음 레벨업에 필요한 룬. 레벨에서 재계산하지 않고 누적 상태값 그대로 저장
 	UPROPERTY()
 	int32 RequiredRunes = 500;
 
@@ -48,6 +49,8 @@ struct FEldenSavedItem
 	int32 ItemCount = 0;
 };
 
+// 인벤토리 저장본. 장비 장착으로 이미 인벤토리에서 빠진 뒤의 상태
+// 복원할 때 장비 쪽 (EquipmentComponent::ApplyFrom)에서 다시 차감하지 않음
 USTRUCT()
 struct FEldenSavedInventory
 {
@@ -133,14 +136,14 @@ struct FEldenSavedWorld
 	FEldenSavedBloodstain Bloodstain;
 };
 
+// 세이브 1슬롯 분량의 데이터 컨테이너
+// 호환 규칙: 필드 추가 -> 옛 파일은 기본값으로 읽혀서 안전 / 의미, 타입 변경 -> 마이그레이션 필요
 UCLASS()
 class ELDENRING_MOD_API UEldenSaveGame : public USaveGame
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
-	int32 SaveVersion = 1;
 
 	UPROPERTY()
 	FEldenSavedStats Stats;

@@ -46,6 +46,8 @@ void AEldenGameMode::BeginPlay()
 		BindEnemy(*It);
 	}
 
+	// 컴포넌트 BeginPlay와 GameMode BeginPlay 순서가 보장되지 않아서 한 틱 위에 복원
+	// 복원이 먼저 돌면 컴포넌트가 이후 기본값으로 덮어쓸 수 있음
 	GetWorldTimerManager().SetTimerForNextTick(this, &AEldenGameMode::ApplySavedProgress);
 }
 
@@ -195,6 +197,7 @@ bool AEldenGameMode::SpawnBloodstain(const FVector& Location, int32 Runes)
 
 }
 
+
 void AEldenGameMode::ResetAllEnemies()
 {
 	for (FEnemySpawnInfo& Info : EnemySpawnSnapshot)
@@ -230,12 +233,14 @@ void AEldenGameMode::HandleGraceRest(AEldenGrace* Grace, AEldenCharacter* Player
 {
 	RegisterGrace(Grace);
 	ResetAllEnemies();
+	// 방송이 아래 SaveProgress 보다 먼저여야 전진한 상태가 저장에 담김
 	OnGraceRested.Broadcast();
 
-	if (!Player || !Player->InventoryComponent) return;
+	if (Player && Player->InventoryComponent)
+	{
+		Player->InventoryComponent->RefillPotions();
 
-	Player->InventoryComponent->RefillPotions();
-
+	}
 
 	SaveProgress();
 
@@ -271,9 +276,9 @@ void AEldenGameMode::SaveProgress()
 	{
 		ActiveBloodstain->CaptureTo(Save->SavedWorld.Bloodstain);
 	}
-	// 없으면 없음(Runes = 0)을 덮어씀. 안 하면 재사용되는 Save에 옛 핏자국이 남아 이어하기 때 되살아남
 	else
 	{
+		// 없으면 없음(Runes = 0)을 덮어씀. 안 하면 재사용되는 Save에 옛 핏자국이 남아 이어하기 때 되살아남
 		FEldenSavedBloodstain Temp;
 		Save->SavedWorld.Bloodstain = Temp;
 	}
@@ -293,10 +298,20 @@ void AEldenGameMode::ApplySavedProgress()
 	UEldenSaveGame* Save = Sub->GetCurrentSave();
 	if (!Save) return;
 
+	RestorePlayerState(Save);
+	RestoreWorldState(Save);
+	RestoreGracePosition(Save);
+}
+
+void AEldenGameMode::RestorePlayerState(const UEldenSaveGame* Save)
+{
 	CachedPlayer->InventoryComponent->ApplyFrom(Save->SavedInventory);
 	CachedPlayer->EquipmentComponent->ApplyFrom(Save->SavedEquipment);
 	CachedPlayer->StatComponent->ApplyFrom(Save->Stats);
+}
 
+void AEldenGameMode::RestoreWorldState(const UEldenSaveGame* Save)
+{
 	CollectedPickups = Save->SavedWorld.PickupIDs;
 	// 이어하기 시 레벨이 새로 열려서 배치된 픽업이 전부 다시 생겨남
 	// 저장된 "이미 주운 ID" 집합에 있는 픽업은 월드에서 제거
@@ -322,7 +337,10 @@ void AEldenGameMode::ApplySavedProgress()
 	{
 		SpawnBloodstain(SavedBloodstain.SpawnLocation, SavedBloodstain.Runes);
 	}
+}
 
+void AEldenGameMode::RestoreGracePosition(const UEldenSaveGame* Save)
+{
 	AEldenGrace* Found = nullptr;
 	for (TActorIterator<AEldenGrace> It(GetWorld()); It; ++It)
 	{
@@ -343,9 +361,8 @@ void AEldenGameMode::ApplySavedProgress()
 
 	const FTransform T = Found->GetRespawnTransform();
 	CachedPlayer->SetActorLocationAndRotation(T.GetLocation(), T.GetRotation().Rotator(), false, nullptr, ETeleportType::TeleportPhysics);
-
-	
 }
+
 
 void AEldenGameMode::MarkPickupCollected(FName ID)
 {
