@@ -50,6 +50,7 @@ public:
 protected:
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	FVector HomeLocation = FVector::ZeroVector;
 
@@ -235,4 +236,9 @@ public:
 	void DisableRightAttackCollision();
 	void EnableLeftAttackCollision();
 	void DisableLeftAttackCollision();
+
+private:
+	// 전투/ 평시에 따라 메시 애니메이션 갱신 정책을 바꾸는 헬퍼
+	// 정책을 한 곳에서만 정하도록 헬퍼로 뺀다.
+	void SetCombatAnimTick(bool bCombat);
 };

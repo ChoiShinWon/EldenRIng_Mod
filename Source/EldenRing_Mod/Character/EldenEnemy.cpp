@@ -14,6 +14,7 @@
 #include "AITypes.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "EldenRing_Mod/Subsystem/EldenTargetSubsystem.h"
 #include <Kismet/GameplayStatics.h>
 
 
@@ -44,12 +45,21 @@ AEldenEnemy::AEldenEnemy()
 
 	HPBarComp = CreateDefaultSubobject<UEldenEnemyHPBarComponent>(TEXT("HPBarComp"));
 	HPBarComp->SetupAttachment(GetMesh());
+
+	// 평시 기본 정책 지정 -> SetCombatAnimTick(false) 호출
+	SetCombatAnimTick(false);
 }
 
 
 void AEldenEnemy::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (GetWorld())
+	{
+		UEldenTargetSubsystem* TargetSub = GetWorld()->GetSubsystem<UEldenTargetSubsystem>();
+		if (TargetSub) TargetSub->RegisterTarget(this);
+	}
 
 	HomeLocation = GetActorLocation();
 	SetMoveSpeed(WanderSpeed);
@@ -70,6 +80,19 @@ void AEldenEnemy::BeginPlay()
 	}
 	
 }
+
+void AEldenEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (GetWorld())
+	{
+
+		UEldenTargetSubsystem* TargetSub = GetWorld()->GetSubsystem<UEldenTargetSubsystem>();
+		if (IsValid(TargetSub)) TargetSub->UnregisterTarget(this);
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
+
 
 
 void AEldenEnemy::PossessedBy(AController* NewController)
@@ -205,10 +228,20 @@ float AEldenEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 	return ActualDamage;
 }
 
+void AEldenEnemy::SetCombatAnimTick(bool bCombat)
+{
+	GetMesh()->VisibilityBasedAnimTickOption = bCombat ? EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones
+		: EVisibilityBasedAnimTickOption::OnlyTickMontagesWhenNotRendered;
+
+	GetMesh()->bEnableUpdateRateOptimizations = !bCombat;
+}
+
+
 // 플레이어가 은총 휴식하거나 죽고 부활했을때 어그로 초기화를 위해 실행되는 함수
 void AEldenEnemy::ResetAggro()
 {
 	bHasAggro = false;
+	SetCombatAnimTick(false);
 	CombatTarget = nullptr;
 
 	SetMoveSpeed(WanderSpeed);
@@ -283,6 +316,7 @@ void AEldenEnemy::StartAggro(APawn* Target)
 
 	// 나를 본게 플레이어가 맞는지 체크
 	bHasAggro = true;
+	SetCombatAnimTick(true);
 
 	if (EnemyController)
 	{
@@ -495,3 +529,4 @@ void AEldenEnemy::DisableLeftAttackCollision()
 {
 	if (LeftHandHitbox) LeftHandHitbox->DisableHitbox();
 }
+
