@@ -7,7 +7,6 @@
 #include "EldenRing_Mod/Interface/ITargetable.h"
 #include "EldenEnemy.generated.h"
 
-class UWidgetComponent;
 class UEldenHitboxComponent;
 class UEldenPoiseComponent;
 class UEldenEnemyHPBarWidget;
@@ -134,10 +133,6 @@ protected:
 	EEnemyState EnemyState = EEnemyState::Idle;
 
 
-
-	// 타겟 마크 위젯 컴포넌트
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
-	UWidgetComponent* TargetMarkWidget;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	UEldenEnemyHPBarComponent* HPBarComp;

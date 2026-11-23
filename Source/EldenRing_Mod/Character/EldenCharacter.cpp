@@ -10,6 +10,7 @@
 #include "EldenRing_Mod/Component/EldenInteractionComponent.h"
 #include "EldenRing_Mod/Component/EldenItemUseComponent.h"
 #include "EldenRing_Mod/Component/EldenLocomotionComponent.h"
+#include "Components/WidgetComponent.h"
 #include "EldenRing_Mod/EldenDamageEvent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -75,6 +76,12 @@ AEldenCharacter::AEldenCharacter()
 	ItemUseComponent = CreateDefaultSubobject<UEldenItemUseComponent>(TEXT("ItemUseComponent"));
 
 	LocomotionComponent = CreateDefaultSubobject<UEldenLocomotionComponent>(TEXT("LocomotionComponent"));
+
+	LockOnMark = CreateDefaultSubobject<UWidgetComponent>(TEXT("LockOnMark"));
+	LockOnMark->SetupAttachment(RootComponent);
+	LockOnMark->SetWidgetSpace(EWidgetSpace::Screen);
+	LockOnMark->SetDrawAtDesiredSize(true);
+	LockOnMark->SetVisibility(false);
 }
 
 AEldenPlayerController* AEldenCharacter::GetEldenController() const
@@ -341,6 +348,8 @@ void AEldenCharacter::OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterr
 void AEldenCharacter::HandleDeath()
 {
 	if (GetState() == ECharacterState::Dead) return;
+
+	if (IsValid(LockOnComponent)) LockOnComponent->ReleaseLockOn();
 
 	SetState(ECharacterState::Dead);
 

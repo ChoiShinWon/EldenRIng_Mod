@@ -22,13 +22,6 @@ AEldenEnemy::AEldenEnemy()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	// 타겟 마크 위젯 컴포넌트 생성 및 설정
-	TargetMarkWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("TargetMarkWidget"));
-	TargetMarkWidget->SetupAttachment(GetMesh());
-	TargetMarkWidget->SetWidgetSpace(EWidgetSpace::Screen);
-	TargetMarkWidget->SetDrawAtDesiredSize(true);
-	TargetMarkWidget->SetVisibility(false);
-
 	// 시야 컴포넌트	생성 및 설정
 	PawnSensingComp = CreateDefaultSubobject<UPawnSensingComponent>(TEXT("PawnSensingComp"));
 	PawnSensingComp->SightRadius = 1500.0f; // 시야 반경 설정
@@ -503,10 +496,6 @@ bool AEldenEnemy::IsTargetable() const
 
 void AEldenEnemy::ShowTargetMark(bool bShow)
 {
-	if (TargetMarkWidget)
-	{
-		TargetMarkWidget->SetVisibility(bShow);
-	}
 	HPBarComp->SetLockedOn(bShow && !GetIsDead());
 }
 

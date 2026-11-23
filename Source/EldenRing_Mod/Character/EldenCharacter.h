@@ -9,6 +9,7 @@
 // 전방 선언
 class AEldenPlayerController;
 class USpringArmComponent;
+class UWidgetComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
@@ -198,6 +199,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UEldenLocomotionComponent* LocomotionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UWidgetComponent* LockOnMark;
 
 	void Revive(const FTransform&);
 
