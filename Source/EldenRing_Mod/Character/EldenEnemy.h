@@ -7,7 +7,6 @@
 #include "EldenRing_Mod/Interface/ITargetable.h"
 #include "EldenEnemy.generated.h"
 
-class UWidgetComponent;
 class UEldenHitboxComponent;
 class UEldenPoiseComponent;
 class UEldenEnemyHPBarWidget;
@@ -50,6 +49,7 @@ public:
 protected:
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	FVector HomeLocation = FVector::ZeroVector;
 
@@ -133,10 +133,6 @@ protected:
 	EEnemyState EnemyState = EEnemyState::Idle;
 
 
-
-	// 타겟 마크 위젯 컴포넌트
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
-	UWidgetComponent* TargetMarkWidget;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	UEldenEnemyHPBarComponent* HPBarComp;
@@ -235,4 +231,9 @@ public:
 	void DisableRightAttackCollision();
 	void EnableLeftAttackCollision();
 	void DisableLeftAttackCollision();
+
+private:
+	// 전투/ 평시에 따라 메시 애니메이션 갱신 정책을 바꾸는 헬퍼
+	// 정책을 한 곳에서만 정하도록 헬퍼로 뺀다.
+	void SetCombatAnimTick(bool bCombat);
 };

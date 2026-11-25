@@ -4,6 +4,8 @@
 #include "EldenRing_Mod/Interface/ITargetable.h"
 #include "LockOnComponent.generated.h"
 
+class UWidgetComponent;
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ELDENRING_MOD_API ULockOnComponent : public UActorComponent
 {
@@ -14,6 +16,8 @@ public:
 	void ToggleLockOn();
 	void UpdateLockOn(float DeltaTime);
 	bool HasTarget() const { return CurrentTarget.IsValid(); }
+
+	void ReleaseLockOn();
 
 protected:
 	virtual void BeginPlay() override;
@@ -33,4 +37,8 @@ protected:
 	float LockOnAcquireDistance = 1500.0f;
 
 	IITargetable* GetTargetInterface() const;
+
+
+	UPROPERTY()
+	UWidgetComponent* LockOnMark;
 };
