@@ -7,6 +7,7 @@
 const FName AEnemyAIController::BBKey_Target(TEXT("TargetActor"));
 const FName AEnemyAIController::BBKey_Aggroed(TEXT("bAggroed"));
 const FName AEnemyAIController::BBKey_Stunned(TEXT("bStunned"));
+const FName AEnemyAIController::BBKey_InMidRange(TEXT("bInMidRange"));
 
 
 void AEnemyAIController::SetAggroTarget(AActor* Target)
@@ -24,6 +25,7 @@ void AEnemyAIController::ClearAggroTarget()
 	if (UBlackboardComponent* BBComp = GetBlackboardComponent())
 	{
 		BBComp->ClearValue(BBKey_Target);
+		BBComp->ClearValue(BBKey_InMidRange);
 	}
 }
 

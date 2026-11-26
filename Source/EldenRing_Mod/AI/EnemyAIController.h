@@ -24,4 +24,5 @@ public:
 	static const FName BBKey_Target;
 	static const FName BBKey_Aggroed;
 	static const FName BBKey_Stunned;
+	static const FName BBKey_InMidRange;
 };

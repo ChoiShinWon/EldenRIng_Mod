@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -18,10 +18,18 @@ public:
 	UBTService_CheckDistance();
 
 protected:
-	// ƽ���� ������ �Լ�
+	// 틱마다 실행할 함수
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
-	// �����Ϳ��� ������ �ִ� ��׷� ���� �Ÿ� ����
+	// 에디터에서 설정할 최대 어그로 해제 거리 변수
 	UPROPERTY(EditAnywhere, Category = "AI")
 	float MaxAggroDistance = 1500.0f;
+
+	// 타깃과의 거리가 이 최소 범위보다 크고 최대 범위보다 작으면 중거리
+	UPROPERTY(EditAnywhere, Category = "AI")
+	float MinMidRange = 800.0f;
+	// 타깃과의 거리가 이 최소 범위보다 크고 최대 범위보다 작으면 중거리
+	UPROPERTY(EditAnywhere, Category = "AI")
+	float MaxMidRange = 1400.0f;
+
 };

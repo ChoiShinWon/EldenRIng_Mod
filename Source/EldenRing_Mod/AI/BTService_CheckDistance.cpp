@@ -29,17 +29,18 @@ void UBTService_CheckDistance::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 		{
 			// 캐릭터와 몬스터 사이 거리
 			float Distance = FVector::Dist(ControlledPawn->GetActorLocation(), TargetActor->GetActorLocation());
+
+			AEldenEnemy* Enemy = Cast<AEldenEnemy>(ControlledPawn);
+
+			const bool bIsMidRange = IsValid(Enemy) && Enemy->GetState() == EEnemyState::Idle && Distance >= MinMidRange && Distance <= MaxMidRange;
+
+			BlackBoardComp->SetValueAsBool(AEnemyAIController::BBKey_InMidRange, bIsMidRange);
 			// 둘의 거리가 최대 어그로 수치보다 멀어진다면
 			if (Distance > MaxAggroDistance)
 			{
-				// ControlledPawn EldenEnemy 캐스팅
-				AEldenEnemy* Enemy = Cast<AEldenEnemy>(ControlledPawn);
-
-				if (Enemy)
-				{
-					// 어그로 취소
-					Enemy->ResetAggro();
-				}
+				if (!Enemy) return;
+				// 어그로 취소
+				Enemy->ResetAggro();
 		
 			}
 		}
