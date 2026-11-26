@@ -16,7 +16,7 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 		AEldenEnemy* Enemy = Cast<AEldenEnemy>(AIController->GetPawn());
 		if (Enemy)
 		{
-			Enemy->PlayAttackMontage();
+			Enemy->PlayAttackMontage(AttackGroup);
 			if (Enemy->GetIsAttacking())
 			{
 				return EBTNodeResult::InProgress;

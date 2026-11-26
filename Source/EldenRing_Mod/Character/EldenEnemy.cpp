@@ -36,6 +36,8 @@ AEldenEnemy::AEldenEnemy()
 
 	PoiseComp = CreateDefaultSubobject<UEldenPoiseComponent>(TEXT("PoiseComp"));
 
+	CombatComp = CreateDefaultSubobject<UEnemyCombatComponent>(TEXT("CombatComp"));
+
 	HPBarComp = CreateDefaultSubobject<UEldenEnemyHPBarComponent>(TEXT("HPBarComp"));
 	HPBarComp->SetupAttachment(GetMesh());
 
@@ -70,6 +72,11 @@ void AEldenEnemy::BeginPlay()
 	if (PoiseComp)
 	{
 		PoiseComp->OnPoiseBroken.AddDynamic(this, &AEldenEnemy::OnPoiseBroken);
+	}
+
+	if (CombatComp)
+	{
+		CombatComp->OnPatternEnd.AddDynamic(this, &AEldenEnemy::OnAttackPatternEnd);
 	}
 	
 }
@@ -119,9 +126,12 @@ void AEldenEnemy::OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	}
 }
 
-void AEldenEnemy::PlayAttackMontage()
+void AEldenEnemy::PlayAttackMontage(EEnemyAttackGroup Group)
 {
 	if (GetState() != EEnemyState::Idle) return;
+
+	if (!CombatComp) return;
+	if (!CombatComp->StartAttack(Group)) return;
 
 	if (EnemyController)
 	{
@@ -130,48 +140,20 @@ void AEldenEnemy::PlayAttackMontage()
 		EnemyController->ClearFocus(EAIFocusPriority::Default);
 	}
 
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-
-	// 공격 애니메이션이 유효하다면 재생하고, 몽타주가 끝났을 때 호출될 델리게이트 설정
-	if (AnimInstance && AttackMontage)
-	{
-		SetState(EEnemyState::Attacking);
-
-		// 공격 애니메이션이 재생되는 동안에는 이동을 못하게 설정
-		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None); // 공격 중에는 이동 불가능하게 설정
-
-		PlaySpecificMontage(AttackMontage);
-	}
+	SetState(EEnemyState::Attacking);
+	// 공격 애니메이션이 재생되는 동안에는 이동을 못하게 설정
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None); // 공격 중에는 이동 불가능하게 설정
+	
 }
 
-void AEldenEnemy::PlaySpecificMontage(UAnimMontage* MontageToPlay)
+void AEldenEnemy::OnAttackPatternEnd()
 {
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-
-	if (AnimInstance && MontageToPlay)
-	{
-		AnimInstance->Montage_Play(MontageToPlay);
-		FOnMontageEnded EndDelegate;
-		EndDelegate.BindUObject(this, &AEldenEnemy::OnAttackMontageEnded);
-		AnimInstance->Montage_SetEndDelegate(EndDelegate, MontageToPlay);
-	}
-}
-
-void AEldenEnemy::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	if (!GetIsAttacking()) return;
-
-	if (Montage == AttackMontage && !bInterrupted && SlamMontage != nullptr && FMath::FRand() < SlamAttackChance)
-	{
-		PlaySpecificMontage(SlamMontage);
-		return;
-	}
-
+	if (GetState() != EEnemyState::Attacking) return;
 	SetState(EEnemyState::Idle);
-
-	// 공격이 끝나면 다시 이동 가능하게 설정
-	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking); // 공격이 끝나면 다시 이동 가능하게 설정
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 }
+
+
 void AEldenEnemy::OnPoiseBroken()
 {
 	ApplyStun();
@@ -254,6 +236,7 @@ void AEldenEnemy::ResetToSpawn(const FTransform& SpawnTransform)
 	if (GetIsDead()) return;
 	GetWorldTimerManager().ClearTimer(StunTimerHandle);
 
+	CombatComp->CancelPattern();
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance)
 	{
@@ -355,6 +338,7 @@ void AEldenEnemy::Die()
 {
 	if (GetIsDead()) return; 
 	SetState(EEnemyState::Dead);
+	CombatComp->CancelPattern();
 	// HP바 숨기기
 	HPBarComp->HideImmediately();
 	// 스턴 타이머 초기화
@@ -434,6 +418,8 @@ void AEldenEnemy::ApplyStun()
 {
 	if (GetIsDead() || GetIsStunned()) return;
 
+	// 후속 패턴 예약 취소
+	CombatComp->CancelPattern();
 	SetState(EEnemyState::Stunned);
 	/*bIsParryable = false;*/
 	float Duration = StunDuration;

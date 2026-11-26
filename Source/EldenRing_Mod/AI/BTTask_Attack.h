@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTTaskNode.h"
+#include "EldenRing_Mod/Component/EnemyCombatComponent.h"
 #include "BTTask_Attack.generated.h"
 
 /**
@@ -16,6 +17,9 @@ public:
 	UBTTask_Attack();
 
 protected:
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	EEnemyAttackGroup AttackGroup = EEnemyAttackGroup::Melee;
+
 	// Behavior Tree가 이 Task를 실행할 때 호출되는 함수.
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 

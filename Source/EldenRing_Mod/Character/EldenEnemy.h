@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Perception/PawnSensingComponent.h"
+#include "EldenRing_Mod/Component/EnemyCombatComponent.h"
 #include "EldenRing_Mod/Interface/ITargetable.h"
 #include "EldenEnemy.generated.h"
 
@@ -64,6 +65,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	UEldenPoiseComponent* PoiseComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	UEnemyCombatComponent* CombatComp;
+
 	// 플레이어를 감지했는지 여부
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
 	bool bHasAggro = false;
@@ -92,15 +96,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* DeathMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	class UAnimMontage* AttackMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	class UAnimMontage* SlamMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	float SlamAttackChance = 0.3f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	class UAnimMontage* AggroMontage;
@@ -159,9 +154,6 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnEnemyDied OnEnemyDied;
 
-
-
-
 	// Enemy마다 할당할 Behavior Tree
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
 	class UBehaviorTree* EnemyBT;
@@ -206,13 +198,7 @@ public:
 	void OnAggroMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 	// 공격 애니메이션을 재생하는 함수
-	void PlayAttackMontage();
-
-	void PlaySpecificMontage(class UAnimMontage* MontageToPlay);
-
-	// 공격 애니메이션이 끝났을 때 호출되는 함수 (델리게이트	로 연결)
-	UFUNCTION()
-	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void PlayAttackMontage(EEnemyAttackGroup Group = EEnemyAttackGroup::Melee);
 
 	UFUNCTION()
 	void OnPoiseBroken();
@@ -236,4 +222,7 @@ private:
 	// 전투/ 평시에 따라 메시 애니메이션 갱신 정책을 바꾸는 헬퍼
 	// 정책을 한 곳에서만 정하도록 헬퍼로 뺀다.
 	void SetCombatAnimTick(bool bCombat);
+
+	UFUNCTION()
+	void OnAttackPatternEnd();
 };
